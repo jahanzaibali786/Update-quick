@@ -8,17 +8,16 @@
 @endsection
 
 @section('content')
-    @include('transaction.sales-tabs')
-
-    <div class="row mt-2">
+    <div class="row">
         <div class="col-sm-12">
             <div class="text-end mb-3">
-                <a href="{{ route('sales-receipt.create', 0) }}" class="btn btn-primary">
+                <a href="{{ route('sales.reciepts.create', 0) }}" class="btn btn-primary">
                     <i class="ti ti-plus"></i> {{__('Create Sales Receipt')}}
                 </a>
             </div>
         </div>
     </div>
+
     <div class="row">
         <div class="col-sm-12">
             <div class="mt-2" id="filters"></div>

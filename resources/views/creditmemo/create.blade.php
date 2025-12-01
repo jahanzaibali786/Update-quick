@@ -1,13 +1,12 @@
 @extends('layouts.admin')
 @section('page-title')
-    {{ __('Sales Receipt') }}
+    {{ __('Credit Memo') }}
 @endsection
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('sales.reciepts.index') }}">{{ __('Sales Receipts') }}</a></li>
-
-    <li class="breadcrumb-item">{{ __('Create Sales Receipt') }}</li>
+    <li class="breadcrumb-item"><a href="{{ route('creditmemo.index') }}">{{ __('Credit Memo') }}</a></li>
+    <li class="breadcrumb-item">{{ __('Create Credit Memo') }}</li>
 @endsection
 
 @push('css-page')
@@ -94,14 +93,14 @@
 
         .customer-select-group {
             /* flex: 1;
-                        max-width: 400px; */
+                            max-width: 400px; */
         }
 
         .email-group {
             /* flex: 1;
-                        max-width: 400px;
-                        display: flex;
-                        flex-direction: column; */
+                            max-width: 400px;
+                            display: flex;
+                            flex-direction: column; */
         }
 
         .email-input-row {
@@ -1159,77 +1158,7 @@
                 keyboard: false
             });
             invoiceModal.show();
-
-
-            // Check if we're in edit mode and populate form data
-            @if(isset($salesReceiptData) && $salesReceiptData)
-                console.log('Edit mode detected, calling populateEditForm');
-                populateEditForm(@json($salesReceiptData));
-            @else
-                console.log('Create mode - no salesReceiptData found');
-            @endif
         });
-
-        // Function to populate form with existing sales receipt data
-        function populateEditForm(salesReceiptData) {
-            console.log('populateEditForm called with data:', salesReceiptData);
-
-            // Populate basic form fields
-            $('#customer').val(salesReceiptData.customer_id).trigger('change');
-            $('#customer_email').val(salesReceiptData.customer_email || '');
-            $('#issue_date').val(salesReceiptData.issue_date);
-            $('#ref_number').val(salesReceiptData.ref_number || '');
-            $('#location_of_sale').val(salesReceiptData.location_of_sale || '');
-            $('textarea[name="bill_to"]').val(salesReceiptData.bill_to || '');
-            $('textarea[name="memo"]').val(salesReceiptData.memo || '');
-            $('textarea[name="note"]').val(salesReceiptData.note || '');
-
-            // Populate payment fields
-            if (salesReceiptData.payment_type) {
-                $('input[name="payment_type"][value="' + salesReceiptData.payment_type + '"]').prop('checked', true);
-                if (salesReceiptData.payment_type === 'record_payment') {
-                    $('#record-payment-fields').show();
-                    $('#charge-payment-card').hide();
-                } else {
-                    $('#record-payment-fields').hide();
-                    $('#charge-payment-card').show();
-                }
-            }
-            $('#payment_method').val(salesReceiptData.payment_method || '');
-            $('#deposit_to').val(salesReceiptData.deposit_to || '');
-
-            // Populate discount fields
-            $('.discount-type-select').val(salesReceiptData.discount_type || 'percent');
-            $('.discount-input').val(salesReceiptData.discount_value || 0);
-
-            // Populate tax rate
-            $('select[name="sales_tax_rate"]').val(salesReceiptData.sales_tax_rate || '');
-
-            // Update form action for edit
-            $('#invoice-form').attr('action', '{{ route("sales-receipt.update", ":id") }}'.replace(':id', salesReceiptData.id));
-            // Add method spoofing for PUT request
-            if (!$('#invoice-form input[name="_method"]').length) {
-                $('#invoice-form').append('<input type="hidden" name="_method" value="PUT">');
-            }
-
-            // Update breadcrumb
-            $('.breadcrumb-item.active').text('{{ __("Edit Sales Receipt") }}');
-
-            // Populate product lines
-            if (salesReceiptData.items && salesReceiptData.items.length > 0) {
-                console.log('Setting repeater data with items:', salesReceiptData.items);
-                // Set the repeater data
-                $('#sortable-table').data('repeater-list', salesReceiptData.items);
-
-                // Trigger recalculation after a short delay to ensure DOM is ready
-                setTimeout(function() {
-                    recalcTotals();
-                    renumberInvoiceLines();
-                }, 500);
-            } else {
-                console.log('No items found in salesReceiptData');
-            }
-        }
 
         // NEW: helper to renumber the "#" column after add / delete / drag
         function renumberInvoiceLines() {
@@ -1273,174 +1202,40 @@
                         $('.select2').select2();
                     }
 
-
-                    // Initialize new row with default values
-                    var $newRow = $(this).find('tr.product-row');
-                    $newRow.find('.quantity').val('1');
-                    $newRow.find('.price').val('0.00');
-                    $newRow.find('.discount').val('0.00');
-                    $newRow.find('.amount').html('0.00');
-                    $newRow.find('.itemTaxPrice').val('0.00');
-                    $newRow.find('.itemTaxRate').val('0.00');
-                    $newRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
-
                     // NEW: renumber lines whenever a new row is added
                     renumberInvoiceLines();
-
-                    // Recalculate totals after adding new row
-                    recalcTotals();
                 },
                 hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
 
+                        var inputs = $(".amount");
+                        var subTotal = 0;
+                        for (var i = 0; i < inputs.length; i++) {
+                            subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                        }
+                        $('.subTotal').html(subTotal.toFixed(2));
+                        $('.totalAmount').html(subTotal.toFixed(2));
 
-                        // Recalculate totals after deletion
-                        recalcTotals();
+                        // NEW: renumber lines after a row is deleted
                         renumberInvoiceLines();
                     }
                 },
                 ready: function(setIndexes) {
+
                     // UPDATED: jQuery UI sortable uses "sortstop" instead of "drop"
                     $dragAndDrop.on('sortstop', function() {
                         setIndexes();
                         renumberInvoiceLines();
                     });
-
-                    // Handle populating existing data for edit mode
-                    @if(isset($salesReceiptData) && $salesReceiptData && isset($salesReceiptData['items']))
-                        // Use sequential approach like invoice edit modal
-                        setTimeout(function() {
-                            var existingItems = @json($salesReceiptData['items']);
-                            console.log('Processing existing items sequentially:', existingItems);
-
-                            if (existingItems && existingItems.length > 0) {
-                                console.log('Found', existingItems.length, 'existing items to populate');
-
-                                // Remove default empty row first
-                                $('#sortable-table tbody').remove();
-                                console.log('Removed default empty row');
-
-                                var currentIndex = 0;
-
-                                // Function to add one item at a time
-                                function addNextItem() {
-                                    if (currentIndex >= existingItems.length) {
-                                        // All items loaded - now renumber and recalculate
-                                        console.log('All items loaded. Renumbering and calculating totals...');
-                                        setTimeout(function() {
-                                            renumberInvoiceLines();
-                                            recalcTotals();
-                                            $('#customer_id').trigger('change');
-                                            console.log('Auto-population complete!');
-                                        }, 300);
-                                        return;
-                                    }
-
-                                    var item = existingItems[currentIndex];
-                                    console.log('Loading item', currentIndex + 1, ':', item.type);
-
-                                    if (item.type === 'product') {
-                                        // Add product row
-                                        $('[data-repeater-create]').trigger('click');
-
-                                        // Wait a moment for the row to be created
-                                        setTimeout(function() {
-                                            var $tbody = $('#sortable-table tbody[data-repeater-item]').last();
-                                            var $row = $tbody.find('tr.product-row');
-
-                                            // Populate product fields
-                                            if (item.item) {
-                                                $row.find('select.item').val(item.item);
-                                            }
-                                            if (item.description) {
-                                                $row.find('textarea.pro_description').val(item.description);
-                                            }
-                                            if (item.quantity) {
-                                                $row.find('input.quantity').val(item.quantity);
-                                            }
-                                            if (item.price) {
-                                                $row.find('input.price').val(item.price);
-                                            }
-                                            if (item.amount) {
-                                                $row.find('input.amount').val(item.amount);
-                                            }
-                                            if (item.taxable) {
-                                                $row.find('.form-check-input[type="checkbox"]').prop('checked', true);
-                                            }
-                                            if (item.tax) {
-                                                $row.find('input.tax').val(item.tax);
-                                            }
-                                            if (item.itemTaxRate) {
-                                                $row.find('input.itemTaxRate').val(item.itemTaxRate);
-                                            }
-
-                                            // Add hidden ID for update
-                                            if (item.id) {
-                                                $tbody.append('<input type="hidden" name="item_ids[]" value="' + item.id + '">');
-                                            }
-
-                                            console.log('Product row populated:', item.description);
-                                            currentIndex++;
-                                            addNextItem(); // Add next item
-                                        }, 100);
-
-                                    } else if (item.type === 'subtotal') {
-                                        // Add subtotal row
-                                        var $subtotalBody = window.createSubtotalBody(item.amount || '0.00');
-                                        $('#sortable-table').append($subtotalBody);
-                                        console.log('Subtotal row added:', item.amount);
-
-                                        currentIndex++;
-                                        setTimeout(addNextItem, 50); // Small delay before next item
-
-                                    } else if (item.type === 'text') {
-                                        // Add text row
-                                        var $textBody = window.createTextBody(item.description || '');
-                                        $('#sortable-table').append($textBody);
-                                        console.log('Text row added:', item.description);
-
-                                        currentIndex++;
-                                        setTimeout(addNextItem, 50); // Small delay before next item
-                                    } else {
-                                        // Unknown type, skip
-                                        currentIndex++;
-                                        addNextItem();
-                                    }
-                                }
-
-                                // Start adding items
-                                addNextItem();
-
-                            } else {
-                                console.log('No existing items to process');
-                            }
-                        }, 200);
-                    @endif
                 },
                 isFirstItemUndeletable: true
             });
-
-            // Check for existing data (either from data-value attribute or salesReceiptData)
             var value = $(selector + " .repeater").attr('data-value');
-            console.log('Initial repeater data-value:', value);
-            @if(isset($salesReceiptData) && $salesReceiptData && isset($salesReceiptData['items']))
-                // For edit mode, use the salesReceiptData items
-                value = @json($salesReceiptData['items']);
-                console.log('Overriding with salesReceiptData items:', value);
-            @endif
-
             if (typeof value != 'undefined' && value.length != 0) {
-                if (typeof value === 'string') {
-                    value = JSON.parse(value);
-                }
-                console.log('Setting repeater list with:', value);
-                console.log('Data has', value.length, 'items');
+                value = JSON.parse(value);
                 $repeater.setList(value);
-                console.log('After setList, tbody elements:', $('#sortable-table tbody').length);
-            } else {
-                console.log('No data to set in repeater');
             }
 
         }
@@ -1713,7 +1508,6 @@
 
         })
 
-
         $(document).on('keyup change', '.discount', function() {
             var el = $(this).parent().parent().parent();
             var discount = $(this).val();
@@ -1911,8 +1705,7 @@
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
                 <div class="invoice-container">
-
-                    {{ Form::open(['url' => 'sales-receipt', 'id' => 'invoice-form']) }}
+                    {{ Form::open(['url' => 'invoice', 'id' => 'invoice-form']) }}
                     <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
                     <style>
                         .header-actions {
@@ -1989,7 +1782,7 @@
                                         d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353">
                                     </path>
                                 </svg>
-                                {{ __('Sales Receipt') }}
+                                {{ __('Credit Memo') }}
                             </div>
 
                             <div class="header-actions">
@@ -2037,8 +1830,7 @@
 
                                 {{-- Close X --}}
                                 <button type="button" class="close-button"
-
-                                    onclick="location.href = '{{ route('sales-receipt.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.reciepts.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round">
@@ -2094,206 +1886,33 @@
 
                         </div>
 
-                        {{-- Cards Grid --}}
-                        <div class="cards-grid">
-                            {{-- Left Column --}}
-                            <div class="left-column">
-                                {{-- Record or Charge Card --}}
-                                <div class="qbo-card">
-                                    <div class="qbo-card-header">
-                                        <div class="qbo-section-title">{{ __('Record or charge') }}</div>
-                                        <span class="new-badge">NEW</span>
-                                    </div>
-                                    <div class="row d-flex">
-                                        <div class="col-4">
-                                            <div class="payment-type-group">
-                                                <div class="payment-option">
-                                                    <input type="radio" name="payment_type" id="record_payment"
-                                                        checked>
-                                                    <label for="record_payment">{{ __('Record payment') }}</label>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                        viewBox="0 0 24 24" fill="none" stroke="#6b6c72"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                        style="margin-left: 5px;">
-                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                                                        <line x1="12" y1="17" x2="12.01"
-                                                            y2="17"></line>
-                                                    </svg>
-                                                </div>
-                                                <div class="payment-option-desc">
-                                                    {{ __('Received via check, cash, other') }}</div>
+                        {{-- Grid Layout for Address, Date, Location --}}
+                        <div class="row" style="padding-top: 20px; padding-bottom: 20px;">
 
-                                                <div class="payment-option">
-                                                    <input type="radio" name="payment_type" id="charge_payment">
-                                                    <label for="charge_payment">{{ __('Charge new payment') }}</label>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                        viewBox="0 0 24 24" fill="none" stroke="#6b6c72"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                        style="margin-left: 5px;">
-                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                                                        <line x1="12" y1="17" x2="12.01"
-                                                            y2="17"></line>
-                                                    </svg>
-                                                </div>
-                                                <div class="payment-option-desc">
-                                                    {{ __('Process a card or ACH bank transfer') }}</div>
-                                                <div class="payment-icons">
-                                                    <div style="margin: 8px 0;">
-                                                        <img src="{{ asset('assets/images/credit_cards_qbocredits.png') }}"
-                                                            alt="Credit Cards" style="height: 24px;">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <style>
-                                            .qbo-card-header {
-                                                display: flex;
-                                                align-items: center;
-                                                gap: 10px;
-
-                                                /* NEW: to match QBO */
-                                                padding-bottom: 10px;
-                                                margin-bottom: 15px;
-                                                border-bottom: 1px solid #e4e4e7;
-                                            }
-
-                                            .charge-payment-card {
-                                                background: #f4f5f8;
-                                                border: 1px solid #e4e4e7;
-                                                border-radius: 4px;
-                                                padding: 20px;
-                                            }
-
-                                            .charge-card-title {
-                                                font-size: 15px;
-                                                font-weight: 600;
-                                                color: #393a3d;
-                                                margin-bottom: 8px;
-                                            }
-
-                                            .charge-card-text {
-                                                font-size: 13px;
-                                                color: #6b6c72;
-                                                margin-bottom: 8px;
-                                            }
-
-                                            .charge-card-link {
-                                                display: inline-block;
-                                                font-size: 13px;
-                                                color: #0077c5;
-                                                text-decoration: none;
-                                                margin-bottom: 16px;
-                                            }
-
-                                            .charge-card-link:hover {
-                                                text-decoration: underline;
-                                            }
-
-                                            .btn-activate-payments {
-                                                display: inline-flex;
-                                                align-items: center;
-                                                justify-content: center;
-                                                padding: 8px 18px;
-                                                border-radius: 4px;
-                                                border: 1px solid var(--qbo-green);
-                                                background: var(--qbo-green);
-                                                color: #fff;
-                                                font-size: 14px;
-                                                font-weight: 600;
-                                                cursor: pointer;
-                                            }
-
-                                            .btn-activate-payments:hover {
-                                                background: var(--qbo-green-hover);
-                                            }
-                                        </style>
-                                        <script>
-                                            // Toggle between "Record payment" form and "Charge new payment" info card
-                                            $(document).on('change', 'input[name="payment_type"]', function() {
-                                                if ($('#charge_payment').is(':checked')) {
-                                                    $('#record-payment-fields').hide();
-                                                    $('#charge-payment-card').show();
-                                                } else {
-                                                    $('#charge-payment-card').hide();
-                                                    $('#record-payment-fields').show();
-                                                }
-                                            });
-
-                                            // ensure correct state on load (in case default changes later)
-                                            $(function() {
-                                                if ($('#charge_payment').is(':checked')) {
-                                                    $('#record-payment-fields').hide();
-                                                    $('#charge-payment-card').show();
-                                                } else {
-                                                    $('#charge-payment-card').hide();
-                                                    $('#record-payment-fields').show();
-                                                }
-                                            });
-                                        </script>
-                                        <div class="col-8">
-                                            {{-- Record payment fields (default view) --}}
-                                            <div id="record-payment-fields" class="form-grid-2">
-                                                <div class="field-group">
-                                                    <label class="form-label">{{ __('Sales Receipt Date') }}</label>
-                                                    {{ Form::date('issue_date', date('Y-m-d'), ['class' => 'form-control', 'required' => 'required']) }}
-                                                </div>
-                                                <div class="field-group">
-                                                    <label class="form-label">{{ __('Reference no.') }}</label>
-                                                    {{ Form::text('ref_number', '', ['class' => 'form-control']) }}
-                                                </div>
-                                                <div class="field-group">
-                                                    <label class="form-label">{{ __('Payment method') }}</label>
-                                                    {{ Form::select('payment_method', ['' => 'Select method', 'Cash' => 'Cash', 'Check' => 'Check', 'Credit Card' => 'Credit Card'], null, ['class' => 'form-select']) }}
-                                                </div>
-                                                <div class="field-group">
-                                                    <label class="form-label">{{ __('Deposit To') }}</label>
-                                                    {{ Form::select('deposit_to', ['Undeposited Funds' => 'Undeposited Funds'], null, ['class' => 'form-select']) }}
-                                                </div>
-                                            </div>
-
-                                            {{-- Charge new payment info card (QBO style) --}}
-                                            <div id="charge-payment-card" class="charge-payment-card"
-                                                style="display:none;">
-                                                <div class="charge-card-title">
-                                                    {{ __('Process payments on open invoices') }}
-                                                </div>
-                                                <div class="charge-card-text">
-                                                    {{ __('Charge debit and credit cards or process ACH bank payments. Your books update automatically when you get paid through QuickBooks.') }}
-                                                </div>
-                                                <a href="#"
-                                                    class="charge-card-link">{{ __('Find out more') }}</a><br>
-
-                                                <button type="button" class="btn-activate-payments">
-                                                    {{ __('Activate payments') }}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                                {{-- Additional Fields Card --}}
-                                <div class="qbo-card">
-                                    <div class="qbo-section-title" style="margin-bottom: 15px;">
-                                        {{ __('Additional fields') }}</div>
-                                    <div class="field-group">
-                                        <label class="form-label">{{ __('Location of Sale') }}</label>
-                                        {{ Form::text('location_of_sale', '123 Sierra Way San Pablo, CA 87999', ['class' => 'form-control']) }}
-                                    </div>
+                            {{-- Billing Address --}}
+                            <div class="col-md-2">
+                                <div class="field-group">
+                                    <label class="form-label">{{ __('Billing Address') }}</label>
+                                    {{ Form::textarea('bill_to', '', ['class' => 'form-control', 'rows' => 3, 'style' => 'resize: none; height: 100px;']) }}
                                 </div>
                             </div>
 
-                            {{-- Right Column --}}
-                            <div class="right-column">
-                                <div class="qbo-card">
-                                    <div class="qbo-section-title" style="margin-bottom: 15px;">{{ __('Addresses') }}
-                                    </div>
-                                    <div class="field-group">
-                                        <label class="form-label">{{ __('Billing Address') }}</label>
-                                        {{ Form::textarea('bill_to', '', ['class' => 'form-control address-box', 'rows' => 3]) }}
-                                    </div>
+                            {{-- Credit Memo Date --}}
+                            <div class="col-md-2">
+                                <div class="field-group">
+                                    <label class="form-label">{{ __('Credit Memo Date') }}</label>
+                                    {{ Form::date('issue_date', date('Y-m-d'), ['class' => 'form-control']) }}
+                                </div>
+                            </div>
+
+                            {{-- Spacer to push Location to the right --}}
+                            <div class="col-md-5"></div>
+
+                            {{-- Location of Sale --}}
+                            <div class="col-md-3">
+                                <div class="field-group">
+                                    <label class="form-label">{{ __('Location of Sale') }}</label>
+                                    {{ Form::text('location_of_sale', '123 Sierra Way San Pablo', ['class' => 'form-control']) }}
                                 </div>
                             </div>
                         </div>
@@ -2498,79 +2117,79 @@
                             .drag-handle:active {
                                 cursor: grabbing;
                             }
+
                             /* === QBO-style totals section === */
 
-/* Keep total rows aligned */
-.totals-section .total-row {
-    align-items: center;
-}
+                            /* Keep total rows aligned */
+                            .totals-section .total-row {
+                                align-items: center;
+                            }
 
-/* Discount row: dropdown + input inline on the left, amount on the right */
-.totals-section .discount-row {
-    align-items: center;
-}
+                            /* Discount row: dropdown + input inline on the left, amount on the right */
+                            .totals-section .discount-row {
+                                align-items: center;
+                            }
 
-.discount-controls {
-    display: flex;
-    flex: 1;
-    gap: 8px;
-}
+                            .discount-controls {
+                                display: flex;
+                                flex: 1;
+                                gap: 8px;
+                            }
 
-.discount-type-select {
-    flex: 1;
-}
+                            .discount-type-select {
+                                flex: 1;
+                            }
 
-.discount-input {
-    width: 90px;
-    text-align: right;
-}
+                            .discount-input {
+                                width: 90px;
+                                text-align: right;
+                            }
 
-/* Tax selector row: rotate icon + dropdown */
-.tax-selector-row {
-    align-items: center;
-}
+                            /* Tax selector row: rotate icon + dropdown */
+                            .tax-selector-row {
+                                align-items: center;
+                            }
 
-.tax-selector-inner {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: 6px;
-}
+                            .tax-selector-inner {
+                                display: flex;
+                                flex: 1;
+                                align-items: center;
+                                gap: 6px;
+                            }
 
-.tax-selector-inner .form-select {
-    flex: 1;
-}
+                            .tax-selector-inner .form-select {
+                                flex: 1;
+                            }
 
-/* Helper text under tax selector */
-.sales-tax-help {
-    font-size: 12px;
-    color: #6b6c72;
-    margin: 4px 0 0;
-    text-align: left;
-}
+                            /* Helper text under tax selector */
+                            .sales-tax-help {
+                                font-size: 12px;
+                                color: #6b6c72;
+                                margin: 4px 0 0;
+                                text-align: left;
+                            }
 
-.sales-tax-help .helper-link {
-    font-size: 12px;
-}
+                            .sales-tax-help .helper-link {
+                                font-size: 12px;
+                            }
 
-/* Keep rotate icon looking like QBO */
-.discount-position-btn {
-    border: none;
-    background: #ffffff;
-    padding: 4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #6b6c72;
-    transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
+                            /* Keep rotate icon looking like QBO */
+                            .discount-position-btn {
+                                border: none;
+                                background: #ffffff;
+                                padding: 4px;
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                cursor: pointer;
+                                color: #6b6c72;
+                                transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+                            }
 
-.discount-position-btn:hover {
-    background: #f4f5f8;
-    border-radius: 4px;
-}
-
+                            .discount-position-btn:hover {
+                                background: #f4f5f8;
+                                border-radius: 4px;
+                            }
                         </style>
 
                         {{-- Bottom Grid --}}
@@ -2628,150 +2247,149 @@
                             </div>
                             <div class="left-section col-4">
                             </div>
-<div class="right-section col-4">
-    <div class="totals-section">
-        {{-- Subtotal --}}
-        <div class="total-row subtotal">
-            <span>{{ __('Subtotal') }}</span>
-            <span class="subTotal">0.00</span>
-        </div>
+                            <div class="right-section col-4">
+                                <div class="totals-section">
+                                    {{-- Subtotal --}}
+                                    <div class="total-row subtotal">
+                                        <span>{{ __('Subtotal') }}</span>
+                                        <span class="subTotal">0.00</span>
+                                    </div>
 
-        {{-- Discount row – QBO style: dropdown + input on the left, discount amount on the right --}}
-        <div class="total-row discount-row">
-            <div class="discount-controls">
-                <select name="discount_type" class="form-select discount-type-select">
-                    <option value="percent">{{ __('Discount Percent') }}</option>
-                    <option value="value">{{ __('Discount Value') }}</option>
-                </select>
+                                    {{-- Discount row – QBO style: dropdown + input on the left, discount amount on the right --}}
+                                    <div class="total-row discount-row">
+                                        <div class="discount-controls">
+                                            <select name="discount_type" class="form-select discount-type-select">
+                                                <option value="percent">{{ __('Discount Percent') }}</option>
+                                                <option value="value">{{ __('Discount Value') }}</option>
+                                            </select>
 
-                <input type="number" step="0.01" name="discount_value"
-                       class="form-control discount-input" value="0.00">
-            </div>
+                                            <input type="number" step="0.01" name="discount_value"
+                                                class="form-control discount-input" value="0.00">
+                                        </div>
 
-            {{-- total discount value --}}
-            <span class="totalDiscount">0.00</span>
-        </div>
+                                        {{-- total discount value --}}
+                                        <span class="totalDiscount">0.00</span>
+                                    </div>
 
-        {{-- Taxable subtotal --}}
-        <div class="total-row">
-            <span>{{ __('Taxable subtotal') }}</span>
-            <span class="taxableSubtotal">0.00</span>
-        </div>
+                                    {{-- Taxable subtotal --}}
+                                    <div class="total-row">
+                                        <span>{{ __('Taxable subtotal') }}</span>
+                                        <span class="taxableSubtotal">0.00</span>
+                                    </div>
 
-        {{-- Sales tax selector: rotate icon + dropdown (left side) --}}
-        <div class="total-row tax-selector-row">
-            <div class="tax-selector-inner">
-                {{-- move-discount-before/after-tax button (QBO icon) --}}
-                <button type="button"
-                        aria-label="To move discounts before or after sales tax, select the icon."
-                        class="discount-position-btn"
-                        data-bs-toggle="tooltip"
-                        data-bs-placement="left"
-                        title="{{ __('To move discounts before or after sales tax, select the icon.') }}">
-                    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"
-                         width="20" height="20" fill="currentColor">
-                        <path
-                            d="M15.7 16.28a1 1 0 10-1.416 1.412l.292.294-5.585-.01a1 1 0 01-1-1l.014-10a1 1 0 011-1l5.586.01-.294.292a1 1 0 101.412 1.416l2-2a1 1 0 000-1.414l-2-2a1 1 0 10-1.416 1.412l.292.294-5.574-.01a3 3 0 00-3 3l-.014 10a3 3 0 002.995 3l5.586.01-.294.292a1 1 0 101.412 1.416l2-2a1 1 0 000-1.414l-1.996-2z">
-                        </path>
-                    </svg>
-                </button>
+                                    {{-- Sales tax selector: rotate icon + dropdown (left side) --}}
+                                    <div class="total-row tax-selector-row">
+                                        <div class="tax-selector-inner">
+                                            {{-- move-discount-before/after-tax button (QBO icon) --}}
+                                            <button type="button"
+                                                aria-label="To move discounts before or after sales tax, select the icon."
+                                                class="discount-position-btn" data-bs-toggle="tooltip"
+                                                data-bs-placement="left"
+                                                title="{{ __('To move discounts before or after sales tax, select the icon.') }}">
+                                                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"
+                                                    width="20" height="20" fill="currentColor">
+                                                    <path
+                                                        d="M15.7 16.28a1 1 0 10-1.416 1.412l.292.294-5.585-.01a1 1 0 01-1-1l.014-10a1 1 0 011-1l5.586.01-.294.292a1 1 0 101.412 1.416l2-2a1 1 0 000-1.414l-2-2a1 1 0 10-1.416 1.412l.292.294-5.574-.01a3 3 0 00-3 3l-.014 10a3 3 0 002.995 3l5.586.01-.294.292a1 1 0 101.412 1.416l2-2a1 1 0 000-1.414l-1.996-2z">
+                                                    </path>
+                                                </svg>
+                                            </button>
 
-                <select name="sales_tax_rate" class="form-select totals-tax-rate-select">
-                    <option value="">{{ __('Select sales tax rate') }}</option>
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                </select>
-            </div>
+                                            <select name="sales_tax_rate" class="form-select totals-tax-rate-select">
+                                                <option value="">{{ __('Select sales tax rate') }}</option>
+                                                <option value="5">5%</option>
+                                                <option value="10">10%</option>
+                                                <option value="15">15%</option>
+                                            </select>
+                                        </div>
 
-            {{-- keep empty span on the right so alignment stays like QBO --}}
-            <span></span>
-        </div>
+                                        {{-- keep empty span on the right so alignment stays like QBO --}}
+                                        <span></span>
+                                    </div>
 
-        {{-- Helper text under the tax selector --}}
-        <div class="sales-tax-help">
-            {{ __('Need help with sales tax?') }}
-            <a href="#" class="helper-link">{{ __('Learn more') }}</a>
-        </div>
+                                    {{-- Helper text under the tax selector --}}
+                                    <div class="sales-tax-help">
+                                        {{ __('Need help with sales tax?') }}
+                                        <a href="#" class="helper-link">{{ __('Learn more') }}</a>
+                                    </div>
 
-        {{-- Sales tax row --}}
-        <div class="total-row sales-tax-row">
-            <span>{{ __('Sales tax') }}</span>
-            <span class="totalTax">0.00</span>
-        </div>
+                                    {{-- Sales tax row --}}
+                                    <div class="total-row sales-tax-row">
+                                        <span>{{ __('Sales tax') }}</span>
+                                        <span class="totalTax">0.00</span>
+                                    </div>
 
-        <script>
-            $(function() {
-                // enable Bootstrap tooltip on the icon
-                if (typeof bootstrap !== 'undefined') {
-                    $('[data-bs-toggle="tooltip"]').each(function() {
-                        new bootstrap.Tooltip(this);
-                    });
-                }
+                                    <script>
+                                        $(function() {
+                                            // enable Bootstrap tooltip on the icon
+                                            if (typeof bootstrap !== 'undefined') {
+                                                $('[data-bs-toggle="tooltip"]').each(function() {
+                                                    new bootstrap.Tooltip(this);
+                                                });
+                                            }
 
-                var discountBeforeTax = true; // visual order only
+                                            var discountBeforeTax = true; // visual order only
 
-                function placeDiscountBeforeTax() {
-                    var $discountRow = $('.totals-section .discount-row');
-                    var $subtotalRow = $('.totals-section .subtotal').first();
+                                            function placeDiscountBeforeTax() {
+                                                var $discountRow = $('.totals-section .discount-row');
+                                                var $subtotalRow = $('.totals-section .subtotal').first();
 
-                    if ($discountRow.length && $subtotalRow.length) {
-                        // Discount just after Subtotal
-                        $discountRow.insertAfter($subtotalRow);
-                    }
-                    discountBeforeTax = true;
-                }
+                                                if ($discountRow.length && $subtotalRow.length) {
+                                                    // Discount just after Subtotal
+                                                    $discountRow.insertAfter($subtotalRow);
+                                                }
+                                                discountBeforeTax = true;
+                                            }
 
-                function placeDiscountAfterTax() {
-                    var $discountRow = $('.totals-section .discount-row');
-                    var $salesTaxRow = $('.totals-section .sales-tax-row').first();
+                                            function placeDiscountAfterTax() {
+                                                var $discountRow = $('.totals-section .discount-row');
+                                                var $salesTaxRow = $('.totals-section .sales-tax-row').first();
 
-                    if ($discountRow.length && $salesTaxRow.length) {
-                        // Discount just after Sales tax
-                        $discountRow.insertAfter($salesTaxRow);
-                    }
-                    discountBeforeTax = false;
-                }
+                                                if ($discountRow.length && $salesTaxRow.length) {
+                                                    // Discount just after Sales tax
+                                                    $discountRow.insertAfter($salesTaxRow);
+                                                }
+                                                discountBeforeTax = false;
+                                            }
 
-                // initial order: Subtotal -> Discount -> Taxable subtotal...
-                placeDiscountBeforeTax();
+                                            // initial order: Subtotal -> Discount -> Taxable subtotal...
+                                            placeDiscountBeforeTax();
 
-                // click on rotate icon toggles position
-                $('.discount-position-btn').on('click', function() {
-                    if (discountBeforeTax) {
-                        placeDiscountAfterTax();
-                    } else {
-                        placeDiscountBeforeTax();
-                    }
-                });
-            });
-        </script>
+                                            // click on rotate icon toggles position
+                                            $('.discount-position-btn').on('click', function() {
+                                                if (discountBeforeTax) {
+                                                    placeDiscountAfterTax();
+                                                } else {
+                                                    placeDiscountBeforeTax();
+                                                }
+                                            });
+                                        });
+                                    </script>
 
-        {{-- See the math (right-aligned) --}}
-        <a href="#" class="link-button see-math-link">{{ __('See the math') }}</a>
+                                    {{-- See the math (right-aligned) --}}
+                                    <a href="#" class="link-button see-math-link">{{ __('See the math') }}</a>
 
-        {{-- Total --}}
-        <div class="total-row final">
-            <span>{{ __('Total') }}</span>
-            <span class="totalAmount">0.00</span>
-        </div>
+                                    {{-- Total --}}
+                                    <div class="total-row final">
+                                        <span>{{ __('Total') }}</span>
+                                        <span class="totalAmount">0.00</span>
+                                    </div>
 
-        {{-- Amount received (for sales receipt, same as total initially) --}}
-        <div class="total-row final">
-            <span>{{ __('Amount received') }}</span>
-            <span class="amountReceived">0.00</span>
-        </div>
+                                    {{-- Amount received (for sales receipt, same as total initially) --}}
+                                    <div class="total-row final">
+                                        <span>{{ __('Amount received') }}</span>
+                                        <span class="amountReceived">0.00</span>
+                                    </div>
 
-        {{-- Balance due (for sales receipt, should be 0 if fully paid) --}}
-        <div class="total-row">
-            <span>{{ __('Balance due') }}</span>
-            <span class="balanceDue">0.00</span>
-        </div>
+                                    {{-- Balance due (for sales receipt, should be 0 if fully paid) --}}
+                                    <div class="total-row">
+                                        <span>{{ __('Balance due') }}</span>
+                                        <span class="balanceDue">0.00</span>
+                                    </div>
 
-        {{-- Edit totals (right-aligned) --}}
-        <a href="#" class="link-button edit-totals-link">{{ __('Edit totals') }}</a>
-    </div>
-</div>
+                                    {{-- Edit totals (right-aligned) --}}
+                                    <a href="#" class="link-button edit-totals-link">{{ __('Edit totals') }}</a>
+                                </div>
+                            </div>
 
                         </div>
                         <style>
@@ -2807,9 +2425,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                    onclick="location.href = '{{ route('invoice.index') }}';">
-                                                                                                                                {{ __('Cancel') }}
-                                                                                                                            </button> -->
+                                                                                                                                        onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                                    {{ __('Cancel') }}
+                                                                                                                                </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -2906,31 +2524,21 @@
                     if ($('.select2').length) {
                         $('.select2').select2();
                     }
-
-                    // Initialize new row with default values and trigger calculations
-                    var $newRow = $(this).find('tr.product-row');
-                    $newRow.find('.quantity').val('1');
-                    $newRow.find('.price').val('0.00');
-                    $newRow.find('.discount').val('0.00');
-                    $newRow.find('.amount').html('0.00');
-                    $newRow.find('.itemTaxPrice').val('0.00');
-                    $newRow.find('.itemTaxRate').val('0.00');
-                    $newRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
-
-                    // NEW: renumber lines whenever a new row is added
                     renumberInvoiceLines();
-
-                    // Recalculate totals after adding new row
-                    recalcTotals();
                 },
                 hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
 
+                        var inputs = $(".amount");
+                        var subTotal = 0;
+                        for (var i = 0; i < inputs.length; i++) {
+                            subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
+                        }
+                        $('.subTotal').html(subTotal.toFixed(2));
+                        $('.totalAmount').html(subTotal.toFixed(2));
 
-                        // Recalculate totals after deletion
-                        recalcTotals();
                         renumberInvoiceLines();
                     }
                 },
@@ -2992,103 +2600,67 @@
             });
         });
 
-$(document).on('change', '.item', function() {
-    var iteams_id = $(this).val();
-    var url = $(this).data('url');
-    var $row = $(this).closest('tr.product-row');
+        $(document).on('change', '.item', function() {
+            var iteams_id = $(this).val();
+            var url = $(this).data('url');
+            var el = $(this);
 
-    if (!iteams_id) {
-        // Clear the row if no product selected
-        $row.find('.quantity').val('');
-        $row.find('.price').val('');
-        $row.find('.pro_description').val('');
-        $row.find('.itemTaxPrice').val('0.00');
-        $row.find('.itemTaxRate').val('0.00');
-        $row.find('.tax').val('');
-        $row.find('.discount').val('0');
-        $row.find('.amount').html('0.00');
-        recalcTotals();
-        return;
-    }
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': jQuery('#token').val()
+                },
+                data: {
+                    'product_id': iteams_id
+                },
+                cache: false,
+                success: function(data) {
+                    var item = JSON.parse(data);
+                    $(el.parent().parent().find('.quantity')).val(1);
+                    $(el.parent().parent().find('.price')).val(item.product.sale_price);
+                    $(el.parent().parent().find('.pro_description')).val(item.product.description);
 
-    $.ajax({
-        url: url,
-        type: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': jQuery('#token').val()
-        },
-        data: {
-            'product_id': iteams_id
-        },
-        cache: false,
-        success: function(data) {
-            var item = JSON.parse(data);
+                    var taxes = '';
+                    var tax = [];
+                    var totalItemTaxRate = 0;
 
-            // Set default quantity to 1
-            $row.find('.quantity').val(1);
+                    if (item.taxes == 0) {
+                        taxes += '-';
+                    } else {
+                        for (var i = 0; i < item.taxes.length; i++) {
+                            taxes += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name +
+                                ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
+                            tax.push(item.taxes[i].id);
+                            totalItemTaxRate += parseFloat(item.taxes[i].rate);
+                        }
+                    }
+                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100)) * parseFloat((item.product
+                        .sale_price * 1));
+                    $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
+                    $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
+                    $(el.parent().parent().find('.tax')).val(tax);
+                    $(el.parent().parent().find('.discount')).val(0);
+                    $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount));
 
-            // Set price from product
-            $row.find('.price').val(parseFloat(item.product.sale_price).toFixed(2));
-
-            // Set description
-            $row.find('.pro_description').val(item.product.description || '');
-
-            // Handle taxes
-            var taxIds = [];
-            var totalItemTaxRate = 0;
-
-            if (item.taxes && item.taxes.length > 0) {
-                for (var i = 0; i < item.taxes.length; i++) {
-                    taxIds.push(item.taxes[i].id);
-                    totalItemTaxRate += parseFloat(item.taxes[i].rate);
-                }
-            }
-
-            // Calculate tax amount: (price * tax_rate / 100)
-            var itemTaxPrice = parseFloat(item.product.sale_price) * totalItemTaxRate / 100;
-
-            // Update hidden fields
-            $row.find('.itemTaxPrice').val(itemTaxPrice.toFixed(2));
-            $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
-            $row.find('.tax').val(taxIds.join(','));
-            $row.find('.discount').val('0');
-
-            // Calculate and display amount: (quantity * price) - discount + tax
-            var quantity = parseFloat($row.find('.quantity').val()) || 0;
-            var price = parseFloat($row.find('.price').val()) || 0;
-            var discount = parseFloat($row.find('.discount').val()) || 0;
-            var amount = (quantity * price) - discount + itemTaxPrice;
-
-            $row.find('.amount').html(amount.toFixed(2));
-
-            // Recalculate totals
-            recalcTotals();
-        },
-        error: function() {
-            console.error('Error loading product data');
-        }
-    });
-});
+                    // Recalculate totals
+                    recalcTotals();
+                },
+            });
+        });
 
         $(document).on('keyup change', '.quantity, .price, .discount', function() {
             var el = $(this).closest('tr');
-            var quantity = parseFloat($(el.find('.quantity')).val()) || 0;
-            var price = parseFloat($(el.find('.price')).val()) || 0;
-            var discount = parseFloat($(el.find('.discount')).val()) || 0;
+            var quantity = $(el.find('.quantity')).val();
+            var price = $(el.find('.price')).val();
+            var discount = $(el.find('.discount')).val() || 0;
 
-            // Calculate base amount: quantity * price - discount
-            var baseAmount = (quantity * price) - discount;
+            var totalItemPrice = (quantity * price) - discount;
+            var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
+            var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
 
-            // Calculate tax on the base amount
-            var totalItemTaxRate = parseFloat($(el.find('.itemTaxRate')).val()) || 0;
-            var itemTaxPrice = (totalItemTaxRate / 100) * baseAmount;
-
-            // Update tax price field
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-
-            // Calculate final amount: base amount + tax
-            var finalAmount = baseAmount + itemTaxPrice;
-            $(el.find('.amount')).html(finalAmount.toFixed(2));
+            $(el.find('.amount')).html((parseFloat(totalItemPrice) + parseFloat(itemTaxPrice)).toFixed(2));
 
             // Recalculate totals
             recalcTotals();
@@ -3104,139 +2676,67 @@ $(document).on('change', '.item', function() {
             recalcTotals();
         });
 
-
-        // Function to create subtotal body
-        window.createSubtotalBody = function(amount) {
-            var $tbody = $('<tbody data-repeater-item>');
-            $tbody.append('<input type="hidden" name="item_ids[]" value="">');
-            $tbody.append('<input type="hidden" name="items[][type]" value="subtotal">');
-            $tbody.append('<input type="hidden" name="items[][amount]" value="' + (amount || '0.00') + '">');
-            $tbody.append('<tr class="subtotal-row"><td colspan="7" style="text-align: right; font-weight: bold;">Subtotal</td><td style="text-align: right; font-weight: bold;">' + (amount || '0.00') + '</td><td></td><td></td></tr>');
-            return $tbody;
-        };
-
-        // Function to create text body
-        window.createTextBody = function(description) {
-            var $tbody = $('<tbody data-repeater-item>');
-            $tbody.append('<input type="hidden" name="item_ids[]" value="">');
-            $tbody.append('<input type="hidden" name="items[][type]" value="text">');
-            $tbody.append('<input type="hidden" name="items[][description]" value="' + (description || '') + '">');
-            $tbody.append('<tr class="text-row"><td colspan="10" style="text-align: left;">' + (description || '') + '</td></tr>');
-            return $tbody;
-        };
-
         // Main totals calculation function
-function recalcTotals() {
-    var grandSubtotal = 0;      // sum of all line amounts (qty * price - discount + tax)
-    var taxableSubtotal = 0;    // sum of taxable line amounts
-    var totalDiscount = 0;      // total discount from discount controls
+        function recalcTotals() {
+            var grandSubtotal = 0; // all product rows (line amounts).
+            var taxableSubtotal = 0; // rows marked taxable
+            var totalDiscount = 0;
 
-    // Calculate per-row amounts and sum them up
-    $('#sortable-table').children('tbody').each(function() {
-        var $body = $(this);
-        var $productRow = $body.find('tr.product-row');
-        if (!$productRow.length) return;
+            $('#sortable-table').children('tbody').each(function() {
+                var $body = $(this);
+                var $productRow = $body.find('tr.product-row');
+                if (!$productRow.length) return;
 
+                // line amount from column
+                var amountText = $productRow.find('.amount').text();
+                var amount = parseFloat(amountText) || 0;
+                grandSubtotal += amount;
 
-        // Get values from this row
-        var quantity = parseFloat($productRow.find('.quantity').val()) || 0;
-        var price = parseFloat($productRow.find('.price').val()) || 0;
-        var discount = parseFloat($productRow.find('.discount').val()) || 0;
-        var itemTaxPrice = parseFloat($productRow.find('.itemTaxPrice').val()) || 0;
+                // taxable?
+                var isTaxable = $productRow
+                    .find('.form-check-input[type="checkbox"]')
+                    .prop('checked');
 
-        // Calculate line amount: (quantity * price) - discount + tax
-        var lineAmount = (quantity * price) - discount + itemTaxPrice;
+                if (isTaxable) {
+                    taxableSubtotal += amount;
+                }
+            });
 
-        // Update the amount display for this row
-        $productRow.find('.amount').html(lineAmount.toFixed(2));
+            // Tax from dropdown
+            var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
+            var totalTax = taxableSubtotal * taxRate / 100;
 
-        // Add to grand subtotal
-        grandSubtotal += lineAmount;
+            // Discount from new controls
+            var discountType = $('.discount-type-select').val();
+            var discountValue = parseFloat($('.discount-input').val());
+            if (isNaN(discountValue) || discountValue < 0) discountValue = 0;
 
-        // Check if taxable
-        var isTaxable = $productRow.find('.form-check-input[type="checkbox"]').prop('checked');
-        if (isTaxable) {
-            taxableSubtotal += lineAmount;
+            if (discountType === 'percent') {
+                totalDiscount = grandSubtotal * (discountValue / 100);
+            } else if (discountType === 'value') {
+                totalDiscount = discountValue;
+            }
+
+            // Cap discount so it can't exceed subtotal + tax
+            if (totalDiscount > grandSubtotal + totalTax) {
+                totalDiscount = grandSubtotal + totalTax;
+            }
+
+            // Update bottom totals
+            $('.subTotal').text(grandSubtotal.toFixed(2));
+            $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
+            $('.totalDiscount').text(totalDiscount.toFixed(2));
+            $('.totalTax').text(totalTax.toFixed(2));
+
+            var grandTotal = grandSubtotal - totalDiscount + totalTax;
+            $('.totalAmount').text(grandTotal.toFixed(2));
+
+            // For sales receipts, amount received = total
+            $('.amountReceived').text(grandTotal.toFixed(2));
+            $('.balanceDue').text('0.00');
         }
-    });
-
-    // Tax from dropdown (applied to taxable subtotal)
-    var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
-    var totalTax = taxableSubtotal * taxRate / 100;
-
-    // Discount from controls (applied to grand subtotal)
-    var discountType = $('.discount-type-select').val();
-    var discountValue = parseFloat($('.discount-input').val()) || 0;
-    if (discountType === 'percent') {
-        totalDiscount = grandSubtotal * (discountValue / 100);
-    } else if (discountType === 'value') {
-        totalDiscount = discountValue;
-    }
-
-
-    // Cap discount so it can't exceed subtotal
-    if (totalDiscount > grandSubtotal) {
-        totalDiscount = grandSubtotal;
-    }
-
-    // Calculate final totals
-    var finalSubtotal = grandSubtotal - totalDiscount;
-    var grandTotal = finalSubtotal + totalTax;
-
-    // Update display
-    $('.subTotal').text(grandSubtotal.toFixed(2));
-    $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
-    $('.totalDiscount').text(totalDiscount.toFixed(2));
-    $('.totalTax').text(totalTax.toFixed(2));
-
-    $('.totalAmount').text(grandTotal.toFixed(2));
-
-    // For sales receipts, amount received = total, balance due = 0
-    $('.amountReceived').text(grandTotal.toFixed(2));
-    $('.balanceDue').text('0.00');
-}
-    // Recalculate when the discount UI changes
-    $(document).on('change', '.discount-type-select', recalcTotals);
-    $(document).on('keyup change', '.discount-input', recalcTotals);
-
-    // Clear all lines button handler
-    $(document).on('click', '#clear-lines', function() {
-        if (confirm('Are you sure you want to clear all lines?')) {
-            // Remove all tbody elements except the first one (template)
-            $('#sortable-table tbody:not(:first)').remove();
-
-            // Reset the first row to default values
-            var $firstRow = $('#sortable-table tbody:first tr.product-row');
-            $firstRow.find('.item').val('');
-            $firstRow.find('.pro_description').val('');
-            $firstRow.find('.quantity').val('');
-            $firstRow.find('.price').val('');
-            $firstRow.find('.discount').val('0');
-            $firstRow.find('.amount').html('0.00');
-            $firstRow.find('.itemTaxPrice').val('0.00');
-            $firstRow.find('.itemTaxRate').val('0.00');
-            $firstRow.find('.tax').val('');
-            $firstRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
-
-            // Recalculate totals
-            recalcTotals();
-            renumberInvoiceLines();
-        }
-    });
-
-    // Frontend validation to prevent saving without customer selection
-    $(document).on('submit', '#invoice-form', function(e) {
-        var customerId = $('#customer').val();
-
-        if (!customerId || customerId === '' || customerId === '__add__') {
-            e.preventDefault();
-            alert('{{ __("Please select a customer before saving.") }}');
-            $('#customer').focus();
-            return false;
-        }
-
-        return true;
-    });
-
+        // Recalculate when the discount UI changes
+        $(document).on('change', '.discount-type-select', recalcTotals);
+        $(document).on('keyup change', '.discount-input', recalcTotals);
     </script>
 @endpush
