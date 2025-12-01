@@ -25,8 +25,9 @@
                         </li>
                     @endif
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link" href="#" onclick="showComingSoon()">
-                            <i class="ti ti-shopping-cart me-2"></i>{{ __('Sales Orders') }}
+                        <a class="nav-link {{ Request::segment(1) == 'sales-receipt' ? 'active' : '' }}"
+                            href="{{ route('sales-receipt.index') }}">
+                            <i class="ti ti-file-text me-2"></i>{{ __('Sales Receipts') }}
                         </a>
                     </li>
                     <li class="nav-item" role="presentation">
