@@ -209,7 +209,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return $settings["invoice_prefix"] . sprintf("%05d", $number);
     }
+    public function salesReceiptNumberFormat($number){
+        $settings = Utility::settings();
 
+        return $settings["invoice_prefix"] . sprintf("%05d", $number);
+    }
     public function proposalNumberFormat($number)
     {
         $settings = Utility::settings();

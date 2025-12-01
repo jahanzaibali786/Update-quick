@@ -6,6 +6,7 @@
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
     <li class="breadcrumb-item"><a href="{{ route('sales.reciepts.index') }}">{{ __('Sales Receipts') }}</a></li>
+
     <li class="breadcrumb-item">{{ __('Create Sales Receipt') }}</li>
 @endsection
 
@@ -1158,7 +1159,77 @@
                 keyboard: false
             });
             invoiceModal.show();
+
+
+            // Check if we're in edit mode and populate form data
+            @if(isset($salesReceiptData) && $salesReceiptData)
+                console.log('Edit mode detected, calling populateEditForm');
+                populateEditForm(@json($salesReceiptData));
+            @else
+                console.log('Create mode - no salesReceiptData found');
+            @endif
         });
+
+        // Function to populate form with existing sales receipt data
+        function populateEditForm(salesReceiptData) {
+            console.log('populateEditForm called with data:', salesReceiptData);
+
+            // Populate basic form fields
+            $('#customer').val(salesReceiptData.customer_id).trigger('change');
+            $('#customer_email').val(salesReceiptData.customer_email || '');
+            $('#issue_date').val(salesReceiptData.issue_date);
+            $('#ref_number').val(salesReceiptData.ref_number || '');
+            $('#location_of_sale').val(salesReceiptData.location_of_sale || '');
+            $('textarea[name="bill_to"]').val(salesReceiptData.bill_to || '');
+            $('textarea[name="memo"]').val(salesReceiptData.memo || '');
+            $('textarea[name="note"]').val(salesReceiptData.note || '');
+
+            // Populate payment fields
+            if (salesReceiptData.payment_type) {
+                $('input[name="payment_type"][value="' + salesReceiptData.payment_type + '"]').prop('checked', true);
+                if (salesReceiptData.payment_type === 'record_payment') {
+                    $('#record-payment-fields').show();
+                    $('#charge-payment-card').hide();
+                } else {
+                    $('#record-payment-fields').hide();
+                    $('#charge-payment-card').show();
+                }
+            }
+            $('#payment_method').val(salesReceiptData.payment_method || '');
+            $('#deposit_to').val(salesReceiptData.deposit_to || '');
+
+            // Populate discount fields
+            $('.discount-type-select').val(salesReceiptData.discount_type || 'percent');
+            $('.discount-input').val(salesReceiptData.discount_value || 0);
+
+            // Populate tax rate
+            $('select[name="sales_tax_rate"]').val(salesReceiptData.sales_tax_rate || '');
+
+            // Update form action for edit
+            $('#invoice-form').attr('action', '{{ route("sales-receipt.update", ":id") }}'.replace(':id', salesReceiptData.id));
+            // Add method spoofing for PUT request
+            if (!$('#invoice-form input[name="_method"]').length) {
+                $('#invoice-form').append('<input type="hidden" name="_method" value="PUT">');
+            }
+
+            // Update breadcrumb
+            $('.breadcrumb-item.active').text('{{ __("Edit Sales Receipt") }}');
+
+            // Populate product lines
+            if (salesReceiptData.items && salesReceiptData.items.length > 0) {
+                console.log('Setting repeater data with items:', salesReceiptData.items);
+                // Set the repeater data
+                $('#sortable-table').data('repeater-list', salesReceiptData.items);
+
+                // Trigger recalculation after a short delay to ensure DOM is ready
+                setTimeout(function() {
+                    recalcTotals();
+                    renumberInvoiceLines();
+                }, 500);
+            } else {
+                console.log('No items found in salesReceiptData');
+            }
+        }
 
         // NEW: helper to renumber the "#" column after add / delete / drag
         function renumberInvoiceLines() {
@@ -1202,40 +1273,174 @@
                         $('.select2').select2();
                     }
 
+
+                    // Initialize new row with default values
+                    var $newRow = $(this).find('tr.product-row');
+                    $newRow.find('.quantity').val('1');
+                    $newRow.find('.price').val('0.00');
+                    $newRow.find('.discount').val('0.00');
+                    $newRow.find('.amount').html('0.00');
+                    $newRow.find('.itemTaxPrice').val('0.00');
+                    $newRow.find('.itemTaxRate').val('0.00');
+                    $newRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
+
                     // NEW: renumber lines whenever a new row is added
                     renumberInvoiceLines();
+
+                    // Recalculate totals after adding new row
+                    recalcTotals();
                 },
                 hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
 
-                        var inputs = $(".amount");
-                        var subTotal = 0;
-                        for (var i = 0; i < inputs.length; i++) {
-                            subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
-                        }
-                        $('.subTotal').html(subTotal.toFixed(2));
-                        $('.totalAmount').html(subTotal.toFixed(2));
 
-                        // NEW: renumber lines after a row is deleted
+                        // Recalculate totals after deletion
+                        recalcTotals();
                         renumberInvoiceLines();
                     }
                 },
                 ready: function(setIndexes) {
-
                     // UPDATED: jQuery UI sortable uses "sortstop" instead of "drop"
                     $dragAndDrop.on('sortstop', function() {
                         setIndexes();
                         renumberInvoiceLines();
                     });
+
+                    // Handle populating existing data for edit mode
+                    @if(isset($salesReceiptData) && $salesReceiptData && isset($salesReceiptData['items']))
+                        // Use sequential approach like invoice edit modal
+                        setTimeout(function() {
+                            var existingItems = @json($salesReceiptData['items']);
+                            console.log('Processing existing items sequentially:', existingItems);
+
+                            if (existingItems && existingItems.length > 0) {
+                                console.log('Found', existingItems.length, 'existing items to populate');
+
+                                // Remove default empty row first
+                                $('#sortable-table tbody').remove();
+                                console.log('Removed default empty row');
+
+                                var currentIndex = 0;
+
+                                // Function to add one item at a time
+                                function addNextItem() {
+                                    if (currentIndex >= existingItems.length) {
+                                        // All items loaded - now renumber and recalculate
+                                        console.log('All items loaded. Renumbering and calculating totals...');
+                                        setTimeout(function() {
+                                            renumberInvoiceLines();
+                                            recalcTotals();
+                                            $('#customer_id').trigger('change');
+                                            console.log('Auto-population complete!');
+                                        }, 300);
+                                        return;
+                                    }
+
+                                    var item = existingItems[currentIndex];
+                                    console.log('Loading item', currentIndex + 1, ':', item.type);
+
+                                    if (item.type === 'product') {
+                                        // Add product row
+                                        $('[data-repeater-create]').trigger('click');
+
+                                        // Wait a moment for the row to be created
+                                        setTimeout(function() {
+                                            var $tbody = $('#sortable-table tbody[data-repeater-item]').last();
+                                            var $row = $tbody.find('tr.product-row');
+
+                                            // Populate product fields
+                                            if (item.item) {
+                                                $row.find('select.item').val(item.item);
+                                            }
+                                            if (item.description) {
+                                                $row.find('textarea.pro_description').val(item.description);
+                                            }
+                                            if (item.quantity) {
+                                                $row.find('input.quantity').val(item.quantity);
+                                            }
+                                            if (item.price) {
+                                                $row.find('input.price').val(item.price);
+                                            }
+                                            if (item.amount) {
+                                                $row.find('input.amount').val(item.amount);
+                                            }
+                                            if (item.taxable) {
+                                                $row.find('.form-check-input[type="checkbox"]').prop('checked', true);
+                                            }
+                                            if (item.tax) {
+                                                $row.find('input.tax').val(item.tax);
+                                            }
+                                            if (item.itemTaxRate) {
+                                                $row.find('input.itemTaxRate').val(item.itemTaxRate);
+                                            }
+
+                                            // Add hidden ID for update
+                                            if (item.id) {
+                                                $tbody.append('<input type="hidden" name="item_ids[]" value="' + item.id + '">');
+                                            }
+
+                                            console.log('Product row populated:', item.description);
+                                            currentIndex++;
+                                            addNextItem(); // Add next item
+                                        }, 100);
+
+                                    } else if (item.type === 'subtotal') {
+                                        // Add subtotal row
+                                        var $subtotalBody = window.createSubtotalBody(item.amount || '0.00');
+                                        $('#sortable-table').append($subtotalBody);
+                                        console.log('Subtotal row added:', item.amount);
+
+                                        currentIndex++;
+                                        setTimeout(addNextItem, 50); // Small delay before next item
+
+                                    } else if (item.type === 'text') {
+                                        // Add text row
+                                        var $textBody = window.createTextBody(item.description || '');
+                                        $('#sortable-table').append($textBody);
+                                        console.log('Text row added:', item.description);
+
+                                        currentIndex++;
+                                        setTimeout(addNextItem, 50); // Small delay before next item
+                                    } else {
+                                        // Unknown type, skip
+                                        currentIndex++;
+                                        addNextItem();
+                                    }
+                                }
+
+                                // Start adding items
+                                addNextItem();
+
+                            } else {
+                                console.log('No existing items to process');
+                            }
+                        }, 200);
+                    @endif
                 },
                 isFirstItemUndeletable: true
             });
+
+            // Check for existing data (either from data-value attribute or salesReceiptData)
             var value = $(selector + " .repeater").attr('data-value');
+            console.log('Initial repeater data-value:', value);
+            @if(isset($salesReceiptData) && $salesReceiptData && isset($salesReceiptData['items']))
+                // For edit mode, use the salesReceiptData items
+                value = @json($salesReceiptData['items']);
+                console.log('Overriding with salesReceiptData items:', value);
+            @endif
+
             if (typeof value != 'undefined' && value.length != 0) {
-                value = JSON.parse(value);
+                if (typeof value === 'string') {
+                    value = JSON.parse(value);
+                }
+                console.log('Setting repeater list with:', value);
+                console.log('Data has', value.length, 'items');
                 $repeater.setList(value);
+                console.log('After setList, tbody elements:', $('#sortable-table tbody').length);
+            } else {
+                console.log('No data to set in repeater');
             }
 
         }
@@ -1508,6 +1713,7 @@
 
         })
 
+
         $(document).on('keyup change', '.discount', function() {
             var el = $(this).parent().parent().parent();
             var discount = $(this).val();
@@ -1705,7 +1911,8 @@
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
                 <div class="invoice-container">
-                    {{ Form::open(['url' => 'invoice', 'id' => 'invoice-form']) }}
+
+                    {{ Form::open(['url' => 'sales-receipt', 'id' => 'invoice-form']) }}
                     <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
                     <style>
                         .header-actions {
@@ -1830,7 +2037,8 @@
 
                                 {{-- Close X --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('sales.reciepts.index') }}';" aria-label="Close">
+
+                                    onclick="location.href = '{{ route('sales-receipt.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round">
@@ -2698,21 +2906,31 @@
                     if ($('.select2').length) {
                         $('.select2').select2();
                     }
+
+                    // Initialize new row with default values and trigger calculations
+                    var $newRow = $(this).find('tr.product-row');
+                    $newRow.find('.quantity').val('1');
+                    $newRow.find('.price').val('0.00');
+                    $newRow.find('.discount').val('0.00');
+                    $newRow.find('.amount').html('0.00');
+                    $newRow.find('.itemTaxPrice').val('0.00');
+                    $newRow.find('.itemTaxRate').val('0.00');
+                    $newRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
+
+                    // NEW: renumber lines whenever a new row is added
                     renumberInvoiceLines();
+
+                    // Recalculate totals after adding new row
+                    recalcTotals();
                 },
                 hide: function(deleteElement) {
                     if (confirm('Are you sure you want to delete this element?')) {
                         $(this).slideUp(deleteElement);
                         $(this).remove();
 
-                        var inputs = $(".amount");
-                        var subTotal = 0;
-                        for (var i = 0; i < inputs.length; i++) {
-                            subTotal = parseFloat(subTotal) + parseFloat($(inputs[i]).html());
-                        }
-                        $('.subTotal').html(subTotal.toFixed(2));
-                        $('.totalAmount').html(subTotal.toFixed(2));
 
+                        // Recalculate totals after deletion
+                        recalcTotals();
                         renumberInvoiceLines();
                     }
                 },
@@ -2774,67 +2992,103 @@
             });
         });
 
-        $(document).on('change', '.item', function() {
-            var iteams_id = $(this).val();
-            var url = $(this).data('url');
-            var el = $(this);
+$(document).on('change', '.item', function() {
+    var iteams_id = $(this).val();
+    var url = $(this).data('url');
+    var $row = $(this).closest('tr.product-row');
 
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': jQuery('#token').val()
-                },
-                data: {
-                    'product_id': iteams_id
-                },
-                cache: false,
-                success: function(data) {
-                    var item = JSON.parse(data);
-                    $(el.parent().parent().find('.quantity')).val(1);
-                    $(el.parent().parent().find('.price')).val(item.product.sale_price);
-                    $(el.parent().parent().find('.pro_description')).val(item.product.description);
+    if (!iteams_id) {
+        // Clear the row if no product selected
+        $row.find('.quantity').val('');
+        $row.find('.price').val('');
+        $row.find('.pro_description').val('');
+        $row.find('.itemTaxPrice').val('0.00');
+        $row.find('.itemTaxRate').val('0.00');
+        $row.find('.tax').val('');
+        $row.find('.discount').val('0');
+        $row.find('.amount').html('0.00');
+        recalcTotals();
+        return;
+    }
 
-                    var taxes = '';
-                    var tax = [];
-                    var totalItemTaxRate = 0;
+    $.ajax({
+        url: url,
+        type: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': jQuery('#token').val()
+        },
+        data: {
+            'product_id': iteams_id
+        },
+        cache: false,
+        success: function(data) {
+            var item = JSON.parse(data);
 
-                    if (item.taxes == 0) {
-                        taxes += '-';
-                    } else {
-                        for (var i = 0; i < item.taxes.length; i++) {
-                            taxes += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name +
-                                ' ' + '(' + item.taxes[i].rate + '%)' + '</span>';
-                            tax.push(item.taxes[i].id);
-                            totalItemTaxRate += parseFloat(item.taxes[i].rate);
-                        }
-                    }
-                    var itemTaxPrice = parseFloat((totalItemTaxRate / 100)) * parseFloat((item.product
-                        .sale_price * 1));
-                    $(el.parent().parent().find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-                    $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
-                    $(el.parent().parent().find('.tax')).val(tax);
-                    $(el.parent().parent().find('.discount')).val(0);
-                    $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount));
+            // Set default quantity to 1
+            $row.find('.quantity').val(1);
 
-                    // Recalculate totals
-                    recalcTotals();
-                },
-            });
-        });
+            // Set price from product
+            $row.find('.price').val(parseFloat(item.product.sale_price).toFixed(2));
+
+            // Set description
+            $row.find('.pro_description').val(item.product.description || '');
+
+            // Handle taxes
+            var taxIds = [];
+            var totalItemTaxRate = 0;
+
+            if (item.taxes && item.taxes.length > 0) {
+                for (var i = 0; i < item.taxes.length; i++) {
+                    taxIds.push(item.taxes[i].id);
+                    totalItemTaxRate += parseFloat(item.taxes[i].rate);
+                }
+            }
+
+            // Calculate tax amount: (price * tax_rate / 100)
+            var itemTaxPrice = parseFloat(item.product.sale_price) * totalItemTaxRate / 100;
+
+            // Update hidden fields
+            $row.find('.itemTaxPrice').val(itemTaxPrice.toFixed(2));
+            $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
+            $row.find('.tax').val(taxIds.join(','));
+            $row.find('.discount').val('0');
+
+            // Calculate and display amount: (quantity * price) - discount + tax
+            var quantity = parseFloat($row.find('.quantity').val()) || 0;
+            var price = parseFloat($row.find('.price').val()) || 0;
+            var discount = parseFloat($row.find('.discount').val()) || 0;
+            var amount = (quantity * price) - discount + itemTaxPrice;
+
+            $row.find('.amount').html(amount.toFixed(2));
+
+            // Recalculate totals
+            recalcTotals();
+        },
+        error: function() {
+            console.error('Error loading product data');
+        }
+    });
+});
 
         $(document).on('keyup change', '.quantity, .price, .discount', function() {
             var el = $(this).closest('tr');
-            var quantity = $(el.find('.quantity')).val();
-            var price = $(el.find('.price')).val();
-            var discount = $(el.find('.discount')).val() || 0;
+            var quantity = parseFloat($(el.find('.quantity')).val()) || 0;
+            var price = parseFloat($(el.find('.price')).val()) || 0;
+            var discount = parseFloat($(el.find('.discount')).val()) || 0;
 
-            var totalItemPrice = (quantity * price) - discount;
-            var totalItemTaxRate = $(el.find('.itemTaxRate')).val();
-            var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
+            // Calculate base amount: quantity * price - discount
+            var baseAmount = (quantity * price) - discount;
 
+            // Calculate tax on the base amount
+            var totalItemTaxRate = parseFloat($(el.find('.itemTaxRate')).val()) || 0;
+            var itemTaxPrice = (totalItemTaxRate / 100) * baseAmount;
+
+            // Update tax price field
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-            $(el.find('.amount')).html((parseFloat(totalItemPrice) + parseFloat(itemTaxPrice)).toFixed(2));
+
+            // Calculate final amount: base amount + tax
+            var finalAmount = baseAmount + itemTaxPrice;
+            $(el.find('.amount')).html(finalAmount.toFixed(2));
 
             // Recalculate totals
             recalcTotals();
@@ -2850,68 +3104,139 @@
             recalcTotals();
         });
 
+
+        // Function to create subtotal body
+        window.createSubtotalBody = function(amount) {
+            var $tbody = $('<tbody data-repeater-item>');
+            $tbody.append('<input type="hidden" name="item_ids[]" value="">');
+            $tbody.append('<input type="hidden" name="items[][type]" value="subtotal">');
+            $tbody.append('<input type="hidden" name="items[][amount]" value="' + (amount || '0.00') + '">');
+            $tbody.append('<tr class="subtotal-row"><td colspan="7" style="text-align: right; font-weight: bold;">Subtotal</td><td style="text-align: right; font-weight: bold;">' + (amount || '0.00') + '</td><td></td><td></td></tr>');
+            return $tbody;
+        };
+
+        // Function to create text body
+        window.createTextBody = function(description) {
+            var $tbody = $('<tbody data-repeater-item>');
+            $tbody.append('<input type="hidden" name="item_ids[]" value="">');
+            $tbody.append('<input type="hidden" name="items[][type]" value="text">');
+            $tbody.append('<input type="hidden" name="items[][description]" value="' + (description || '') + '">');
+            $tbody.append('<tr class="text-row"><td colspan="10" style="text-align: left;">' + (description || '') + '</td></tr>');
+            return $tbody;
+        };
+
         // Main totals calculation function
 function recalcTotals() {
-    var grandSubtotal = 0;      // all product rows (line amounts).
-    var taxableSubtotal = 0;    // rows marked taxable
-    var totalDiscount = 0;
+    var grandSubtotal = 0;      // sum of all line amounts (qty * price - discount + tax)
+    var taxableSubtotal = 0;    // sum of taxable line amounts
+    var totalDiscount = 0;      // total discount from discount controls
 
+    // Calculate per-row amounts and sum them up
     $('#sortable-table').children('tbody').each(function() {
         var $body = $(this);
         var $productRow = $body.find('tr.product-row');
         if (!$productRow.length) return;
 
-        // line amount from column
-        var amountText = $productRow.find('.amount').text();
-        var amount = parseFloat(amountText) || 0;
-        grandSubtotal += amount;
 
-        // taxable?
-        var isTaxable = $productRow
-            .find('.form-check-input[type="checkbox"]')
-            .prop('checked');
+        // Get values from this row
+        var quantity = parseFloat($productRow.find('.quantity').val()) || 0;
+        var price = parseFloat($productRow.find('.price').val()) || 0;
+        var discount = parseFloat($productRow.find('.discount').val()) || 0;
+        var itemTaxPrice = parseFloat($productRow.find('.itemTaxPrice').val()) || 0;
 
+        // Calculate line amount: (quantity * price) - discount + tax
+        var lineAmount = (quantity * price) - discount + itemTaxPrice;
+
+        // Update the amount display for this row
+        $productRow.find('.amount').html(lineAmount.toFixed(2));
+
+        // Add to grand subtotal
+        grandSubtotal += lineAmount;
+
+        // Check if taxable
+        var isTaxable = $productRow.find('.form-check-input[type="checkbox"]').prop('checked');
         if (isTaxable) {
-            taxableSubtotal += amount;
+            taxableSubtotal += lineAmount;
         }
     });
 
-    // Tax from dropdown
+    // Tax from dropdown (applied to taxable subtotal)
     var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
     var totalTax = taxableSubtotal * taxRate / 100;
 
-    // Discount from new controls
+    // Discount from controls (applied to grand subtotal)
     var discountType = $('.discount-type-select').val();
-    var discountValue = parseFloat($('.discount-input').val());
-    if (isNaN(discountValue) || discountValue < 0) discountValue = 0;
-
+    var discountValue = parseFloat($('.discount-input').val()) || 0;
     if (discountType === 'percent') {
         totalDiscount = grandSubtotal * (discountValue / 100);
     } else if (discountType === 'value') {
         totalDiscount = discountValue;
     }
 
-    // Cap discount so it can't exceed subtotal + tax
-    if (totalDiscount > grandSubtotal + totalTax) {
-        totalDiscount = grandSubtotal + totalTax;
+
+    // Cap discount so it can't exceed subtotal
+    if (totalDiscount > grandSubtotal) {
+        totalDiscount = grandSubtotal;
     }
 
-    // Update bottom totals
+    // Calculate final totals
+    var finalSubtotal = grandSubtotal - totalDiscount;
+    var grandTotal = finalSubtotal + totalTax;
+
+    // Update display
     $('.subTotal').text(grandSubtotal.toFixed(2));
     $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
     $('.totalDiscount').text(totalDiscount.toFixed(2));
     $('.totalTax').text(totalTax.toFixed(2));
 
-    var grandTotal = grandSubtotal - totalDiscount + totalTax;
     $('.totalAmount').text(grandTotal.toFixed(2));
 
-    // For sales receipts, amount received = total
+    // For sales receipts, amount received = total, balance due = 0
     $('.amountReceived').text(grandTotal.toFixed(2));
     $('.balanceDue').text('0.00');
 }
-// Recalculate when the discount UI changes
-$(document).on('change', '.discount-type-select', recalcTotals);
-$(document).on('keyup change', '.discount-input', recalcTotals);
+    // Recalculate when the discount UI changes
+    $(document).on('change', '.discount-type-select', recalcTotals);
+    $(document).on('keyup change', '.discount-input', recalcTotals);
+
+    // Clear all lines button handler
+    $(document).on('click', '#clear-lines', function() {
+        if (confirm('Are you sure you want to clear all lines?')) {
+            // Remove all tbody elements except the first one (template)
+            $('#sortable-table tbody:not(:first)').remove();
+
+            // Reset the first row to default values
+            var $firstRow = $('#sortable-table tbody:first tr.product-row');
+            $firstRow.find('.item').val('');
+            $firstRow.find('.pro_description').val('');
+            $firstRow.find('.quantity').val('');
+            $firstRow.find('.price').val('');
+            $firstRow.find('.discount').val('0');
+            $firstRow.find('.amount').html('0.00');
+            $firstRow.find('.itemTaxPrice').val('0.00');
+            $firstRow.find('.itemTaxRate').val('0.00');
+            $firstRow.find('.tax').val('');
+            $firstRow.find('.form-check-input[type="checkbox"]').prop('checked', false);
+
+            // Recalculate totals
+            recalcTotals();
+            renumberInvoiceLines();
+        }
+    });
+
+    // Frontend validation to prevent saving without customer selection
+    $(document).on('submit', '#invoice-form', function(e) {
+        var customerId = $('#customer').val();
+
+        if (!customerId || customerId === '' || customerId === '__add__') {
+            e.preventDefault();
+            alert('{{ __("Please select a customer before saving.") }}');
+            $('#customer').focus();
+            return false;
+        }
+
+        return true;
+    });
 
     </script>
 @endpush

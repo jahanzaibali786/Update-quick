@@ -100,6 +100,7 @@ use App\Http\Controllers\PaystackPaymentController;
 use App\Http\Controllers\PaytabController;
 use App\Http\Controllers\PaytmPaymentController;
 use App\Http\Controllers\PaytrController;
+use App\Http\Controllers\SalesReceipt;
 use App\Http\Controllers\sync\TrialBalanceController;
 use App\Http\Controllers\sync\VoucherController;
 use App\Http\Controllers\WorkflowController;
@@ -659,6 +660,10 @@ Route::group(['middleware' => ['verified']], function () {
     Route::post('product-category/getaccount', [ProductServiceCategoryController::class, 'getAccount'])->name('productServiceCategory.getaccount')->middleware(['auth', 'XSS', 'revalidate']);
 
     Route::resource('product-unit', ProductServiceUnitController::class)->middleware(['auth', 'XSS', 'revalidate']);
+    Route::resource('sales-receipt', SalesReceipt::class)->middleware(['auth', 'XSS']);
+    Route::get('sales-receipt/{id}/resent', [SalesReceipt::class, 'resent'])->name('sales-receipt.resent')->middleware(['auth', 'XSS']);
+    Route::get('sales-receipt/pdf/{id}', [SalesReceipt::class, 'pdf'])->name('sales-receipt.pdf')->middleware(['auth', 'XSS']);
+    Route::get('sales-receipt/link/copy/{id}', [SalesReceipt::class, 'linkCopy'])->name('sales-receipt.link.copy')->middleware(['auth', 'XSS']);
 
     Route::group(
         [
