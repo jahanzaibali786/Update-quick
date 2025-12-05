@@ -240,6 +240,7 @@ Route::post('/quickbooks/items', [QuickBooksApiController::class, 'items'])->nam
 Route::post('/quickbooks/journals', [QuickBooksApiController::class, 'journalEntries'])->name('quickbooks.journals');
 Route::post('/quickbooks/api/invoices', [QuickBooksApiController::class, 'invoices'])->name('quickbooks.api.invoices');
 Route::post('/quickbooks/api/bills', [QuickBooksApiController::class, 'bills'])->name('quickbooks.api.bills');
+Route::post('/quickbooks/import/taxes',[QuickBooksApiController::class,'mergedTaxes'])->name('quickbooks.taxes');
 Route::post('/quickbooks/api/customers', [QuickBooksApiController::class, 'customers'])->name('quickbooks.api.customers');
 Route::post('/quickbooks/api/chart-of-accounts', [QuickBooksApiController::class, 'chartOfAccounts'])->name('quickbooks.api.chartOfAccounts');
 Route::post('/quickbooks/api/vendors', [QuickBooksApiController::class, 'vendors'])->name('quickbooks.api.vendors');
