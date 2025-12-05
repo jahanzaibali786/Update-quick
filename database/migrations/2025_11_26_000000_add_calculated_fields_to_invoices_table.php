@@ -17,8 +17,9 @@ class AddCalculatedFieldsToInvoicesTable extends Migration
             $table->decimal('subtotal', 15, 2)->nullable()->after('created_by');
             $table->decimal('taxable_subtotal', 15, 2)->nullable()->after('subtotal');
             $table->decimal('total_discount', 15, 2)->nullable()->after('taxable_subtotal');
-            $table->decimal('total_tax', 15, 2)->nullable()->after('total_discount');
-            $table->decimal('sales_tax_amount', 15, 2)->nullable()->after('total_tax');
+            $table->decimal('tax_id', 15, 2)->nullable()->after('total_discount');
+            $table->decimal('tax_rate', 15, 2)->nullable()->after('tax_id');
+            $table->decimal('sales_tax_amount', 15, 2)->nullable()->after('tax_rate');
             $table->decimal('total_amount', 15, 2)->nullable()->after('sales_tax_amount');
             $table->string('logo')->nullable()->after('total_amount');
             $table->json('attachments')->nullable()->after('logo');

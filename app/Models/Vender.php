@@ -23,6 +23,7 @@ class Vender extends Authenticatable
         'balance',
         'is_active',
         'created_by',
+        'owned_by',
         'email_verified_at',
         'billing_name',
         'billing_country',

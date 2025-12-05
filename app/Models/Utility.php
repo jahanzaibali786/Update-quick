@@ -734,6 +734,7 @@ class Utility extends Model
 
     public static function getTax($tax)
     {
+        dd($tax);
         if (self::$taxes == null) {
             $tax = Tax::find($tax);
             self::$taxes = $tax;
