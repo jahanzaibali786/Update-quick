@@ -15,6 +15,8 @@ class Proposal extends Model
         'is_convert',
         'converted_invoice_id',
         'created_by',
+        'accepted_by',
+        'accepted_date',
     ];
 
     public static $statues = [

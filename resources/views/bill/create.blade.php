@@ -1,3 +1,4 @@
+
 <style>
     .qbo-bill-container {
         background: #f8f9fa;
@@ -340,6 +341,7 @@
             </select>
         </div>
 
+
         {{-- Row 2: Horizontal layout for Address, Terms, Dates, Bill No --}}
         <div class="details-row">
             
@@ -349,6 +351,7 @@
                 {{-- Using a textarea to mimic the box look in the screenshot --}}
                 <textarea class="form-control qbo-input qbo-textarea" name="mailing_address" id="vendor_address" ></textarea>
             </div>
+
 
             {{-- Column 2: Terms --}}
             <div class="col-term">
@@ -360,6 +363,7 @@
                     <option value="Net 60">Net 60</option>
                 </select>
             </div>
+
 
             {{-- Column 3: Bill Date --}}
             <div class="col-date">
@@ -385,6 +389,7 @@
 
     </div>
 {{-- </div> --}}
+
 
         {{-- Category Details Section --}}
         <div class="qbo-grid-section">
@@ -446,6 +451,7 @@
                     id="clear-category-lines">{{ __('Clear all lines') }}</button>
             </div>
         </div>
+
 
         {{-- Item Details Section --}}
         <div class="qbo-grid-section">
@@ -539,6 +545,7 @@
                 </div>
             </div>
 
+
             <div class="col-md-6">
                 <div class="qbo-total-section">
                     <div class="qbo-total-row">
@@ -552,6 +559,7 @@
                 </div>
             </div>
         </div>
+
 
         <input type="hidden" name="subtotal" id="subtotal" value="0">
         <input type="hidden" name="total" id="total" value="0">
@@ -605,6 +613,7 @@
             updateLineNumbers();
         });
 
+
         // Add Item Line
         $('#add-item-line').on('click', function() {
             const newRow = `
@@ -646,6 +655,7 @@
             calculateTotal();
         });
 
+
         // Clear Lines
         $('#clear-category-lines').on('click', function() {
             $('#category-tbody').empty();
@@ -658,6 +668,8 @@
             itemLineCount = 0;
             calculateTotal();
         });
+
+
 
         // Update Line Numbers
         function updateLineNumbers() {
@@ -693,12 +705,14 @@
                 subtotal += parseFloat($(this).val()) || 0;
             });
 
+
             $('#subtotal').val(subtotal.toFixed(2));
             $('#total').val(subtotal.toFixed(2));
             $('#subtotal-display').text('$' + subtotal.toFixed(2));
             $('#total-display').text('$' + subtotal.toFixed(2));
             $('#grand-total-display').text('$' + subtotal.toFixed(2));
         }
+
 
         // File Upload Display
         $('#attachments').on('change', function() {
@@ -756,8 +770,10 @@
                     console.error('Error fetching product:', xhr);
                     show_toastr('Error', 'Failed to load product details. Please try again.', 'error');
                 }
+
             });
         });
+
 
         // Form Submit
         $('#bill-form').on('submit', function(e) {
@@ -783,6 +799,7 @@
                         $('.btn-qbo-save').prop('disabled', false).text(
                             '{{ __('Save') }}');
                     }
+
                 },
                 error: function(xhr) {
                     let message = '{{ __('Error creating bill') }}';
@@ -791,8 +808,10 @@
                     }
                     show_toastr('error', message, 'error');
 
+
                     $('.btn-qbo-save').prop('disabled', false).text('{{ __('Save') }}');
                 }
+
             });
         });
 
@@ -838,7 +857,8 @@
                     $('#vendor_address').val(addressText.trim());
                 }
             },
-        });
+
     }
 });
 </script>
+

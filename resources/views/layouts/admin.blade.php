@@ -322,7 +322,8 @@
     </div>
     @include('partials.admin.footer')
     @include('Chatify::layouts.footerLinks')
-
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let modalDialog = modal.find('.modal-dialog');
         if ($(this).data('size') === 'fullscreen') {
