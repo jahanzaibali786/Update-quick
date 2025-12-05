@@ -14,6 +14,8 @@ class ProductService extends Model
         'sku',
         'sale_price',
         'purchase_price',
+        'quantity',
+        'qb_balance',
         'tax_id',
         'category_id',
         'unit_id',
@@ -23,6 +25,7 @@ class ProductService extends Model
         'asset_chartaccount_id',
         'cogs_chartaccount_id',
         'created_by',
+        'owned_by',
     ];
 
     public static $types = [

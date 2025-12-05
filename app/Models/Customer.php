@@ -26,6 +26,7 @@ class Customer extends Authenticatable
         'qb_balance',
         'balance',
         'created_by',
+        'owned_by',
         'email_verified_at',
         'billing_name',
         'billing_country',
@@ -243,9 +244,9 @@ class Customer extends Authenticatable
     {
         $dueInvoices = Invoice:: where('customer_id', $customerId)->whereNotIn(
             'status', [
-                        '0',
-                        '4',
-                    ]
+                '0',
+                '4',
+            ]
         )->where('due_date', '<', date('Y-m-d'))->get();
         $due         = 0;
         foreach($dueInvoices as $invoice)
