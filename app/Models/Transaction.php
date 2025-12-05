@@ -7,12 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     protected $fillable = [
+        'user_id',
+        'user_type',
         'account',
         'type',
         'amount',
         'description',
         'date',
         'created_by',
+        'owned_by',
+        'category',
         'customer_id',
         'payment_id',
         'payment_no',
