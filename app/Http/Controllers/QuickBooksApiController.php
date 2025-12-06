@@ -376,6 +376,29 @@ class QuickBooksApiController extends Controller
         dd(count($allBills), $allBills);
     }
 
+    public function purchaseOrders()
+    {
+    $startPosition = 1;
+    $maxResults = 50;
+    $allPurchaseOrders = [];
+
+    do {
+        $query = "SELECT * FROM PurchaseOrder STARTPOSITION $startPosition MAXRESULTS $maxResults";
+        $data = $this->runQuery($query);
+
+        $purchaseOrders = $data['QueryResponse']['PurchaseOrder'] ?? [];
+        $count = count($purchaseOrders);
+
+        // Merge into main array
+        $allPurchaseOrders = array_merge($allPurchaseOrders, $purchaseOrders);
+
+        // Next batch
+        $startPosition += $maxResults;
+
+    } while ($count === $maxResults);
+
+    dd(count($allPurchaseOrders), $allPurchaseOrders);
+    }
 
     public function customers()
     {

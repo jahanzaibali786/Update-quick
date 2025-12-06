@@ -8,23 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class VendorCredit extends Model
 {
     use HasFactory;
-
     protected $fillable = [
-        'vendor_id',
-        'credit_number',
-        'credit_date',
+        'vendor_credit_id',
+        'vender_id',
+        'date',
         'amount',
-        'remaining_amount',
-        'reason',
-        'status',
+        'memo',
         'created_by',
         'owned_by',
-    ];
-
-    protected $casts = [
-        'credit_date' => 'date',
-        'amount' => 'decimal:2',
-        'remaining_amount' => 'decimal:2',
     ];
 
     /**
@@ -32,7 +23,7 @@ class VendorCredit extends Model
      */
     public function vendor()
     {
-        return $this->belongsTo(Vender::class, 'vendor_id');
+        return $this->belongsTo(Vender::class, 'vender_id');
     }
 
     /**
