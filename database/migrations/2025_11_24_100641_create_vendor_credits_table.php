@@ -8,37 +8,61 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
-     * Creates vendor_credits table for tracking credits that can be applied to bills
+     *
+     * @return void
      */
     public function up()
     {
-        if (!Schema::hasTable('vendor_credits')) {
-            Schema::create('vendor_credits', function (Blueprint $table) {
-                $table->id();
-                $table->unsignedBigInteger('vendor_id');
-                $table->string('credit_number')->unique();
-                $table->date('credit_date');
-                $table->decimal('amount', 18, 2);
-                $table->decimal('remaining_amount', 18, 2);
-                $table->text('reason')->nullable();
-                $table->string('status', 20)->default('available'); // available, applied, expired
-                $table->unsignedBigInteger('created_by');
-                $table->unsignedBigInteger('owned_by')->nullable();
-                $table->timestamps();
-                
-                $table->foreign('vendor_id')->references('id')->on('venders')->onDelete('cascade');
-                $table->index(['vendor_id', 'status']);
-                $table->index('created_by');
-            });
-        }
+        // 1. Vendor Credits Header Table
+        Schema::create('vendor_credits', function (Blueprint $table) {
+            $table->id();
+            $table->string('vendor_credit_id')->comment('QuickBooks ID'); 
+            $table->integer('vender_id');
+            $table->date('date');
+            $table->double('amount', 15, 2)->default(0.00);
+            $table->text('memo')->nullable();
+            $table->integer('created_by')->default(0);
+            $table->integer('owned_by')->default(0);
+            $table->timestamps();
+        });
+
+        // 2. Vendor Credit Products (Lines for ItemBasedExpenseLineDetail)
+        Schema::create('vendor_credit_products', function (Blueprint $table) {
+            $table->id();
+            $table->integer('vendor_credit_id');
+            $table->integer('product_id');
+            $table->double('quantity', 15, 2)->default(0.00);
+            $table->double('price', 15, 2)->default(0.00);
+            $table->text('description')->nullable();
+            $table->double('tax', 15, 2)->default(0.00);
+            $table->boolean('billable')->default(0);
+            $table->integer('customer_id')->nullable();
+            $table->timestamps();
+        });
+
+        // 3. Vendor Credit Accounts (Lines for AccountBasedExpenseLineDetail)
+        Schema::create('vendor_credit_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->integer('vendor_credit_id');
+            $table->integer('chart_account_id');
+            $table->double('price', 15, 2)->default(0.00);
+            $table->text('description')->nullable();
+            $table->double('tax', 15, 2)->default(0.00);
+            $table->boolean('billable')->default(0);
+            $table->integer('customer_id')->nullable();
+            $table->timestamps();
+        });
     }
 
     /**
      * Reverse the migrations.
+     *
+     * @return void
      */
     public function down()
     {
+        Schema::dropIfExists('vendor_credit_accounts');
+        Schema::dropIfExists('vendor_credit_products');
         Schema::dropIfExists('vendor_credits');
     }
 };

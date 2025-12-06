@@ -13,6 +13,8 @@ class Purchase extends Model
 
     protected $fillable = [
         'purchase_id',
+        'txn_id',
+        'txn_type',
         'vender_id',
         'warehouse_id',
         'purchase_date',
@@ -30,6 +32,7 @@ class Purchase extends Model
         'notes',
         'vendor_message',
         'type',
+        'status',
         'expected_date',
         'ship_to_address',
     ];
@@ -37,9 +40,7 @@ class Purchase extends Model
     public static $statues = [
         'Draft',
         'Sent',
-        'Unpaid',
-        'Partialy Paid',
-        'Paid',
+        'Print',
     ];
     public function vender()
     {

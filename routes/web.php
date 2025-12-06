@@ -230,6 +230,7 @@ Route::post('/quickbooks/getPayrollRuns', [QuickBooksApiController::class, 'getP
 Route::post('/quickbooks/getEstimates', [QuickBooksApiController::class, 'getEstimates'])->name('quickbooks.getEstimates');
 Route::post('/quickbooks/sales-tax-payments', [QuickBooksApiController::class, 'salesTaxPayments'])->name('quickbooks.taxpayments');
 Route::post('/quickbooks/refunds', [QuickBooksApiController::class, 'refunds'])->name('quickbooks.refunds');
+Route::post('/quickbooks/purchase-orders', [QuickBooksApiController::class, 'purchaseOrders'])->name('quickbooks.PurchaseOrders');
 Route::post('/quickbooks/credit-memos', [QuickBooksApiController::class, 'creditMemos'])->name('quickbooks.creditmemos');
 Route::post('/quickbooks/credit-card-credits', [QuickBooksApiController::class, 'creditCardCredits'])->name('quickbooks.creditcardcredits');
 Route::post('/quickbooks/credit-card-credits-with-bills', [QuickBooksApiController::class, 'creditCardCreditsWithBills'])->name('quickbooks.creditcardcreditswithbills');

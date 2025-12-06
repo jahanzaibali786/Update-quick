@@ -65,6 +65,7 @@
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.getAllTransactionsGrouped') }}">Get All Transactions Grouped</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.checkUnbalancedBills') }}">checkUnbalancedBills</button>
         <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.taxes') }}">Taxes</button>
+        <button class="btn btn-primary qb-btn" data-route="{{ route('quickbooks.PurchaseOrders') }}">Purchase Order</button>
     </div>
 
     <hr>

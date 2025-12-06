@@ -26,7 +26,7 @@ class QuickBooksFullImportJob implements ShouldQueue
         // 'chartOfAccounts' => 'Importing Chart of Accounts',
         // 'items' => 'Importing Items/Products',
         // 'taxes' => 'Importing Taxes',
-        'invoices' => 'Importing Invoices',
+        // 'invoices' => 'Importing Invoices',
         // 'bills' => 'Importing Bills',
         // 'expenses' => 'Importing Expenses',
         // 'estimates' => 'Importing Estimates',
