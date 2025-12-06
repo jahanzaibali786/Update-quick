@@ -13,23 +13,30 @@ class Purchase extends Model
 
     protected $fillable = [
         'purchase_id',
+        'txn_id',
+        'txn_type',
         'vender_id',
         'warehouse_id',
         'purchase_date',
         'purchase_number',
         'discount_apply',
         'category_id',
+        'txn_id',
+        'txn_type',
+        'owned_by',
         'created_by',
         'voucher_id',
         'po_date',
         'ship_via',
         'ref_no',
+        'tax',
         'ship_to',
         'mailing_address',
         'terms',
         'notes',
         'vendor_message',
         'type',
+        'status',
         'expected_date',
         'ship_to_address',
     ];
@@ -37,9 +44,7 @@ class Purchase extends Model
     public static $statues = [
         'Draft',
         'Sent',
-        'Unpaid',
-        'Partialy Paid',
-        'Paid',
+        'Print',
     ];
     public function vender()
     {
