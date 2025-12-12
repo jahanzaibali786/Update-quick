@@ -183,53 +183,54 @@ class TransactionListByVendor extends DataTable
                         WHERE ba.ref_id = bills.id
                     )
                     ELSE 
-        (
-            -- Subquery 1 & 2 repeated (calculating the total bill amount)
             (
-                SELECT IFNULL(SUM(bp.price * bp.quantity - IFNULL(bp.discount, 0)), 0)
-                FROM bill_products bp
-                WHERE bp.bill_id = bills.id
-            ) + 
-            (
-                SELECT IFNULL(SUM(ba.price), 0)
-                FROM bill_accounts ba
-                WHERE ba.ref_id = bills.id
-            )
-        ) 
-        * CASE 
-            -- Subquery 3: Check payment account type
-            WHEN (
-                SELECT ba2.account_subtype
-                FROM bill_payments bp2
-                JOIN bank_accounts ba2 ON ba2.id = bp2.account_id
-                WHERE bp2.bill_id = bills.id
-                LIMIT 1 -- ⚠️ This can be non-deterministic!
-            ) = "credit_card"
-            THEN 1   -- If Credit Card, it is an increase in Liability (Positive sign)
-            ELSE -1  -- Otherwise (e.g., Bank/Cash), it is a decrease in Asset (Negative sign)
-        END
-            END AS amount'),
-                DB::raw('CASE 
-                    WHEN bills.type = "Bill" THEN (
-                        (
-                            SELECT IFNULL(SUM(bp.price * bp.quantity - IFNULL(bp.discount, 0)), 0)
-                            FROM bill_products bp
-                            WHERE bp.bill_id = bills.id
-                        ) + (
-                            SELECT IFNULL(SUM(ba.price), 0)
-                            FROM bill_accounts ba
-                            WHERE ba.ref_id = bills.id
-                        ) - (
-                            SELECT IFNULL(SUM(bill_payments.amount), 0)
-                            FROM bill_payments
-                            WHERE bill_payments.bill_id = bills.id
+                -- Subquery 1 & 2 repeated (calculating the total bill amount)
+                (
+                    SELECT IFNULL(SUM(bp.price * bp.quantity - IFNULL(bp.discount, 0)), 0)
+                    FROM bill_products bp
+                    WHERE bp.bill_id = bills.id
+                ) + 
+                (
+                    SELECT IFNULL(SUM(ba.price), 0)
+                    FROM bill_accounts ba
+                    WHERE ba.ref_id = bills.id
+                )
+            ) 
+            * CASE 
+                -- Subquery 3: Check payment account type
+                WHEN (
+                    SELECT ba2.account_subtype
+                    FROM bill_payments bp2
+                    JOIN bank_accounts ba2 ON ba2.id = bp2.account_id
+                    WHERE bp2.bill_id = bills.id
+                    LIMIT 1 -- ⚠ This can be non-deterministic!
+                ) = "credit_card"
+                THEN 1   -- If Credit Card, it is an increase in Liability (Positive sign)
+                ELSE -1  -- Otherwise (e.g., Bank/Cash), it is a decrease in Asset (Negative sign)
+            END
+                END AS amount'),
+                    DB::raw('CASE 
+                        WHEN bills.type = "Bill" THEN (
+                            (
+                                SELECT IFNULL(SUM(bp.price * bp.quantity - IFNULL(bp.discount, 0)), 0)
+                                FROM bill_products bp
+                                WHERE bp.bill_id = bills.id
+                            ) + (
+                                SELECT IFNULL(SUM(ba.price), 0)
+                                FROM bill_accounts ba
+                                WHERE ba.ref_id = bills.id
+                            ) - (
+                                SELECT IFNULL(SUM(bill_payments.amount), 0)
+                                FROM bill_payments
+                                WHERE bill_payments.bill_id = bills.id
+                            )
                         )
-                    )
-                    ELSE 0
-                END as open_balance')
-            )
+                        ELSE 0
+                    END as open_balance')
+                )
             ->join('venders', 'venders.id', '=', 'bills.vender_id')
             ->where('bills.created_by', $userId)
+            ->whereRaw('LOWER(bills.user_type) = ?', ['vendor'])
             ->whereBetween('bills.bill_date', [$start, $end]);
 
         // 2️⃣ Purchase Orders that have bills (txn_id) - POSITIVE
@@ -344,6 +345,8 @@ $billPayments = DB::table('bill_payments')
     })
     ->where('bills.created_by', $userId)
     ->where('bills.type', 'Bill')
+
+    ->whereRaw('LOWER(bills.user_type) = ?', ['vendor'])
     ->whereBetween('bill_payments.date', [$start, $end])
     ->groupBy(
         'venders.id',
@@ -394,14 +397,40 @@ $billPayments = DB::table('bill_payments')
             ->whereBetween('vendor_credits.date', [$start, $end]);
 
 
-        // ✅ Union all
-        
-        $combined = $bills->unionAll($purchaseOrders)->unionAll($billPayments)->unionAll($vendorCredits);
+             // EXCLUDE payments that are already counted as vendor credits in the transactions table
+            $unappliedPayments = DB::table('unapplied_payments')
+            ->selectRaw("
+                NULL as id,
+                unapplied_payments.txn_date as transaction_date,
+                venders.name as vendor_name,
+                unapplied_payments.reference as transaction_number,
+                unapplied_payments.reference as memo,
+                'Unapplied Payment' as transaction_type,
+                bank_accounts.bank_name as account_name,
+                 -ABS(unapplied_payments.unapplied_amount) as amount,
+                 -ABS(unapplied_payments.unapplied_amount) as open_balance
+            ")
+            ->leftJoin('venders', 'venders.id', '=', 'unapplied_payments.vendor_id')
+            ->leftJoin('bank_accounts', 'bank_accounts.id', '=', 'unapplied_payments.account_id')
+            ->where('unapplied_payments.created_by', $userId)
+            ->whereBetween('unapplied_payments.txn_date', [$start, $end])
+            ->where('unapplied_payments.unapplied_amount', '>', 0)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('transactions')
+                      ->whereRaw('transactions.payment_no = unapplied_payments.reference')
+                      ->whereRaw('LOWER(transactions.category) LIKE \'%vendor credit%\'');
+            });
+                    
+                // ✅ Union all
+                
+                $combined = $bills->unionAll($purchaseOrders)->unionAll($billPayments)->unionAll($vendorCredits)->unionAll($unappliedPayments);
 
-        return DB::query()->fromSub($combined, 'transactions')
-            ->orderBy('vendor_name', 'asc')
-            ->orderBy('transaction_date', 'asc');
-    }
+                return DB::query()->fromSub($combined, 'transactions')
+                    ->orderBy('vendor_name', 'asc')
+                    ->orderBy('transaction_date', 'asc');
+        }
+
 
     public function html()
     {
