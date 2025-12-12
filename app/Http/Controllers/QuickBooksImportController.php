@@ -1315,14 +1315,13 @@ class QuickBooksImportController extends Controller
     }
 
     /**
-     * Map invoices with their payments comprehensively
-     * Creates a complete allocation map showing which payment paid which invoice
+     * Map invoices with their payments using LINE-LEVEL amounts from QBO
+     * This ensures accurate allocation - each payment line specifies exactly how much goes to each invoice
      */
     private function mapInvoicesWithPayments($allInvoices, $allPayments)
     {
         $invoicesMap = [];
-        $paymentsMap = [];
-        $allocations = []; // Mapping of payment -> invoice allocations
+        $allocations = [];
 
         // Step 1: Build invoices map
         foreach ($allInvoices as $invoice) {
@@ -1340,174 +1339,114 @@ class QuickBooksImportController extends Controller
                 'currency' => $invoice['CurrencyRef']['name'] ?? 'USD',
                 'raw_data' => $invoice,
                 'allocated_amount' => 0,
-                'status' => 'unpaid', // Will be updated
-                'allocations' => [], // Payment allocations for this invoice
+                'status' => 'unpaid',
+                'allocations' => [],
             ];
         }
 
-        // Step 2: Build payments map
+        // Step 2: Process each payment and extract LINE-LEVEL amounts
+        // This is the KEY FIX: Use the Amount from each Line, not TotalAmt
         foreach ($allPayments as $payment) {
             $paymentId = (string) ($payment['Id'] ?? null);
-            $totalAmount = (float) ($payment['TotalAmt'] ?? 0);
+            $paymentDate = $payment['TxnDate'] ?? null;
+            $paymentTotalAmt = (float) ($payment['TotalAmt'] ?? 0);
 
-            // Extract linked invoices
-            $linkedInvoices = [];
+            // Process each line in the payment
             foreach ($payment['Line'] ?? [] as $line) {
+                $lineAmount = (float) ($line['Amount'] ?? 0);
+                
+                if ($lineAmount <= 0) continue;
+
+                // Find linked invoice in this line
+                $linkedInvoiceId = null;
+                $linkedCreditMemoId = null;
+                
                 if (!empty($line['LinkedTxn'])) {
-                    $linked = is_array($line['LinkedTxn'][0] ?? null) ? $line['LinkedTxn'] : [$line['LinkedTxn']];
-                    foreach ($linked as $txn) {
-                        if (($txn['TxnType'] ?? null) === 'Invoice') {
-                            $linkedInvoices[] = (string) $txn['TxnId'];
+                    $linkedTxns = is_array($line['LinkedTxn'][0] ?? null) ? $line['LinkedTxn'] : [$line['LinkedTxn']];
+                    foreach ($linkedTxns as $txn) {
+                        $txnType = $txn['TxnType'] ?? null;
+                        $txnId = (string) ($txn['TxnId'] ?? null);
+                        
+                        if ($txnType === 'Invoice') {
+                            $linkedInvoiceId = $txnId;
+                        } elseif ($txnType === 'CreditMemo') {
+                            $linkedCreditMemoId = $txnId;
                         }
                     }
                 }
-            }
 
-            $paymentsMap[$paymentId] = [
-                'payment_id' => $paymentId,
-                'customer_id' => $payment['CustomerRef']['value'] ?? null,
-                'customer_name' => $payment['CustomerRef']['name'] ?? null,
-                'txn_date' => $payment['TxnDate'] ?? null,
-                'total_amount' => $totalAmount,
-                'payment_method' => $payment['PaymentMethodRef']['name'] ?? null,
-                'linked_invoices' => array_unique($linkedInvoices),
-                'raw_data' => $payment,
-                'allocated_amount' => 0, // Will be updated
-            ];
-        }
-
-        // Step 3: Allocate payments to invoices intelligently
-        $sortedPayments = collect($paymentsMap)->sortBy('txn_date')->toArray();
-
-        foreach ($sortedPayments as $payment) {
-            $paymentId = $payment['payment_id'];
-            $remainingAmount = (float) $payment['total_amount'];
-            $linkedInvoices = $payment['linked_invoices'];
-
-            // Case 1: No linked invoices - create orphan allocation
-            if (empty($linkedInvoices)) {
-                $allocations[] = [
-                    'payment_id' => $paymentId,
-                    'invoice_id' => null,
-                    'allocated_amount' => $remainingAmount,
-                    'allocation_type' => 'orphan', // Payment with no invoice link
-                    'reason' => 'No invoices linked to payment',
-                    'payment_date' => $payment['txn_date'],
-                ];
-                $paymentsMap[$paymentId]['allocated_amount'] += $remainingAmount;
-                continue;
-            }
-
-            // Case 2: Single linked invoice
-            if (count($linkedInvoices) === 1) {
-                $invId = $linkedInvoices[0];
-
-                if (isset($invoicesMap[$invId])) {
-                    $invoiceAmount = $invoicesMap[$invId]['total_amount'];
-                    $alreadyAllocated = $invoicesMap[$invId]['allocated_amount'];
-                    $remainingInvoiceAmount = max(0, $invoiceAmount - $alreadyAllocated);
-
-                    $allocatedToThisInvoice = min($remainingAmount, $remainingInvoiceAmount);
-
-                    $allocations[] = [
-                        'payment_id' => $paymentId,
-                        'invoice_id' => $invId,
-                        'allocated_amount' => $allocatedToThisInvoice,
-                        'allocation_type' => 'single_link',
-                        'reason' => 'Direct payment to single invoice',
-                        'payment_date' => $payment['txn_date'],
-                    ];
-
-                    $invoicesMap[$invId]['allocated_amount'] += $allocatedToThisInvoice;
-                    $invoicesMap[$invId]['allocations'][] = [
-                        'payment_id' => $paymentId,
-                        'amount' => $allocatedToThisInvoice,
-                        'date' => $payment['txn_date'],
-                    ];
-
-                    $paymentsMap[$paymentId]['allocated_amount'] += $allocatedToThisInvoice;
-                    $remainingAmount -= $allocatedToThisInvoice;
-
-                    // Overpayment
-                    if ($remainingAmount > 0.01) {
+                // If this line is linked to an invoice, create allocation with LINE amount
+                if ($linkedInvoiceId && isset($invoicesMap[$linkedInvoiceId])) {
+                    $invoiceTotal = $invoicesMap[$linkedInvoiceId]['total_amount'];
+                    $alreadyAllocated = $invoicesMap[$linkedInvoiceId]['allocated_amount'];
+                    $remainingOnInvoice = max(0, $invoiceTotal - $alreadyAllocated);
+                    
+                    // The allocation is the LINE AMOUNT, capped at remaining invoice balance
+                    $allocatedToInvoice = min($lineAmount, $remainingOnInvoice);
+                    
+                    if ($allocatedToInvoice > 0.01) {
                         $allocations[] = [
                             'payment_id' => $paymentId,
-                            'invoice_id' => null,
-                            'allocated_amount' => $remainingAmount,
-                            'allocation_type' => 'overpayment',
-                            'reason' => 'Overpayment on single invoice',
-                            'payment_date' => $payment['txn_date'],
+                            'invoice_id' => $linkedInvoiceId,
+                            'allocated_amount' => $allocatedToInvoice,
+                            'line_amount' => $lineAmount, // Original line amount for reference
+                            'allocation_type' => 'line_level',
+                            'reason' => 'Direct line-level allocation from QBO payment',
+                            'payment_date' => $paymentDate,
+                            'has_credit_memo' => !empty($linkedCreditMemoId),
+                            'credit_memo_id' => $linkedCreditMemoId,
                         ];
-                        $paymentsMap[$paymentId]['allocated_amount'] += $remainingAmount;
-                    }
-                }
-            }
-            // Case 3: Multiple linked invoices - allocate sequentially by invoice date
-            else {
-                $sortedLinkedInvoices = [];
-                foreach ($linkedInvoices as $invId) {
-                    if (isset($invoicesMap[$invId])) {
-                        $sortedLinkedInvoices[] = [
-                            'invoice_id' => $invId,
-                            'txn_date' => $invoicesMap[$invId]['txn_date'],
-                            'total_amount' => $invoicesMap[$invId]['total_amount'],
-                            'allocated_amount' => $invoicesMap[$invId]['allocated_amount'],
+
+                        $invoicesMap[$linkedInvoiceId]['allocated_amount'] += $allocatedToInvoice;
+                        $invoicesMap[$linkedInvoiceId]['allocations'][] = [
+                            'payment_id' => $paymentId,
+                            'amount' => $allocatedToInvoice,
+                            'date' => $paymentDate,
                         ];
+                        
+                        \Log::info("PAYMENT_MAP: Payment {$paymentId} -> Invoice {$linkedInvoiceId}: Line Amount = {$lineAmount}, Allocated = {$allocatedToInvoice}");
                     }
-                }
-
-                usort($sortedLinkedInvoices, fn($a, $b) => strcmp($a['txn_date'], $b['txn_date']));
-
-                foreach ($sortedLinkedInvoices as $inv) {
-                    if ($remainingAmount <= 0.01) {
-                        break;
-                    }
-
-                    $invId = $inv['invoice_id'];
-                    $invoiceAmount = $inv['total_amount'];
-                    $alreadyAllocated = $inv['allocated_amount'];
-                    $remainingInvoiceAmount = max(0, $invoiceAmount - $alreadyAllocated);
-
-                    $allocatedToThisInvoice = min($remainingAmount, $remainingInvoiceAmount);
-
-                    if ($allocatedToThisInvoice > 0.01) {
+                    
+                    // Check for overpayment on this specific line
+                    $lineOverpayment = $lineAmount - $allocatedToInvoice;
+                    if ($lineOverpayment > 0.01) {
                         $allocations[] = [
                             'payment_id' => $paymentId,
-                            'invoice_id' => $invId,
-                            'allocated_amount' => $allocatedToThisInvoice,
-                            'allocation_type' => 'multi_link_sequential',
-                            'reason' => 'Sequential allocation from multi-linked payment',
-                            'payment_date' => $payment['txn_date'],
+                            'invoice_id' => $linkedInvoiceId,
+                            'allocated_amount' => $lineOverpayment,
+                            'allocation_type' => 'line_overpayment',
+                            'reason' => 'Overpayment on line (invoice already fully paid)',
+                            'payment_date' => $paymentDate,
                         ];
-
-                        $invoicesMap[$invId]['allocated_amount'] += $allocatedToThisInvoice;
-                        $invoicesMap[$invId]['allocations'][] = [
-                            'payment_id' => $paymentId,
-                            'amount' => $allocatedToThisInvoice,
-                            'date' => $payment['txn_date'],
-                        ];
-
-                        $paymentsMap[$paymentId]['allocated_amount'] += $allocatedToThisInvoice;
-                        $remainingAmount -= $allocatedToThisInvoice;
                     }
                 }
-
-                // Overpayment after all invoices
-                if ($remainingAmount > 0.01) {
+                // Handle orphan lines (no invoice link)
+                elseif (!$linkedInvoiceId && !$linkedCreditMemoId) {
                     $allocations[] = [
                         'payment_id' => $paymentId,
                         'invoice_id' => null,
-                        'allocated_amount' => $remainingAmount,
-                        'allocation_type' => 'overpayment',
-                        'reason' => 'Overpayment after sequential allocation',
-                        'payment_date' => $payment['txn_date'],
+                        'allocated_amount' => $lineAmount,
+                        'allocation_type' => 'orphan_line',
+                        'reason' => 'Payment line with no invoice link',
+                        'payment_date' => $paymentDate,
                     ];
-                    $paymentsMap[$paymentId]['allocated_amount'] += $remainingAmount;
                 }
+            }
+            
+            // Handle payments with no lines at all (edge case)
+            if (empty($payment['Line']) && $paymentTotalAmt > 0) {
+                $allocations[] = [
+                    'payment_id' => $paymentId,
+                    'invoice_id' => null,
+                    'allocated_amount' => $paymentTotalAmt,
+                    'allocation_type' => 'no_lines',
+                    'reason' => 'Payment has TotalAmt but no lines',
+                    'payment_date' => $paymentDate,
+                ];
             }
         }
 
-        // Step 4: Update invoice status
+        // Step 3: Update invoice status based on allocations
         foreach ($invoicesMap as $invId => &$invoice) {
             $totalAmount = $invoice['total_amount'];
             $allocatedAmount = $invoice['allocated_amount'];
@@ -1525,7 +1464,6 @@ class QuickBooksImportController extends Controller
 
         return [
             'invoices' => array_values($invoicesMap),
-            'payments' => array_values($paymentsMap),
             'allocations' => $allocations,
         ];
     }
@@ -2543,12 +2481,39 @@ class QuickBooksImportController extends Controller
                                 continue;
 
                             $itemName = $line['ItemName'];
-                            $product = ProductService::where('name', $itemName)->first();
+                            
+                            // First try exact match
+                            $product = ProductService::where('name', $itemName)
+                                ->where('created_by', \Auth::user()->creatorId())
+                                ->first();
+                            
+                            // If not found and name contains colon (QBO sub-item), try parent item name
+                            if (!$product && strpos($itemName, ':') !== false) {
+                                $parentName = explode(':', $itemName)[0];
+                                $product = ProductService::where('name', $parentName)
+                                    ->where('created_by', \Auth::user()->creatorId())
+                                    ->first();
+                                    
+                                if ($product) {
+                                    \Log::info("QBO Sub-item '{$itemName}' matched to parent product '{$parentName}'");
+                                }
+                            }
+                            
+                            // If still not found, create new product WITH type
                             if (!$product) {
                                 $unit = ProductServiceUnit::firstOrCreate(['name' => 'pcs']);
                                 $cat = ProductServiceCategory::firstOrCreate(['name' => 'Product']);
-                                $pData = ['name' => $itemName, 'sku' => $itemName, 'sale_price' => $line['Amount'], 'unit_id' => $unit->id, 'category_id' => $cat->id, 'created_by' => \Auth::user()->creatorId()];
+                                $pData = [
+                                    'name' => $itemName, 
+                                    'sku' => $itemName, 
+                                    'sale_price' => $line['Amount'], 
+                                    'unit_id' => $unit->id, 
+                                    'category_id' => $cat->id, 
+                                    'type' => 'service', // Default to service for QBO items
+                                    'created_by' => \Auth::user()->creatorId()
+                                ];
                                 $product = ProductService::create($pData);
+                                \Log::info("Created new product/service: {$itemName}");
                             }
 
                             $isTaxable = ($line['QBTaxCodeRef'] ?? 'NON') !== 'NON';
@@ -8009,6 +7974,219 @@ class QuickBooksImportController extends Controller
         }
     }
 
+    /**
+     * Sync payments for existing invoices that are missing payment records.
+     * This fixes invoices that were imported before their payments existed in QBO.
+     */
+    public function syncPaymentsForExistingInvoices(Request $request)
+    {
+        ini_set('memory_limit', '512M');
+        set_time_limit(600);
 
+        try {
+            $creatorId = \Auth::user()->creatorId();
+            $imported = 0;
+            $skipped = 0;
+            $errors = [];
+
+            // 1. Fetch ALL payments from QuickBooks
+            $allPayments = collect();
+            $startPosition = 1;
+            $maxResults = 50;
+            do {
+                $query = "SELECT * FROM Payment STARTPOSITION {$startPosition} MAXRESULTS {$maxResults}";
+                $res = $this->qbController->runQuery($query);
+                if ($res instanceof \Illuminate\Http\JsonResponse) {
+                    return $res;
+                }
+                $data = $res['QueryResponse']['Payment'] ?? [];
+                $allPayments = $allPayments->merge($data);
+                $startPosition += count($data);
+            } while (count($data) === $maxResults);
+
+            \Log::info("PAYMENT_SYNC: Fetched " . $allPayments->count() . " payments from QBO");
+
+            // 2. Get all local invoices that might need payment sync
+            $localInvoices = Invoice::where('created_by', $creatorId)
+                ->pluck('id', 'invoice_id')
+                ->toArray();
+
+            \Log::info("PAYMENT_SYNC: Found " . count($localInvoices) . " local invoices");
+
+            // 3. Process each payment
+            DB::beginTransaction();
+            try {
+                foreach ($allPayments as $payment) {
+                    $paymentId = $payment['Id'] ?? null;
+                    $paymentDate = $payment['TxnDate'] ?? now()->toDateString();
+                    $paymentMethod = $payment['PaymentMethodRef']['name'] ?? 'Unknown';
+
+                    // Extract linked invoices from payment lines
+                    $linkedInvoices = [];
+                    foreach ($payment['Line'] ?? [] as $line) {
+                        if (!empty($line['LinkedTxn'])) {
+                            $linked = is_array($line['LinkedTxn'][0] ?? null) ? $line['LinkedTxn'] : [$line['LinkedTxn']];
+                            foreach ($linked as $txn) {
+                                if (($txn['TxnType'] ?? null) === 'Invoice') {
+                                    $qbInvoiceId = (string) $txn['TxnId'];
+                                    $amount = (float) ($line['Amount'] ?? 0);
+                                    if ($amount > 0) {
+                                        $linkedInvoices[] = [
+                                            'qb_invoice_id' => $qbInvoiceId,
+                                            'amount' => $amount,
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 4. For each linked invoice, check if local invoice exists and payment is missing
+                    foreach ($linkedInvoices as $linkData) {
+                        $qbInvoiceId = $linkData['qb_invoice_id'];
+                        $amount = $linkData['amount'];
+
+                        // Check if we have this invoice locally
+                        if (!isset($localInvoices[$qbInvoiceId])) {
+                            continue; // Invoice not in local DB
+                        }
+
+                        $localInvoiceId = $localInvoices[$qbInvoiceId];
+
+                        // Check if payment already exists for this invoice with this txn_id
+                        $existingPayment = InvoicePayment::where('invoice_id', $localInvoiceId)
+                            ->where('txn_id', $paymentId)
+                            ->first();
+
+                        if ($existingPayment) {
+                            $skipped++;
+                            continue; // Payment already synced
+                        }
+
+                        // Get bank account
+                        $bankAccountId = null;
+                        $accName = 'Undeposited Funds';
+                        if (isset($payment['DepositToAccountRef'])) {
+                            $accName = $payment['DepositToAccountRef']['name'] ?? 'Bank';
+                            $accCode = $payment['DepositToAccountRef']['value'] ?? null;
+                            $bankAccountId = $this->getOrCreateBankAccountFromChartAccount($accCode, $accName);
+                        }
+                        if (!$bankAccountId) {
+                            $bankAccountId = $this->getOrCreateBankAccountFromChartAccount(null, 'Bank');
+                        }
+
+                        // Create the missing payment record
+                        $invoice = Invoice::find($localInvoiceId);
+                        $allocatedAmount = min($amount, $invoice->total_amount ?? $amount);
+
+                        $newPayment = InvoicePayment::create([
+                            'invoice_id' => $localInvoiceId,
+                            'date' => $paymentDate,
+                            'amount' => $allocatedAmount,
+                            'account_id' => $bankAccountId,
+                            'payment_method' => $paymentMethod,
+                            'txn_id' => $paymentId,
+                            'description' => 'Payment synced from QBO',
+                        ]);
+
+                        // Create transaction record
+                        if ($invoice && $invoice->customer_id) {
+                            Transaction::create([
+                                'user_id' => $invoice->customer_id,
+                                'user_type' => 'Customer',
+                                'type' => 'Payment',
+                                'amount' => $allocatedAmount,
+                                'account' => $bankAccountId,
+                                'description' => 'Invoice Payment (synced)',
+                                'date' => $paymentDate,
+                                'category' => 'Invoice',
+                                'payment_id' => $newPayment->id,
+                                'payment_no' => $paymentId,
+                                'created_by' => $creatorId,
+                            ]);
+
+                            // Update balances
+                            if ($bankAccountId) {
+                                Utility::bankAccountBalance($bankAccountId, $allocatedAmount, 'credit');
+                            }
+                            Utility::updateUserBalance('customer', $invoice->customer_id, $allocatedAmount, 'credit');
+                        }
+
+                        \Log::info("PAYMENT_SYNC: Created payment for invoice {$qbInvoiceId} (local ID: {$localInvoiceId}), amount: {$allocatedAmount}");
+                        $imported++;
+                    }
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'status' => 'success',
+                    'imported' => $imported,
+                    'skipped' => $skipped,
+                    'errors' => $errors,
+                    'message' => "Synced {$imported} payments for existing invoices (skipped {$skipped} already synced).",
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Payment sync error: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Payment sync failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get a diagnostic report of invoices with missing payments.
+     * Compares local open balance vs what should be zero based on QBO data.
+     */
+    public function getMissingPaymentsReport(Request $request)
+    {
+        try {
+            $creatorId = \Auth::user()->creatorId();
+
+            // Find invoices with amount > 0 but no payments
+            $invoicesWithNoPayments = DB::select("
+                SELECT 
+                    i.id as local_id,
+                    i.invoice_id as qb_invoice_id,
+                    i.ref_number,
+                    c.name as customer_name,
+                    i.issue_date,
+                    (SELECT IFNULL(SUM((price * quantity) - discount), 0) FROM invoice_products WHERE invoice_id = i.id) as subtotal,
+                    (SELECT IFNULL(SUM(amount), 0) FROM invoice_payments WHERE invoice_id = i.id) as total_payments,
+                    (SELECT IFNULL(SUM(cn.amount), 0) 
+                        FROM credit_notes cn
+                        LEFT JOIN invoice_payments ip ON cn.payment_id = ip.id
+                        WHERE cn.invoice = i.id OR ip.invoice_id = i.id) as total_credits
+                FROM invoices i
+                LEFT JOIN customers c ON c.id = i.customer_id
+                WHERE i.created_by = ?
+                HAVING subtotal > 0 AND total_payments = 0 AND total_credits = 0
+                ORDER BY subtotal DESC
+                LIMIT 50
+            ", [$creatorId]);
+
+            $totalMissing = collect($invoicesWithNoPayments)->sum('subtotal');
+
+            return response()->json([
+                'status' => 'success',
+                'count' => count($invoicesWithNoPayments),
+                'total_missing_amount' => number_format($totalMissing, 2),
+                'invoices' => $invoicesWithNoPayments,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
 }
