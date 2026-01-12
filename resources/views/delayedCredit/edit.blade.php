@@ -385,6 +385,9 @@
 @endpush
 
 @section('content')
+<div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true" style="background: #ffffff;">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
     <div class="dc-container">
         {{ Form::model($delayedCredit, ['route' => ['delayed-credit.update', $delayedCredit->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
 
@@ -654,6 +657,9 @@
 
         {{ Form::close() }}
     </div>
+    </div>
+    </div>
+    </div>
 @endsection
 
 @push('script-page')
@@ -815,5 +821,13 @@
                 }
             });
         });
+
+           $(document).ready(function() {
+        var expenseModal = new bootstrap.Modal(document.getElementById('expense-modal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        expenseModal.show();
+    });
     </script>
 @endpush

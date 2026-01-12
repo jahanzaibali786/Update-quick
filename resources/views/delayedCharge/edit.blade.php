@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @section('page-title')
-    {{ __('Delayed Credit Edit') }}
+    {{ __('Delayed Charge Edit') }}
 @endsection
 
 @section('breadcrumb')
@@ -385,8 +385,11 @@
 @endpush
 
 @section('content')
+    <div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true" style="background: #ffffff;">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
     <div class="dc-container">
-        {{ Form::model($delayedCredit, ['route' => ['delayed-credit.update', $delayedCredit->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
+        {{ Form::model($delayedCharge, ['route' => ['delayed-charge.update', $delayedCharge->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
 
         {{-- Fixed Top Header --}}
         <div class="fixed-top-header">
@@ -396,11 +399,11 @@
                         <path fill="currentColor" d="M13.007 7a1 1 0 0 0-1 1L12 12a1 1 0 0 0 1 1l3.556.006a1 1 0 0 0 0-2L14 11l.005-3a1 1 0 0 0-.998-1"></path>
                         <path fill="currentColor" d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353"></path>
                     </svg>
-                    {{ __('Delayed Credit') }}
+                    {{ __('Delayed Charge') }}
                 </div>
 
                 <div class="header-right-controls">
-                    <a href="{{ route('delayed-credit.index') }}" class="close-button" aria-label="Close">
+                    <a href="{{ route('sales.transactions.index') }}" class="close-button" aria-label="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
                             <path fill="currentColor" d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z"></path>
                         </svg>
@@ -415,7 +418,7 @@
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <label for="customer_id" class="form-label">{{ __('Customer') }}</label>
-                        {{ Form::select('customer_id', $customers, $delayedCredit->customer_id, [
+                        {{ Form::select('customer_id', $customers, $delayedCharge->customer_id, [
                             'class' => 'form-select',
                             'id' => 'customer_id',
                             'placeholder' => 'Choose a customer',
@@ -425,15 +428,15 @@
                     <div class="col-md-5 text-end">
                         <div style="margin-top: 20px;">
                             <label style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
-                            <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">${{ number_format($delayedCredit->total_amount, 2) }}</div>
+                            <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">${{ number_format($delayedCharge->total_amount, 2) }}</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-md-3">
-                        <label for="date" class="form-label">{{ __('Delayed Credit Date') }}</label>
-                        {{ Form::date('date', $delayedCredit->date ? $delayedCredit->date->format('Y-m-d') : date('Y-m-d'), [
+                        <label for="date" class="form-label">{{ __('Delayed Charge Date') }}</label>
+                        {{ Form::date('date', $delayedCharge->date ? $delayedCharge->date->format('Y-m-d') : date('Y-m-d'), [
                             'class' => 'form-control',
                             'id' => 'date',
                             'required' => 'required',
@@ -461,7 +464,7 @@
                     </thead>
                     <tbody id="items-body">
                         @php $rowIndex = 0; @endphp
-                        @forelse($delayedCredit->lines as $line)
+                        @forelse($delayedCharge->lines as $line)
                             <tr class="item-row">
                                 <td>
                                     <div class="drag-handle">
@@ -590,7 +593,7 @@
                     <div class="col-md-6">
                         <div class="info-field mb-4">
                             <label for="memo" class="form-label">{{ __('Memo') }}</label>
-                            {{ Form::textarea('memo', $delayedCredit->memo, [
+                            {{ Form::textarea('memo', $delayedCharge->memo, [
                                 'class' => 'form-control',
                                 'id' => 'memo',
                                 'rows' => '3',
@@ -600,10 +603,10 @@
 
                         <div class="info-field">
                             <label class="form-label">{{ __('Attachments') }}</label>
-                            @if($delayedCredit->attachments && count($delayedCredit->attachments) > 0)
+                            @if($delayedCharge->attachments && count($delayedCharge->attachments) > 0)
                                 <div class="mb-2">
                                     <strong>{{ __('Existing:') }}</strong>
-                                    @foreach($delayedCredit->attachments as $attachment)
+                                    @foreach($delayedCharge->attachments as $attachment)
                                         <span class="existing-attachment">
                                             <a href="{{ asset('storage/uploads/delayed_credit_attachments/' . $attachment) }}" target="_blank">{{ $attachment }}</a>
                                         </span>
@@ -622,7 +625,7 @@
                         <div class="totals-section">
                             <div class="total-row final">
                                 <span>{{ __('Total') }}</span>
-                                <span id="total-amount">${{ number_format($delayedCredit->total_amount, 2) }}</span>
+                                <span id="total-amount">${{ number_format($delayedCharge->total_amount, 2) }}</span>
                             </div>
                         </div>
                     </div>
@@ -633,7 +636,7 @@
         {{-- Footer --}}
         <div class="dc-footer">
             <div class="footer-left">
-                <a href="{{ route('delayed-credit.index') }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
+                <a href="{{ route('delayed-charge.index') }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
             </div>
             <div class="footer-center">
                 <a href="#" class="text-primary">{{ __('Make recurring') }}</a>
@@ -654,12 +657,15 @@
 
         {{ Form::close() }}
     </div>
+    </div>
+    </div>
+    </div>
 @endsection
 
 @push('script-page')
     <script>
         $(document).ready(function() {
-            var rowIndex = {{ $delayedCredit->lines->count() > 0 ? $delayedCredit->lines->count() : 1 }};
+            var rowIndex = {{ $delayedCharge->lines->count() > 0 ? $delayedCharge->lines->count() : 1 }};
 
             // Recalculate row amount
             function recalcRow($row) {
@@ -815,5 +821,13 @@
                 }
             });
         });
+
+           $(document).ready(function() {
+        var expenseModal = new bootstrap.Modal(document.getElementById('expense-modal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        expenseModal.show();
+    });
     </script>
 @endpush

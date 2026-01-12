@@ -4500,4 +4500,34 @@
         });
     </script>
 @endsection
+
+@if(isset($mode) && $mode == 'edit' && isset($salesReceiptData))
+<script>
+$(document).ready(function() {
+    // Set selected tax rate
+    if (typeof salesReceiptData !== 'undefined' && salesReceiptData.sales_tax_rate) {
+        $('select[name="tax_id"]').val(salesReceiptData.sales_tax_rate);
+    }
+
+    // Set taxable checkboxes for each item
+    if (typeof salesReceiptData !== 'undefined' && salesReceiptData.items) {
+        // Wait a bit for repeater to initialize
+        setTimeout(function() {
+            salesReceiptData.items.forEach(function(item, index) {
+                var $tbody = $('#sortable-table tbody').eq(index);
+                if ($tbody.length && $tbody.find('tr.product-row').length) {
+                    var $checkbox = $tbody.find('.form-check-input[type="checkbox"]');
+                    if (item.taxable == 1 || item.taxable === true) {
+                        $checkbox.prop('checked', true);
+                    } else {
+                        $checkbox.prop('checked', false);
+                    }
+                }
+            });
+        }, 500);
+    }
+});
+</script>
+@endif
+
 <script src="{{ asset('js/invoice-items-payload-handler.js') }}"></script>

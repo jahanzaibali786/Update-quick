@@ -6263,6 +6263,9 @@ class Utility extends Model
         $journal->voucher_type = 'BRV';
         $journal->owned_by = $data['owned_by'];
         $journal->created_by = $data['created_by'];
+        $journal->customer_id = $data['customer_id'] ?? null;
+        $journal->customer_name = $data['customer_name'] ?? null;
+        $journal->customer_type = $data['customer_type'] ?? null;
         $journal->save();
         $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6277,6 +6280,9 @@ class Utility extends Model
         $journalItem->product_ids = $data['prod_id'];
         $journalItem->credit = 0;
         $journalItem->debit = $data['amount'];
+             $journalItem->type = $data['type'] ?? null;
+        $journalItem->name = $data['customer_name'] ?? null;
+        $journalItem->customer_id = $data['customer_id'] ?? null;
         $journalItem->save();
         $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6325,6 +6331,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+                 $journalItem->type = $data['type'] ?? null;
+        $journalItem->name = $data['customer_name'] ?? null;
+        $journalItem->customer_id = $data['customer_id'] ?? null;
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6393,6 +6402,9 @@ class Utility extends Model
         $journal->voucher_type = 'CRV';
         $journal->owned_by = $data['owned_by'];
         $journal->created_by = $data['created_by'];
+        $journal->customer_id = $data['customer_id'] ?? null;
+        $journal->customer_name = $data['customer_name'] ?? null;
+        $journal->customer_type = $data['customer_type'] ?? null;
         $journal->save();
         $journal->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journal->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6407,6 +6419,9 @@ class Utility extends Model
         $journalItem->product_ids = $data['prod_id'];
         $journalItem->credit = 0;
         $journalItem->debit = $data['amount'];
+        $journalItem->type = $data['type'] ?? null;
+        $journalItem->name = $data['customer_name'] ?? null;
+        $journalItem->customer_id = $data['customer_id'] ?? null;
         $journalItem->save();
         $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
         $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6454,6 +6469,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+                 $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['customer_name'] ?? null;
+            $journalItem->customer_id = $data['customer_id'] ?? null;
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');

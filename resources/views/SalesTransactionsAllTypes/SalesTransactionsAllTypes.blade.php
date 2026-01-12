@@ -1021,6 +1021,10 @@
                                         <a href="{{ $txn['view_url'] }}"
                                             class="qbo-action-link">{{ __('View/Edit') }}</a>
                                     @endif
+                                    @if (!empty($txn['edit_payment_url']))
+                                        <a href="{{ $txn['edit_payment_url'] }}"
+                                            class="qbo-action-link">{{ __('| Receive Payment') }}</a>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

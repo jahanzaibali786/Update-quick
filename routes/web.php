@@ -801,6 +801,9 @@ Route::group(['middleware' => ['verified']], function () {
             //sales reciepts create
             Route::get('creditmemo/create/{cid}', [CreditNoteController::class, 'creditmemoCreate'])->name('creditmemo.create');
             Route::post('creditmemo/store', [CreditNoteController::class, 'creditmemoStore'])->name('creditmemo.store');
+            Route::get('creditmemo/edit/{id}', [CreditNoteController::class, 'creditmemoEdit'])->name('creditmemo.edit');
+            Route::post('creditmemo/update/{id}', [CreditNoteController::class, 'creditmemoUpdate'])->name('creditmemo.update');
+            Route::delete('creditmemo/destroy/{id}', [CreditNoteController::class, 'creditmemoDestroy'])->name('creditmemo.destroy');
         }
     );
 

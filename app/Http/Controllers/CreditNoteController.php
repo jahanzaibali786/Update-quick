@@ -61,7 +61,22 @@ class CreditNoteController extends Controller
 
     public function creditmemoIndex()
     {
-        return view('creditmemo.index');
+        if (\Auth::user()->can('manage invoice')) {
+            $user = \Auth::user();
+            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+            // Fetch standalone credit memos (those where invoice is 0 or null)
+            $creditMemos = CreditNote::where($column, $ownerId)
+                ->where(function($query) {
+                    $query->where('invoice', 0)->orWhereNull('invoice');
+                })
+                ->get();
+
+            return view('creditmemo.index', compact('creditMemos'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
     }
 
     public function creditmemoCreate($customerId)
@@ -98,7 +113,379 @@ class CreditNoteController extends Controller
                 'taxes'
             ));
         } else {
-            return response()->json(['error' => __('Permission denied.')], 401);
+            if ($request->ajax()) {
+                return response()->json(['error' => __('Permission denied.')], 403);
+            }
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function creditmemoStore(Request $request)
+    {
+        if (\Auth::user()->can('create invoice')) {
+            $validator = \Validator::make(
+                $request->all(),
+                [
+                    'customer_id' => 'required',
+                    'issue_date' => 'required',
+                ]
+            );
+            if ($validator->fails()) {
+                $messages = $validator->getMessageBag();
+                return redirect()->back()->with('error', $messages->first());
+            }
+
+            try {
+                \DB::beginTransaction();
+
+                $creditMemo = new CreditNote();
+                $creditMemo->credit_note_id = $this->invoiceNumber();
+                $creditMemo->customer = $request->customer_id; // For legacy compatibility
+                $creditMemo->customer_id = $request->customer_id;
+                $creditMemo->customer_email = $request->customer_email;
+                $creditMemo->date = $request->issue_date; // For legacy compatibility
+                $creditMemo->issue_date = $request->issue_date;
+                $creditMemo->category_id = $request->category_id ?? 1;
+                $creditMemo->location_of_sale = $request->location_of_sale;
+                $creditMemo->bill_to = $request->bill_to;
+                $creditMemo->status = 2; // Approved
+                $creditMemo->created_by = \Auth::user()->creatorId();
+                $creditMemo->owned_by = \Auth::user()->ownedId();
+
+                // Store calculated totals
+                $creditMemo->subtotal = $request->subtotal ?? 0;
+                $creditMemo->taxable_subtotal = $request->taxable_subtotal ?? 0;
+                $creditMemo->discount_type = $request->discount_type;
+                $creditMemo->discount_value = $request->discount_value ?? 0;
+                $creditMemo->total_discount = $request->total_discount ?? 0;
+                $creditMemo->sales_tax_rate = $request->sales_tax_rate;
+                $creditMemo->total_tax = $request->total_tax ?? 0;
+                $creditMemo->sales_tax_amount = $request->sales_tax_amount ?? 0;
+                $creditMemo->total_amount = $request->total_amount ?? 0;
+                $creditMemo->amount = $request->total_amount ?? 0; // For legacy compatibility
+                
+                $creditMemo->memo = $request->memo;
+                $creditMemo->note = $request->note;
+
+                // Handle attachments
+                if ($request->hasFile('attachments')) {
+                    $attachments = [];
+                    foreach ($request->file('attachments') as $attachment) {
+                        $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                        $attachment->storeAs('uploads/credit_memo_attachments', $attachmentName, 'public');
+                        $attachments[] = $attachmentName;
+                    }
+                    $creditMemo->attachments = json_encode($attachments);
+                }
+
+                $creditMemo->save();
+
+                // Save Custom Fields
+                \App\Models\CustomField::saveData($creditMemo, $request->customField);
+
+                // Parse items
+                $products = $request->items;
+                if (is_string($products)) {
+                    $products = json_decode($products, true);
+                }
+
+                foreach ($products as $prod) {
+                    $creditMemoProduct = new \App\Models\CreditNoteProduct();
+                    $creditMemoProduct->credit_note_id = $creditMemo->id;
+                    $creditMemoProduct->product_id = $prod['item'] ?? null;
+                    $creditMemoProduct->quantity = $prod['quantity'] ?? 0;
+                    $creditMemoProduct->price = $prod['price'] ?? 0;
+                    $creditMemoProduct->description = $prod['description'] ?? '';
+                    $creditMemoProduct->tax = $prod['tax'] ?? 0;
+                    $creditMemoProduct->discount = $prod['discount'] ?? 0;
+
+                    $creditMemoProduct->taxable = isset($prod['tax_checkbox']) && $prod['tax_checkbox'] == 'on' ? 1 : 0;
+                    $creditMemoProduct->item_tax_price = $prod['itemTaxPrice'] ?? 0;
+                    $creditMemoProduct->item_tax_rate = $prod['itemTaxRate'] ?? 0;
+                    $creditMemoProduct->amount = $prod['amount'] ?? 0;
+
+                    $creditMemoProduct->save();
+
+                    // Inventory management: CREDIT MEMO INCREASES STOCK
+                    if ($creditMemoProduct->product_id) {
+                        \App\Models\Utility::total_quantity('plus', $creditMemoProduct->quantity, $creditMemoProduct->product_id);
+
+                        // Stock Log
+                        $type = 'credit_note';
+                        $type_id = $creditMemo->id;
+                        $description = $creditMemoProduct->quantity . ' ' . __(' quantity returned in credit memo ') . \Auth::user()->invoiceNumberFormat($creditMemo->credit_note_id);
+                        \App\Models\Utility::addProductStock($creditMemoProduct->product_id, $creditMemoProduct->quantity, $type, $description, $type_id);
+                    }
+                }
+
+                // Create Journal Voucher for credit memo
+                $this->createCreditMemoJournalVoucher($creditMemo);
+
+                \App\Models\Utility::makeActivityLog(\Auth::user()->id, 'Credit Memo', $creditMemo->id, 'Create Credit Memo', 'Credit Memo Created & Approved');
+
+                // Webhook
+                $module = 'New Credit Note'; // Reuse existing module if possible
+                $webhook = \App\Models\Utility::webhookSetting($module);
+                if ($webhook) {
+                    $parameter = json_encode($creditMemo);
+                    $status = \App\Models\Utility::WebhookCall($webhook['url'], $parameter, $webhook['method']);
+                    if (!$status) {
+                        \DB::rollback();
+                        return redirect()->back()->with('error', __('Webhook call failed.'));
+                    }
+                }
+
+                \DB::commit();
+
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => __('Credit memo successfully created.'),
+                        'redirect' => route('sales.transactions.index'),
+                    ]);
+                }
+
+                return redirect()->route('sales.transactions.index')->with('success', __('Credit memo successfully created.'));
+
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                return redirect()->back()->with('error', $e->getMessage());
+            }
+
+        } else {
+            if ($request->ajax()) {
+                return response()->json(['error' => __('Permission denied.')], 403);
+            }
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function creditmemoEdit($id)
+    {
+        if (\Auth::user()->can('edit invoice')) {
+            $user = \Auth::user();
+            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+
+            $creditMemo = CreditNote::find($id);
+            if (!$creditMemo) {
+                return redirect()->back()->with('error', __('Credit Memo not found.'));
+            }
+
+            $customerId = $creditMemo->customer_id;
+            $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
+                ->where('module', '=', 'invoice')->get();
+            $invoice_number = \Auth::user()->invoiceNumberFormat($creditMemo->credit_note_id);
+
+            $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
+            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+
+            $category = ProductServiceCategory::where($column, $ownerId)
+                ->where('type', 'income')->get()->pluck('name', 'id')->toArray();
+            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+
+            $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
+            $product_services->prepend('--', '');
+            
+            $taxes = \App\Models\Tax::where('created_by', \Auth::user()->creatorId())->get();
+
+            return view('creditmemo.edit', compact(
+                'customers',
+                'invoice_number',
+                'product_services',
+                'category',
+                'customFields',
+                'customerId',
+                'taxes',
+                'creditMemo'
+            ));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function creditmemoUpdate(Request $request, $id)
+    {
+        if (\Auth::user()->can('edit invoice')) {
+            $validator = \Validator::make(
+                $request->all(),
+                [
+                    'customer_id' => 'required',
+                    'issue_date' => 'required',
+                ]
+            );
+            if ($validator->fails()) {
+                $messages = $validator->getMessageBag();
+                return redirect()->back()->with('error', $messages->first());
+            }
+
+            try {
+                \DB::beginTransaction();
+
+                $creditMemo = CreditNote::find($id);
+                if (!$creditMemo) {
+                    return redirect()->back()->with('error', __('Credit Memo not found.'));
+                }
+
+                // Inventory management: Normalize stock (remove previously added stock)
+                $oldProducts = \App\Models\CreditNoteProduct::where('credit_note_id', $creditMemo->id)->get();
+                foreach ($oldProducts as $oldProd) {
+                    if ($oldProd->product_id) {
+                        \App\Models\Utility::total_quantity('minus', $oldProd->quantity, $oldProd->product_id);
+                    }
+                }
+                \App\Models\CreditNoteProduct::where('credit_note_id', $creditMemo->id)->delete();
+
+                // Delete old Journal Entries and Transaction Lines
+                if ($creditMemo->voucher_id) {
+                    $journal = \App\Models\JournalEntry::find($creditMemo->voucher_id);
+                    if ($journal) {
+                        \App\Models\JournalItem::where('journal', $journal->id)->delete();
+                        \App\Models\TransactionLines::where('reference_id', $journal->id)->delete();
+                        $journal->delete();
+                    }
+                }
+
+                // Update Header
+                $creditMemo->customer = $request->customer_id;
+                $creditMemo->customer_id = $request->customer_id;
+                $creditMemo->customer_email = $request->customer_email;
+                $creditMemo->date = $request->issue_date;
+                $creditMemo->issue_date = $request->issue_date;
+                $creditMemo->category_id = $request->category_id ?? 1;
+                $creditMemo->location_of_sale = $request->location_of_sale;
+                $creditMemo->bill_to = $request->bill_to;
+                
+                // Store calculated totals
+                $creditMemo->subtotal = $request->subtotal ?? 0;
+                $creditMemo->taxable_subtotal = $request->taxable_subtotal ?? 0;
+                $creditMemo->discount_type = $request->discount_type;
+                $creditMemo->discount_value = $request->discount_value ?? 0;
+                $creditMemo->total_discount = $request->total_discount ?? 0;
+                $creditMemo->sales_tax_rate = $request->sales_tax_rate;
+                $creditMemo->total_tax = $request->total_tax ?? 0;
+                $creditMemo->sales_tax_amount = $request->sales_tax_amount ?? 0;
+                $creditMemo->total_amount = $request->total_amount ?? 0;
+                $creditMemo->amount = $request->total_amount ?? 0;
+                
+                $creditMemo->memo = $request->memo;
+                $creditMemo->note = $request->note;
+
+                // Handle attachments
+                if ($request->hasFile('attachments')) {
+                    $attachments = [];
+                    foreach ($request->file('attachments') as $attachment) {
+                        $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                        $attachment->storeAs('uploads/credit_memo_attachments', $attachmentName, 'public');
+                        $attachments[] = $attachmentName;
+                    }
+                    $creditMemo->attachments = json_encode($attachments);
+                }
+
+                $creditMemo->save();
+
+                // Save Custom Fields
+                \App\Models\CustomField::saveData($creditMemo, $request->customField);
+
+                // Parse and Save new items
+                $products = $request->items;
+                if (is_string($products)) {
+                    $products = json_decode($products, true);
+                }
+
+                foreach ($products as $prod) {
+                    $creditMemoProduct = new \App\Models\CreditNoteProduct();
+                    $creditMemoProduct->credit_note_id = $creditMemo->id;
+                    $creditMemoProduct->product_id = $prod['item'] ?? null;
+                    $creditMemoProduct->quantity = $prod['quantity'] ?? 0;
+                    $creditMemoProduct->price = $prod['price'] ?? 0;
+                    $creditMemoProduct->description = $prod['description'] ?? '';
+                    $creditMemoProduct->tax = $prod['tax'] ?? 0;
+                    $creditMemoProduct->discount = $prod['discount'] ?? 0;
+
+                    $creditMemoProduct->taxable = isset($prod['tax_checkbox']) && $prod['tax_checkbox'] == 'on' ? 1 : 0;
+                    $creditMemoProduct->item_tax_price = $prod['itemTaxPrice'] ?? 0;
+                    $creditMemoProduct->item_tax_rate = $prod['itemTaxRate'] ?? 0;
+                    $creditMemoProduct->amount = $prod['amount'] ?? 0;
+
+                    $creditMemoProduct->save();
+
+                    // Update stock
+                    if ($creditMemoProduct->product_id) {
+                        \App\Models\Utility::total_quantity('plus', $creditMemoProduct->quantity, $creditMemoProduct->product_id);
+                    }
+                }
+
+                // Re-create Journal Voucher
+                $this->createCreditMemoJournalVoucher($creditMemo);
+
+                \App\Models\Utility::makeActivityLog(\Auth::user()->id, 'Credit Memo', $creditMemo->id, 'Update Credit Memo', 'Credit Memo Updated');
+
+                \DB::commit();
+
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => __('Credit memo successfully updated.'),
+                        'redirect' => route('creditmemo.index'),
+                    ]);
+                }
+
+                return redirect()->route('creditmemo.index')->with('success', __('Credit memo successfully updated.'));
+
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                return redirect()->back()->with('error', $e->getMessage());
+            }
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
+    public function creditmemoDestroy($id)
+    {
+        if (\Auth::user()->can('delete invoice')) {
+            try {
+                \DB::beginTransaction();
+
+                $creditMemo = CreditNote::find($id);
+                if (!$creditMemo) {
+                    return redirect()->back()->with('error', __('Credit Memo not found.'));
+                }
+
+                // Inventory management: Normalize stock (remove returns)
+                $oldProducts = \App\Models\CreditNoteProduct::where('credit_note_id', $creditMemo->id)->get();
+                foreach ($oldProducts as $oldProd) {
+                    if ($oldProd->product_id) {
+                        \App\Models\Utility::total_quantity('minus', $oldProd->quantity, $oldProd->product_id);
+                    }
+                }
+                \App\Models\CreditNoteProduct::where('credit_note_id', $creditMemo->id)->delete();
+
+                // Delete Journal Entries and Transaction Lines
+                if ($creditMemo->voucher_id) {
+                    $journal = \App\Models\JournalEntry::find($creditMemo->voucher_id);
+                    if ($journal) {
+                        \App\Models\JournalItem::where('journal', $journal->id)->delete();
+                        \App\Models\TransactionLines::where('reference_id', $journal->id)->delete();
+                        $journal->delete();
+                    }
+                }
+
+                $creditMemo->delete();
+
+                \App\Models\Utility::makeActivityLog(\Auth::user()->id, 'Credit Memo', $id, 'Delete Credit Memo', 'Credit Memo Deleted');
+
+                \DB::commit();
+
+                return redirect()->back()->with('success', __('Credit memo successfully deleted.'));
+
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                return redirect()->back()->with('error', $e->getMessage());
+            }
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 
@@ -630,7 +1017,7 @@ class CreditNoteController extends Controller
         // ============================================================
         // 5. Credit entry for Accounts Receivable (Reducing customer debt)
         // ============================================================
-        $receivableAccountId = $this->getOrCreateAccountReceivable($creditMemo->created_by);
+        $receivableAccountId = Utility::getAccountReceivable($creditMemo->created_by);
 
         // The A/R credit should equal the total credit memo amount
         $creditMemoTotal = floatval($creditMemo->total_amount ?? 0);
@@ -639,7 +1026,7 @@ class CreditNoteController extends Controller
             $journalItem = new $JournalItem();
             $journalItem->journal = $journal->id;
             $journalItem->account = $receivableAccountId;
-            $journalItem->description = 'Credit applied to customer for Credit Memo No: ' . ($creditMemo->credit_memo_id ?? $creditMemo->id);
+            $journalItem->description = 'Credit Memo to customer for Credit Memo No: ' . ($creditMemo->credit_memo_id ?? $creditMemo->id);
             $journalItem->credit = $creditMemoTotal;
             $journalItem->debit = 0;
             $journalItem->type = 'Credit Memo';

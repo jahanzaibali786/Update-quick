@@ -93,14 +93,14 @@
 
         .customer-select-group {
             /* flex: 1;
-                                            max-width: 400px; */
+                                                    max-width: 400px; */
         }
 
         .email-group {
             /* flex: 1;
-                                            max-width: 400px;
-                                            display: flex;
-                                            flex-direction: column; */
+                                                    max-width: 400px;
+                                                    display: flex;
+                                                    flex-direction: column; */
         }
 
         .email-input-row {
@@ -1961,7 +1961,8 @@
                                             </td>
                                             <td>
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" value="">
+                                                    <input class="form-check-input" type="checkbox" name="tax_checkbox"
+                                                        value="">
                                                 </div>
                                                 {{ Form::hidden('tax', '', ['class' => 'form-control tax']) }}
                                                 {{ Form::hidden('itemTaxPrice', '', ['class' => 'form-control itemTaxPrice']) }}
@@ -2323,6 +2324,14 @@
                                         <span class="totalTax">0.00</span>
                                     </div>
 
+                                    {{-- Hidden fields for totals --}}
+                                    <input type="hidden" name="subtotal" value="0.00">
+                                    <input type="hidden" name="taxable_subtotal" value="0.00">
+                                    <input type="hidden" name="total_discount" value="0.00">
+                                    <input type="hidden" name="total_tax" value="0.00">
+                                    <input type="hidden" name="sales_tax_amount" value="0.00">
+                                    <input type="hidden" name="total_amount" value="0.00">
+
                                     <script>
                                         $(function() {
                                             // enable Bootstrap tooltip on the icon
@@ -2430,9 +2439,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                        onclick="location.href = '{{ route('invoice.index') }}';">
-                                                                                                                                                    {{ __('Cancel') }}
-                                                                                                                                                </button> -->
+                                                                                                                                                                onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                                                            {{ __('Cancel') }}
+                                                                                                                                                        </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -2737,6 +2746,14 @@
 
             var grandTotal = grandSubtotal - totalDiscount + totalTax;
             $('.totalAmount').text(grandTotal.toFixed(2));
+
+            // Populate hidden fields
+            $('input[name="subtotal"]').val(grandSubtotal.toFixed(2));
+            $('input[name="taxable_subtotal"]').val(taxableSubtotal.toFixed(2));
+            $('input[name="total_discount"]').val(totalDiscount.toFixed(2));
+            $('input[name="total_tax"]').val(totalTax.toFixed(2));
+            $('input[name="sales_tax_amount"]').val(totalTax.toFixed(2));
+            $('input[name="total_amount"]').val(grandTotal.toFixed(2));
 
             // For sales receipts, amount received = total
             $('.amountReceived').text(grandTotal.toFixed(2));

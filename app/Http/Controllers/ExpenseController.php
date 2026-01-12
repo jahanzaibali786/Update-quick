@@ -2226,7 +2226,7 @@ class ExpenseController extends Controller
             $timeActivity->created_by = \Auth::user()->creatorId();
             $timeActivity->save();
 
-            return redirect()->route('expense.index')->with('success', __('Time Activity successfully created.'));
+            return redirect()->route('')->with('success', __('Time Activity successfully created.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }

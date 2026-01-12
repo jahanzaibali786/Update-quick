@@ -179,11 +179,11 @@ class DelayedCreditController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Delayed Credit created successfully.'),
-                        'redirect' => route('delayed-credit.index')
+                        'redirect' => route('sales.transactions.index')
                     ]);
                 }
 
-                return redirect()->route('delayed-credit.index')->with('success', __('Delayed Credit created successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Credit created successfully.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -333,11 +333,11 @@ class DelayedCreditController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Delayed Credit updated successfully.'),
-                        'redirect' => route('delayed-credit.index')
+                        'redirect' => route('sales.transactions.index')
                     ]);
                 }
 
-                return redirect()->route('delayed-credit.index')->with('success', __('Delayed Credit updated successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Credit updated successfully.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }

@@ -9,6 +9,8 @@ use App\Models\SalesReceipt;
 use App\Models\Proposal;
 use App\Models\CreditNote;
 use App\Models\Customer;
+use App\Models\DelayedCharges;
+use App\Models\DelayedCredits;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
@@ -145,6 +147,10 @@ class SalesTransactionsAllTypesController extends Controller
                     'status' => $statusText,
                     'view_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
                     'edit_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
+                    'edit_payment_url' => route(
+                        'receive-payment.payment',
+                        ['invoice_id' => Crypt::encrypt($inv->id)]
+                    ),
                 ]);
             }
         }
@@ -239,11 +245,51 @@ class SalesTransactionsAllTypesController extends Controller
                     'date' => $cn->date,
                     'type' => __('Credit Memo'),
                     'no' => '#' . ($cn->credit_note_id ?? $cn->id),
-                    'customer' => '-',
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
                     'memo' => $cn->description ?? '',
                     'amount' => -$cn->amount,
-                    'status' => __('Applied'),
-                    'view_url' => route('credit.note', $cn->id),
+                    'status' => __('Unapplied'),
+                    'view_url' => route('creditmemo.edit', $cn->id),
+                ]);
+            }
+        }
+        if ($type === 'all' || $type === 'delayed_credits') {
+            $creditNotes = DelayedCredits::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Delayed Credit'),
+                    'no' => '#' . ($cn->credit_id ?? $cn->id),
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'memo' => $cn->description ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('delayed-credit.edit', $cn->id),
+                ]);
+            }
+        }
+        if ($type === 'all' || $type === 'delayed_charges') {
+            $creditNotes = DelayedCharges::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Delayed Charge'),
+                    'no' => '#' . ($cn->credit_id ?? $cn->id),
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'memo' => $cn->description ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('delayed-charge.edit', $cn->id),
                 ]);
             }
         }
