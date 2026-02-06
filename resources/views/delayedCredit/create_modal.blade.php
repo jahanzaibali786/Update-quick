@@ -678,11 +678,13 @@
                 $.ajax({
                     url: '{{ route("invoice.product") }}',
                     type: 'POST',
+                    dataType: 'json', // 🔥 THIS LINE
                     data: {
                         _token: '{{ csrf_token() }}',
                         product_id: productId
                     },
                     success: function(response) {
+
                         if (response.product) {
                             $row.find('.item-description').val(response.product.description || '');
                             $row.find('.item-quantity').val(1);

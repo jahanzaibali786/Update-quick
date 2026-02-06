@@ -22,6 +22,7 @@ class TimeActivity extends Model
         'billable',
         'rate',
         'taxable',
+        'total_amount',
         'notes',
         'created_by',
         'invoiced_at',

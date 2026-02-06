@@ -12,6 +12,7 @@ use App\Models\JournalEntry;
 use App\Models\ProductService;
 use App\Models\Utility;
 use App\Services\JournalService;
+use App\Services\JournalServicecredit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -67,97 +68,112 @@ class VendorCreditController extends Controller
             'vender_id' => 'required|exists:venders,id',
             'date' => 'required|date',
         ]);
-// dd($request->all());
-        // Calculate total from category and item lines
-        $categoryTotal = 0;
-        $itemTotal = 0;
 
-        // Form uses 'categories' (repeater list name)
-        if ($request->has('categories')) {
-            foreach ($request->categories as $line) {
-                if (!empty($line['account_id']) && isset($line['amount'])) {
-                    $categoryTotal += floatval($line['amount'] ?? 0);
+        try {
+            // Calculate total from category and item lines
+            $categoryTotal = 0;
+            $itemTotal = 0;
+
+            // Form uses 'categories' (repeater list name)
+            if ($request->has('categories')) {
+                foreach ($request->categories as $line) {
+                    if (!empty($line['account_id']) && isset($line['amount'])) {
+                        $categoryTotal += floatval($line['amount'] ?? 0);
+                    }
                 }
             }
-        }
 
-        if ($request->has('items')) {
-            foreach ($request->items as $item) {
-                if (!empty($item['item_id'])) {
-                    $qty = floatval($item['quantity'] ?? 1);
-                    $rate = floatval($item['rate'] ?? 0);
-                    $itemTotal += $qty * $rate;
+            if ($request->has('items')) {
+                foreach ($request->items as $item) {
+                    if (!empty($item['item_id'])) {
+                        $qty = floatval($item['quantity'] ?? 1);
+                        $rate = floatval($item['rate'] ?? 0);
+                        $itemTotal += $qty * $rate;
+                    }
                 }
             }
-        }
 
-        $totalAmount = $categoryTotal + $itemTotal;
+            $totalAmount = $categoryTotal + $itemTotal;
 
-        // Create vendor credit
-        $vendorCredit = VendorCredit::create([
-            'vendor_credit_id' => VendorCredit::generateCreditNumber(),
-            'status' => VendorCredit::STATUS_OPEN,
-            'vender_id' => $request->vender_id,
-            'date' => $request->date,
-            'amount' => $totalAmount,
-            'memo' => $request->memo,
-            'created_by' => Auth::user()->creatorId(),
-            'owned_by' => Auth::user()->ownedId(),
-        ]);
-
-        // Save category lines (account-based expenses)
-        if ($request->has('categories')) {
-            foreach ($request->categories as $line) {
-                if (!empty($line['account_id'])) {
-                    VendorCreditAccount::create([
-                        'vendor_credit_id' => $vendorCredit->id,
-                        'chart_account_id' => $line['account_id'],
-                        'price' => floatval($line['amount'] ?? 0),
-                        'description' => $line['description'] ?? null,
-                        'tax' => isset($line['tax']) ? 1 : 0,
-                        'billable' => isset($line['billable']) ? 1 : 0,
-                        'customer_id' => !empty($line['customer_id']) ? $line['customer_id'] : null,
-                    ]);
-                }
-            }
-        }
-
-        // Save item lines (product-based expenses)
-        if ($request->has('items')) {
-            foreach ($request->items as $item) {
-                if (!empty($item['item_id'])) {
-                    $qty = floatval($item['quantity'] ?? 1);
-                    $rate = floatval($item['rate'] ?? 0);
-                    
-                    VendorCreditProduct::create([
-                        'vendor_credit_id' => $vendorCredit->id,
-                        'product_id' => $item['item_id'],
-                        'quantity' => $qty,
-                        'price' => $rate,
-                        'description' => $item['description'] ?? null,
-                        'tax' => isset($item['tax_id']) ? 1 : 0,
-                        'billable' => isset($item['billable']) ? 1 : 0,
-                        'customer_id' => !empty($item['customer_id']) ? $item['customer_id'] : null,
-                    ]);
-                }
-            }
-        }
-
-                         // Create journal entry using JournalService
-        $this->createvendorCreditJournalEntry($vendorCredit);
-                    
-        Utility::makeActivityLog(\Auth::user()->id, 'Vendor Credit', $vendorCredit->id, 'Create Vendor Credit', 'Vendor Credit Created');
-
-        // Handle AJAX request
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => __('Vendor Credit created successfully'),
-                'redirect' => route('expense.index'),
+            // Create vendor credit
+            $vendorCredit = VendorCredit::create([
+                'vendor_credit_id' => VendorCredit::generateCreditNumber(),
+                'status' => VendorCredit::STATUS_OPEN,
+                'vender_id' => $request->vender_id,
+                'date' => $request->date,
+                'amount' => $totalAmount,
+                'memo' => $request->memo,
+                'created_by' => Auth::user()->creatorId(),
+                'owned_by' => Auth::user()->ownedId(),
             ]);
-        }
 
-        return redirect()->route('expense.index')->with('success', __('Vendor Credit created successfully'));
+            // Save category lines (account-based expenses)
+            if ($request->has('categories')) {
+                foreach ($request->categories as $line) {
+                    if (!empty($line['account_id'])) {
+                        VendorCreditAccount::create([
+                            'vendor_credit_id' => $vendorCredit->id,
+                            'chart_account_id' => $line['account_id'],
+                            'price' => floatval($line['amount'] ?? 0),
+                            'description' => $line['description'] ?? null,
+                            'tax' => isset($line['tax']) ? 1 : 0,
+                            'billable' => isset($line['billable']) ? 1 : 0,
+                            'customer_id' => !empty($line['customer_id']) ? $line['customer_id'] : null,
+                        ]);
+                    }
+                }
+            }
+
+            // Save item lines (product-based expenses)
+            if ($request->has('items')) {
+                foreach ($request->items as $item) {
+                    if (!empty($item['item_id'])) {
+                        $qty = floatval($item['quantity'] ?? 1);
+                        $rate = floatval($item['rate'] ?? 0);
+                        
+                        VendorCreditProduct::create([
+                            'vendor_credit_id' => $vendorCredit->id,
+                            'product_id' => $item['item_id'],
+                            'quantity' => $qty,
+                            'price' => $rate,
+                            'description' => $item['description'] ?? null,
+                            'tax' => isset($item['tax_id']) ? 1 : 0,
+                            'billable' => isset($item['billable']) ? 1 : 0,
+                            'customer_id' => !empty($item['customer_id']) ? $item['customer_id'] : null,
+                        ]);
+                    }
+                }
+            }
+
+            // Create journal entry using JournalService
+            $this->createvendorCreditJournalEntry($vendorCredit);
+                        
+            Utility::makeActivityLog(\Auth::user()->id, 'Vendor Credit', $vendorCredit->id, 'Create Vendor Credit', 'Vendor Credit Created');
+
+            // Handle AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => __('Vendor Credit created successfully'),
+                    'redirect' => route('expense.index'),
+                ]);
+            }
+
+            return redirect()->route('expense.index')->with('success', __('Vendor Credit created successfully'));
+        } catch (\Exception $e) {
+            \Log::error('Error creating vendor credit: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('Error creating Vendor Credit: ') . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', __('Error creating Vendor Credit: ') . $e->getMessage())->withInput();
+        }
     }
 
     /**
@@ -264,106 +280,122 @@ class VendorCreditController extends Controller
             'date' => 'required|date',
         ]);
 
-        // Calculate total from category and item lines
-        $categoryTotal = 0;
-        $itemTotal = 0;
+        try {
+            // Calculate total from category and item lines
+            $categoryTotal = 0;
+            $itemTotal = 0;
 
-        // Form uses 'categories' (repeater list name)
-        if ($request->has('categories')) {
-            foreach ($request->categories as $line) {
-                if (!empty($line['account_id']) && isset($line['amount'])) {
-                    $categoryTotal += floatval($line['amount'] ?? 0);
+            // Form uses 'categories' (repeater list name)
+            if ($request->has('categories')) {
+                foreach ($request->categories as $line) {
+                    if (!empty($line['account_id']) && isset($line['amount'])) {
+                        $categoryTotal += floatval($line['amount'] ?? 0);
+                    }
                 }
             }
-        }
 
-        if ($request->has('items')) {
-            foreach ($request->items as $item) {
-                if (!empty($item['item_id'])) {
-                    $qty = floatval($item['quantity'] ?? 1);
-                    $rate = floatval($item['price'] ?? 0);
-                    $itemTotal += $qty * $rate;
+            if ($request->has('items')) {
+                foreach ($request->items as $item) {
+                    if (!empty($item['item_id'])) {
+                        $qty = floatval($item['quantity'] ?? 1);
+                        $rate = floatval($item['price'] ?? 0);
+                        $itemTotal += $qty * $rate;
+                    }
                 }
             }
-        }
 
-        $totalAmount = $categoryTotal + $itemTotal;
+            $totalAmount = $categoryTotal + $itemTotal;
 
-        // Update vendor credit
-        $vendorCredit->update([
-            'vender_id' => $request->vender_id,
-            'date' => $request->date,
-            'amount' => $totalAmount,
-            'memo' => $request->memo,
-        ]);
-
-        if ($request->ref_no) {
-            $vendorCredit->update(['vendor_credit_id' => $request->ref_no]);
-        }
-
-        // Delete old account lines and recreate
-        VendorCreditAccount::where('vendor_credit_id', $vendorCredit->id)->delete();
-        
-        if ($request->has('categories')) {
-            foreach ($request->categories as $line) {
-                if (!empty($line['account_id'])) {
-                    VendorCreditAccount::create([
-                        'vendor_credit_id' => $vendorCredit->id,
-                        'chart_account_id' => $line['account_id'],
-                        'price' => floatval($line['amount'] ?? 0),
-                        'description' => $line['description'] ?? null,
-                        'tax' => isset($line['tax']) ? 1 : 0,
-                        'billable' => isset($line['billable']) ? 1 : 0,
-                        'customer_id' => !empty($line['customer_id']) ? $line['customer_id'] : null,
-                    ]);
-                }
-            }
-        }
-
-        // Delete old product lines and recreate
-        VendorCreditProduct::where('vendor_credit_id', $vendorCredit->id)->delete();
-        
-        if ($request->has('items')) {
-            foreach ($request->items as $item) {
-                if (!empty($item['item_id'])) {
-                    $qty = floatval($item['quantity'] ?? 1);
-                    $rate = floatval($item['price'] ?? 0);
-                    
-                    VendorCreditProduct::create([
-                        'vendor_credit_id' => $vendorCredit->id,
-                        'product_id' => $item['item_id'],
-                        'quantity' => $qty,
-                        'price' => $rate,
-                        'description' => $item['description'] ?? null,
-                        'tax' => isset($item['tax_id']) ? 1 : 0,
-                        'billable' => isset($item['billable']) ? 1 : 0,
-                        'customer_id' => !empty($item['customer_id']) ? $item['customer_id'] : null,
-                    ]);
-                }
-            }
-        }
-
-        // Handle AJAX request
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => __('Vendor Credit updated successfully'),
-                'redirect' => route('expense.index'),
+            // Update vendor credit
+            $vendorCredit->update([
+                'vender_id' => $request->vender_id,
+                'date' => $request->date,
+                'amount' => $totalAmount,
+                'memo' => $request->memo,
             ]);
-        }
 
-         $journalEntry = JournalEntry::where('reference_id', $vendorCredit->id)
-                ->where('module', 'vendor_credit')
-                ->first();
+            if ($request->ref_no) {
+                $vendorCredit->update(['vendor_credit_id' => $request->ref_no]);
+            }
+
+            // Delete old account lines and recreate
+            VendorCreditAccount::where('vendor_credit_id', $vendorCredit->id)->delete();
+            
+            if ($request->has('categories')) {
+                foreach ($request->categories as $line) {
+                    if (!empty($line['account_id'])) {
+                        VendorCreditAccount::create([
+                            'vendor_credit_id' => $vendorCredit->id,
+                            'chart_account_id' => $line['account_id'],
+                            'price' => floatval($line['amount'] ?? 0),
+                            'description' => $line['description'] ?? null,
+                            'tax' => isset($line['tax']) ? 1 : 0,
+                            'billable' => isset($line['billable']) ? 1 : 0,
+                            'customer_id' => !empty($line['customer_id']) ? $line['customer_id'] : null,
+                        ]);
+                    }
+                }
+            }
+
+            // Delete old product lines and recreate
+            VendorCreditProduct::where('vendor_credit_id', $vendorCredit->id)->delete();
+            
+            if ($request->has('items')) {
+                foreach ($request->items as $item) {
+                    if (!empty($item['item_id'])) {
+                        $qty = floatval($item['quantity'] ?? 1);
+                        $rate = floatval($item['price'] ?? 0);
+                        
+                        VendorCreditProduct::create([
+                            'vendor_credit_id' => $vendorCredit->id,
+                            'product_id' => $item['item_id'],
+                            'quantity' => $qty,
+                            'price' => $rate,
+                            'description' => $item['description'] ?? null,
+                            'tax' => isset($item['tax_id']) ? 1 : 0,
+                            'billable' => isset($item['billable']) ? 1 : 0,
+                            'customer_id' => !empty($item['customer_id']) ? $item['customer_id'] : null,
+                        ]);
+                    }
+                }
+            }
+
+            $journalEntry = JournalEntry::where('reference_id', $vendorCredit->id)
+                    ->where('module', 'vendor_credit')
+                    ->first();
             if ($journalEntry) {
-;                // Update existing journal entry
+                // Update existing journal entry
                 $this->updateVendorCreditJournalEntry($vendorCredit, $journalEntry);
             } else {
                 // Create new journal entry if doesn't exist
                 $this->createVendorCreditJournalEntry($vendorCredit);
             }
 
-        return redirect()->route('expense.index')->with('success', __('Vendor Credit updated successfully'));
+            // Handle AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => __('Vendor Credit updated successfully'),
+                    'redirect' => route('expense.index'),
+                ]);
+            }
+
+            return redirect()->route('expense.index')->with('success', __('Vendor Credit updated successfully'));
+        } catch (\Exception $e) {
+            \Log::error('Error updating vendor credit: ' . $e->getMessage(), [
+                'vendor_credit_id' => $vendorCredit->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('Error updating Vendor Credit: ') . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', __('Error updating Vendor Credit: ') . $e->getMessage())->withInput();
+        }
     }
 
     /**
@@ -461,7 +493,7 @@ class VendorCreditController extends Controller
         }
 
         // Create journal entry using JournalService
-        $journalEntry = JournalService::createJournalEntry([
+        $journalEntry = JournalServicecredit::createJournalEntry([
             'date' => $expense->bill_date,
             'backdate' => true,
             'reference' => $expense->vendor_credit_id,
@@ -580,8 +612,8 @@ class VendorCreditController extends Controller
         }
 
         // Update journal entry using JournalService
-        $updatedJournalEntry = JournalService::updateJournalEntry($journalEntry->id, [
-            'date' => $expense->bill_date,
+        $updatedJournalEntry = JournalServicecredit::updateJournalEntry($journalEntry->id, [
+            'date' => $expense->date,
             'backdate' => true,
             'reference' => $expense->vendor_credit_id,
             'description' => 'Vendor Credit from ' . $vendorName,

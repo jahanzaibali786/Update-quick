@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('creditmemo.index') }}">{{ __('Credit Memo') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('sales.transactions.index') }}">{{ __('Credit Memo') }}</a></li>
     <li class="breadcrumb-item">{{ __('Create Credit Memo') }}</li>
 @endsection
 
@@ -1830,7 +1830,7 @@
 
                                 {{-- Close X --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('sales.reciepts.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.transactions.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round">
@@ -2439,7 +2439,7 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                                onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                                                                onclick="location.href = '{{ route('sales.transactions.index') }}';">
                                                                                                                                                             {{ __('Cancel') }}
                                                                                                                                                         </button> -->
                         </div>

@@ -45,8 +45,10 @@ class InvoiceController extends Controller
     {
         if (\Auth::user()->can('manage invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customer = Customer::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $customer->prepend('Select Customer', '');
             $status = Invoice::$statues;
@@ -95,8 +97,10 @@ class InvoiceController extends Controller
         }
 
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+        $column = 'created_by';
 
         $customer = Customer::where($column, '=', $ownerId)->pluck('name', 'id');
         $customer->prepend('Select Customer', '');
@@ -227,8 +231,10 @@ class InvoiceController extends Controller
     {
         if (\Auth::user()->can('create invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
                 ->where('module', '=', 'invoice')
                 ->get();
@@ -1005,6 +1011,8 @@ class InvoiceController extends Controller
             'prod_id' => $invoiceProducts->where('product_id', '!=', null)->first()->product_id ?? null,
             'items' => $newitems,
             'customer_id' => $invoice->customer_id,
+            'customer_name' => $invoice->customer->name ?? null,
+            'type' => 'Invoice',
             'total' => $invoice->total_amount ?? $invoice->getTotal(),
             'subtotal' => $invoice->subtotal,
             'total_tax' => $invoice->total_tax,
@@ -1169,8 +1177,10 @@ class InvoiceController extends Controller
             $invoice = Invoice::find($id);
             $invoice_number = \Auth::user()->invoiceNumberFormat($invoice->invoice_id);
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
             $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
@@ -1952,6 +1962,9 @@ class InvoiceController extends Controller
                     $journalItem->description = $invoiceProduct->description;
                     $journalItem->credit = floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0);
                     $journalItem->debit = 0;
+                    $journalItem->type = 'Invoice';
+                    $journalItem->name = $invoice->customer->name ?? null;
+                    $journalItem->customer_id = $invoice->customer_id ?? null;
                     $journalItem->save();
                     $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
                     $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
@@ -2007,6 +2020,9 @@ class InvoiceController extends Controller
                             $journalItem->description = 'Tax on Invoice No : ' . @$invoice->invoice_id;
                             $journalItem->credit = $tax;
                             $journalItem->debit = 0;
+                            $journalItem->type = 'Invoice';
+                            $journalItem->name = $invoice->customer->name ?? null;
+                            $journalItem->customer_id = $invoice->customer_id ?? null;
                             $journalItem->save();
                             $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
                             $journalItem->updated_at = date('Y-m-d H:i:s', timestamp: strtotime($invoice->created_at));
@@ -2124,6 +2140,9 @@ class InvoiceController extends Controller
                         $journalItem->description = $invoiceProduct->description;
                         $journalItem->credit = floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0);
                         $journalItem->debit = 0;
+                        $journalItem->type = 'Invoice';
+                        $journalItem->name = $invoice->customer->name ?? null;
+                        $journalItem->customer_id = $invoice->customer_id ?? null;
                         $journalItem->save();
                         $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
                         $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
@@ -2146,6 +2165,9 @@ class InvoiceController extends Controller
                         Utility::addTransactionLines($dataline, 'create');
                     } else {
                         // Update existing Journal Item
+                        $journalItem->type = 'Invoice';
+                        $journalItem->name = $invoice->customer->name ?? null;
+                        $journalItem->customer_id = $invoice->customer_id ?? null;
                         $journalItem->credit = floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0);
                         $journalItem->save();
 
@@ -2178,6 +2200,9 @@ class InvoiceController extends Controller
                                     $journal_tax->description = 'Tax on Invoice No : ' . @$invoice->invoice_id;
                                     $journal_tax->credit = $tax;
                                     $journal_tax->debit = 0;
+                                    $journal_tax->type = 'Invoice';
+                                    $journal_tax->name = $invoice->customer->name ?? null;
+                                    $journal_tax->customer_id = $invoice->customer_id ?? null;
                                     $journal_tax->save();
                                     $journal_tax->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
                                     $journal_tax->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
@@ -2201,6 +2226,9 @@ class InvoiceController extends Controller
                             }
                         } else {
                             // Update existing Tax Journal Item
+                            $journal_tax->type = 'Invoice';
+                            $journal_tax->name = $invoice->customer->name ?? null;
+                            $journal_tax->customer_id = $invoice->customer_id ?? null;
                             $journal_tax->credit = $tax;
                             $journal_tax->save();
 
@@ -2322,6 +2350,9 @@ class InvoiceController extends Controller
                     
                     if ($existingSalesTaxJournal) {
                         // Update existing tax journal item
+                        $existingSalesTaxJournal->type = 'Invoice';
+                        $existingSalesTaxJournal->name = $invoice->customer->name ?? null;
+                        $existingSalesTaxJournal->customer_id = $invoice->customer_id ?? null;
                         $existingSalesTaxJournal->account = $taxAccountId;
                         $existingSalesTaxJournal->description = 'Sales Tax (' . $tax->name . ' @ ' . $tax->rate . '%) on Invoice No: ' . $invoice->invoice_id;
                         $existingSalesTaxJournal->credit = floatval($invoice->total_tax);
@@ -2348,6 +2379,9 @@ class InvoiceController extends Controller
                         $journalItem->debit = 0;
                         $journalItem->product_ids = null;
                         $journalItem->prod_tax_id = null;
+                        $journalItem->type = 'Invoice';
+                        $journalItem->name = $invoice->customer->name ?? null;
+                        $journalItem->customer_id = $invoice->customer_id ?? null;
                         $journalItem->save();
                         $journalItem->created_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
                         $journalItem->updated_at = date('Y-m-d H:i:s', strtotime($invoice->created_at));
@@ -2400,12 +2434,18 @@ class InvoiceController extends Controller
             if ($account) {
                 $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
                 if ($item_last) {
+                    $item_last->type = 'Invoice';
+                        $item_last->name = $invoice->customer->name ?? null;
+                        $item_last->customer_id = $invoice->customer_id ?? null;
                     $item_last->debit = $reciveable;
                     $item_last->save();
                 }
             } elseif ($inv_receviable) {
                 $item_last = JournalItem::where('journal', $voucher->id)->where('id', $inv_receviable->reference_sub_id)->first();
                 if ($item_last) {
+                    $item_last->type = 'Invoice';
+                    $item_last->name = $invoice->customer->name ?? null;
+                    $item_last->customer_id = $invoice->customer_id ?? null;
                     $item_last->debit = $reciveable;
                     $item_last->save();
                 }
@@ -2435,8 +2475,10 @@ class InvoiceController extends Controller
     public function invoiceNumber()
     {
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+            $column = 'created_by';
         $latest = Invoice::where($column, '=', $ownerId)->latest()->first();
         if (!$latest) {
             return 1;
@@ -2460,8 +2502,10 @@ class InvoiceController extends Controller
                 // Check if request is AJAX (for modal loading)
                 if (request()->ajax()) {
                     $user = \Auth::user();
-                    $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-                    $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+                    // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+                    // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+                    $ownerId = $user->creatorId();
+            $column = 'created_by';
                     $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
                     $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
                     $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
@@ -2672,8 +2716,10 @@ class InvoiceController extends Controller
         if (\Auth::user()->can('manage customer invoice')) {
             $status = Invoice::$statues;
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $query = Invoice::where('customer_id', '=', \Auth::user()->id)
                 ->where('status', '!=', '0')
                 ->where($column, $ownerId);
@@ -2814,8 +2860,10 @@ class InvoiceController extends Controller
         if (\Auth::user()->can('create payment invoice')) {
             $invoice = Invoice::where('id', $invoice_id)->first();
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customers = Customer::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $categories = ProductServiceCategory::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $accounts = BankAccount::select('*', \DB::raw("CONCAT(bank_name,' ',holder_name) AS name"))
@@ -2840,9 +2888,10 @@ class InvoiceController extends Controller
         }
         
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
-        
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+            $column = 'created_by';
         // Get all customers for the dropdown
         $customers = Customer::where($column, '=', $ownerId)->get()->pluck('name', 'id');
         $customerId = $invoice->customer_id;
@@ -3523,8 +3572,10 @@ class InvoiceController extends Controller
     {
         if (\Auth::user()->can('create invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
 
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
                 ->where('module', '=', 'invoice')->get();
@@ -3619,8 +3670,10 @@ class InvoiceController extends Controller
             ]);
         }
 
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+        $column = 'created_by';
 
         // 1. Get Estimates (reuse logic from ProposalController)
         $estimates = $this->getCustomerEstimates($customerId, $ownerId, $column, $user);

@@ -21,6 +21,7 @@ class VendorCredit extends Model
         'amount',
         'memo',
         'status',
+        'voucher_id',
         'created_by',
         'owned_by',
     ];

@@ -11,6 +11,8 @@ use App\Models\CreditNote;
 use App\Models\Customer;
 use App\Models\DelayedCharges;
 use App\Models\DelayedCredits;
+use App\Models\RefundReceipt;
+use App\Models\TimeActivity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
@@ -232,6 +234,27 @@ class SalesTransactionsAllTypesController extends Controller
             }
         }
 
+        // Refund Receipts (Refund Receipts)
+        if ($type === 'all' || $type === 'refund') {
+            $creditNotes = RefundReceipt::where('created_by', $companyId)
+                ->whereBetween('issue_date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->issue_date,
+                    'type' => __('Refund'),
+                    'no' => '#' . ($cn->ref_number ?? $cn->refund_receipt_id),
+                    'customer' => optional($cn->customer)->name ?? '-',
+                    'memo' => $cn->memo ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Paid'),
+                    'view_url' => route('refund-receipt.edit', $cn->id),
+                ]);
+            }
+        }
         // Credit Memos (Credit Notes)
         if ($type === 'all' || $type === 'credit_memo') {
             $creditNotes = CreditNote::where('created_by', $companyId)
@@ -290,6 +313,26 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => -$cn->total_amount,
                     'status' => __('Open'),
                     'view_url' => route('delayed-charge.edit', $cn->id),
+                ]);
+            }
+        }
+        if ($type === 'all' || $type === 'time_charges') {
+            $creditNotes = TimeActivity::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Time Charge'),
+                    'no' => '#' . ($cn->id ?? $cn->id),
+                    'customer' => optional($cn->customer)->name ?? '-',
+                    'memo' => $cn->notes ?? '',
+                    'amount' => $cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('timeActivity.edit', $cn->id),
                 ]);
             }
         }

@@ -42,7 +42,7 @@ class ExpenseTransactionsDataTable
         $endDate = $this->endDate;
         $vendorId = $this->vendorId;
         $status = $this->status;
-
+  
         $transactions = collect();
 
         // Expenses (Bill model with type='Expense')
@@ -166,7 +166,7 @@ class ExpenseTransactionsDataTable
         if ($type === 'all' || $type === 'bill_payment') {
             $billPayments = BillPayment::whereHas('bill', function($q) use ($companyId) {
                     $q->where('created_by', $companyId)
-                    ->whereNotIn('type', ['Expense', 'Credit Card Credit']);
+                    ->whereNotIn('type', ['Expense', 'Credit Card Credit','Check']);
                 })
                 ->whereBetween('date', [$startDate, $endDate])
                 ->with(['bill.vender'])

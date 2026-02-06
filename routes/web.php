@@ -217,6 +217,7 @@ Route::get('/fix-autoload', function () {
 
 // for time activity
 Route::get('/timeActivity', [ExpenseController::class, 'timeActivityCreate'])->name('timeActivity.create');
+Route::get('/timeActivity/{id}/edit', [ExpenseController::class, 'editTimeActivity'])->name('timeActivity.edit');
 Route::post('/timeActivity/store', [ExpenseController::class, 'storeTimeActivity'])->name('timeActivity.store');
 Route::put('/timeActivity/update/{id}', [ExpenseController::class, 'updateTimeActivity'])->name('timeActivity.update');
 

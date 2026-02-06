@@ -267,11 +267,11 @@ class RefundReceiptController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Refund receipt successfully created.'),
-                        'redirect' => route('refund-receipt.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('refund-receipt.index')->with('success', __('Refund receipt successfully created.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Refund receipt successfully created.'));
             } else {
                 if ($request->ajax()) {
                     return response()->json(['error' => __('Permission denied.')], 403);
@@ -647,11 +647,11 @@ class RefundReceiptController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Refund receipt successfully updated.'),
-                        'redirect' => route('refund-receipt.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('refund-receipt.index')->with('success', __('Refund receipt successfully updated.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Refund receipt successfully updated.'));
             } else {
                 if ($request->ajax()) {
                     return response()->json(['error' => __('Permission denied.')], 403);

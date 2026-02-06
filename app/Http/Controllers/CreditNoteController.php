@@ -63,8 +63,10 @@ class CreditNoteController extends Controller
     {
         if (\Auth::user()->can('manage invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
 
             // Fetch standalone credit memos (those where invoice is 0 or null)
             $creditMemos = CreditNote::where($column, $ownerId)
@@ -83,8 +85,10 @@ class CreditNoteController extends Controller
     {
         if (\Auth::user()->can('create invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
 
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
                 ->where('module', '=', 'invoice')->get();
@@ -264,8 +268,10 @@ class CreditNoteController extends Controller
     {
         if (\Auth::user()->can('edit invoice')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
 
             $creditMemo = CreditNote::find($id);
             if (!$creditMemo) {
@@ -427,11 +433,11 @@ class CreditNoteController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Credit memo successfully updated.'),
-                        'redirect' => route('creditmemo.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('creditmemo.index')->with('success', __('Credit memo successfully updated.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Credit memo successfully updated.'));
 
             } catch (\Exception $e) {
                 \DB::rollBack();
@@ -492,8 +498,10 @@ class CreditNoteController extends Controller
     public function invoiceNumber()
     {
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = $user->type == 'company' ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+        $column = 'created_by';
         $latest = Invoice::where($column, '=', $ownerId)->latest()->first();
         if (!$latest) {
             return 1;
@@ -504,7 +512,7 @@ class CreditNoteController extends Controller
 
     public function store(Request $request, $invoice_id)
     {
-         dd($request->all(),'ss');
+      
         \DB::beginTransaction();
         try {
         if(\Auth::user()->can('create credit note'))
@@ -553,95 +561,95 @@ class CreditNoteController extends Controller
              $us_notify = 'false';
              $us_approve = 'false';
              $usr_Notification = [];
-             $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
-             if ($workflow) {
-                 $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
-                 foreach ($workflowaction as $action) {
-                     $useraction = json_decode($action->assigned_users);
-                     if (strtolower('issue-credit-note') == $action->node_id) {
-                         // Pick that stage user assign or change on lead
-                         if (@$useraction != '') {
-                             $useraction = json_decode($useraction);
-                             foreach ($useraction as $anyaction) {
-                                 // make new user array
-                                 if ($anyaction->type == 'user') {
-                                     $usr_Notification[] = $anyaction->id;
-                                 }
-                             }
-                         }
-                         $raw_json = trim($action->applied_conditions, '"');
-                         $cleaned_json = stripslashes($raw_json);
-                         $applied_conditions = json_decode($cleaned_json, true);
+            //  $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
+            //  if ($workflow) {
+            //      $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
+            //      foreach ($workflowaction as $action) {
+            //          $useraction = json_decode($action->assigned_users);
+            //          if (strtolower('issue-credit-note') == $action->node_id) {
+            //              // Pick that stage user assign or change on lead
+            //              if (@$useraction != '') {
+            //                  $useraction = json_decode($useraction);
+            //                  foreach ($useraction as $anyaction) {
+            //                      // make new user array
+            //                      if ($anyaction->type == 'user') {
+            //                          $usr_Notification[] = $anyaction->id;
+            //                      }
+            //                  }
+            //              }
+            //              $raw_json = trim($action->applied_conditions, '"');
+            //              $cleaned_json = stripslashes($raw_json);
+            //              $applied_conditions = json_decode($cleaned_json, true);
 
-                         if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
-                             $arr = [
-                                 'invoice' => 'invoice_invoice_id',
-                                 'customer' => 'customer_name',
-                                 'amount' => 'amount',
-                             ];
-                             $relate = [
-                                'invoice_invoice_id' => 'invoice',
-                                'customer_name' => 'customer',
-                             ];
+            //              if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+            //                  $arr = [
+            //                      'invoice' => 'invoice_invoice_id',
+            //                      'customer' => 'customer_name',
+            //                      'amount' => 'amount',
+            //                  ];
+            //                  $relate = [
+            //                     'invoice_invoice_id' => 'invoice',
+            //                     'customer_name' => 'customer',
+            //                  ];
 
-                             foreach ($applied_conditions['conditions'] as $conditionGroup) {
+            //                  foreach ($applied_conditions['conditions'] as $conditionGroup) {
 
-                                 if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
-                                     $query = CreditNote::where('id', $credit->id);
-                                     foreach ($conditionGroup['conditions'] as $condition) {
-                                         $field = $condition['field'];
-                                         $operator = $condition['operator'];
-                                         $value = $condition['value'];
-                                         if (isset($arr[$field], $relate[$arr[$field]])) {
-                                             $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
-                                             $relation = $relate[$arr[$field]];
-                                             // Apply condition to the related model
-                                             $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
-                                                 $relatedQuery->where($relatedField, $operator, $value);
-                                            });
-                                         } else {
-                                             // Apply condition directly to the contract model
-                                             $query->where($arr[$field], $operator, $value);
-                                         }
-                                     }
-                                     $result = $query->first();
+            //                      if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
+            //                          $query = CreditNote::where('id', $credit->id);
+            //                          foreach ($conditionGroup['conditions'] as $condition) {
+            //                              $field = $condition['field'];
+            //                              $operator = $condition['operator'];
+            //                              $value = $condition['value'];
+            //                              if (isset($arr[$field], $relate[$arr[$field]])) {
+            //                                  $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
+            //                                  $relation = $relate[$arr[$field]];
+            //                                  // Apply condition to the related model
+            //                                  $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
+            //                                      $relatedQuery->where($relatedField, $operator, $value);
+            //                                 });
+            //                              } else {
+            //                                  // Apply condition directly to the contract model
+            //                                  $query->where($arr[$field], $operator, $value);
+            //                              }
+            //                          }
+            //                          $result = $query->first();
 
-                                     if (!empty($result)) {
-                                         if ($conditionGroup['action'] === 'send_email') {
-                                             $us_mail = 'true';
-                                         } elseif ($conditionGroup['action'] === 'send_notification') {
-                                             $us_notify = 'true';
-                                         } elseif ($conditionGroup['action'] === 'send_approval') {
-                                             $us_approve = 'true';
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                         if ($us_mail == 'true') {
-                             // email send
-                         }
-                         if ($us_notify == 'true' || $us_approve == 'true') {
-                             // notification generate
-                            if (count($usr_Notification) > 0) {
-                                $usr_Notification[] = Auth::user()->creatorId();
-                                foreach ($usr_Notification as $usrLead) {
-                                    $data = [
-                                        "updated_by" => Auth::user()->id,
-                                        "data_id" => $credit->id,
-                                        "name" => '',
-                                    ];
-                                    if($us_notify == 'true'){
-                                        Utility::makeNotification($usrLead,'create_credit',$data,$credit->id,'create Credit');
-                                    }elseif($us_approve == 'true'){
-                                        Utility::makeNotification($usrLead,'approve_credit',$data,$credit->id,'For Approval Credit Note');
-                                    }
-                                }
-                            }
-                         }
-                     }
-                 }
-             }
+            //                          if (!empty($result)) {
+            //                              if ($conditionGroup['action'] === 'send_email') {
+            //                                  $us_mail = 'true';
+            //                              } elseif ($conditionGroup['action'] === 'send_notification') {
+            //                                  $us_notify = 'true';
+            //                              } elseif ($conditionGroup['action'] === 'send_approval') {
+            //                                  $us_approve = 'true';
+            //                              }
+            //                          }
+            //                      }
+            //                  }
+            //              }
+            //              if ($us_mail == 'true') {
+            //                  // email send
+            //              }
+            //              if ($us_notify == 'true' || $us_approve == 'true') {
+            //                  // notification generate
+            //                 if (count($usr_Notification) > 0) {
+            //                     $usr_Notification[] = Auth::user()->creatorId();
+            //                     foreach ($usr_Notification as $usrLead) {
+            //                         $data = [
+            //                             "updated_by" => Auth::user()->id,
+            //                             "data_id" => $credit->id,
+            //                             "name" => '',
+            //                         ];
+            //                         if($us_notify == 'true'){
+            //                             Utility::makeNotification($usrLead,'create_credit',$data,$credit->id,'create Credit');
+            //                         }elseif($us_approve == 'true'){
+            //                             Utility::makeNotification($usrLead,'approve_credit',$data,$credit->id,'For Approval Credit Note');
+            //                         }
+            //                     }
+            //                 }
+            //              }
+            //          }
+            //      }
+            //  }
             \DB::commit();
             return redirect()->back()->with('success', __('Credit Note successfully created.'));
         }
@@ -756,7 +764,7 @@ class CreditNoteController extends Controller
 
     public function customStore(Request $request)
     {
-        dd($request->all(),'asd');
+        // dd($request->all(),'asd');
         if(\Auth::user()->can('create credit note'))
         {
             $validator = \Validator::make(
@@ -1025,7 +1033,7 @@ class CreditNoteController extends Controller
         if ($receivableAccountId && $creditMemoTotal > 0) {
             $journalItem = new $JournalItem();
             $journalItem->journal = $journal->id;
-            $journalItem->account = $receivableAccountId;
+            $journalItem->account = $receivableAccountId->id;
             $journalItem->description = 'Credit Memo to customer for Credit Memo No: ' . ($creditMemo->credit_memo_id ?? $creditMemo->id);
             $journalItem->credit = $creditMemoTotal;
             $journalItem->debit = 0;
@@ -1036,7 +1044,7 @@ class CreditNoteController extends Controller
             $totalCredits += $creditMemoTotal;
 
             $Utility::addTransactionLines([
-                'account_id' => $receivableAccountId,
+                'account_id' => $receivableAccountId->id,
                 'transaction_type' => 'Credit',
                 'transaction_amount' => $creditMemoTotal,
                 'reference' => 'Credit Memo Journal',
@@ -1103,19 +1111,20 @@ class CreditNoteController extends Controller
         $subType = $ChartOfAccountSubType::where('type', $types->id)->first();
         if (!$subType) return null;
 
-        $account = $ChartOfAccount::where('code', 'SALES-DISC')
+         $account = $ChartOfAccount::where('type', $types->id)
+            ->where('name', 'Sales Discounts')
             ->where('created_by', $createdBy)
             ->first();
 
         if (!$account) {
-            $account = new $ChartOfAccount();
-            $account->code = 'SALES-DISC';
-            $account->name = 'Sales Discounts';
-            $account->type = $types->id;
-            $account->sub_type = $subType->id;
-            $account->is_enabled = 1;
-            $account->created_by = $createdBy;
-            $account->save();
+            $account = $ChartOfAccount::create([
+                'name' => 'Sales Discounts',
+                'code' => '40100',
+                'type' => $types->id,
+                'sub_type' => $subType->id,
+                'is_enabled' => 1,
+                'created_by' => $createdBy,
+            ]);
         }
 
         return $account->id;
@@ -1153,6 +1162,7 @@ class CreditNoteController extends Controller
 
         return $account->id;
     }
+    
 
 }
 

@@ -205,7 +205,6 @@ class CreditCreditCardController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request->all());
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create bill')) {
@@ -232,16 +231,19 @@ class CreditCreditCardController extends Controller
                 $payeeType = null;
                 $payeeId = null;
                 
-                if ($request->has('vender_id') && !empty($request->vender_id)) {
-                    $payeeId = $request->vender_id;
-                    $payeeType = 'vendor';
-                } elseif ($request->has('payee') && !empty($request->payee)) {
-                    $payeeParts = explode('_', $request->payee);
-                    if (count($payeeParts) === 2) {
-                        $payeeType = $payeeParts[0];
-                        $payeeId = $payeeParts[1];
+                 $payeeParts = explode('_', $request->payee);
+                 if (count($payeeParts) !== 2) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => __('Invalid payee format.')
+                        ], 422);
                     }
+                    return redirect()->back()->with('error', __('Invalid payee format.'));
                 }
+                
+                $payeeType = $payeeParts[0]; // 'customer', 'vendor', or 'employee'
+                $payeeId = $payeeParts[1];
 
                 // Validate billable items have customers
                 $billableValidationError = null;
@@ -1089,7 +1091,7 @@ class CreditCreditCardController extends Controller
             $bill = Bill::find($id); // Renamed to $bill to match view expectation (create view uses manual vars, but typically edit views use model binding or specific var)
             // Wait, existing code used $expense. I should check view. create view didn't use $expense. edit view usually uses $bill or $expense.
             // The existing creditCreditCard-edit.blade.php uses $bill at line 2.
-            $expense = $bill;
+            $expense = Bill::find($id);
 
             $bankAccountQuery = BillPayment::where('bill_id', $id)->first();
             $bankAccount = $bankAccountQuery ? BankAccount::find($bankAccountQuery->account_id) : null;
@@ -1216,7 +1218,7 @@ class CreditCreditCardController extends Controller
 
     public function update(Request $request, $id)
     {
-        // dd($request->all());
+
         \DB::beginTransaction();
         try {
             if (!\Auth::user()->can('edit bill')) {
@@ -1241,20 +1243,22 @@ class CreditCreditCardController extends Controller
             }
 
             // Parse payee - prioritize explicit vender_id
-            $payeeId = null;
             $payeeType = null;
-
-            if ($request->has('vender_id') && !empty($request->vender_id)) {
-                $payeeId = $request->vender_id;
-                // user_type is not typically strictly required for Bills if logic depends on vender_id, 
-                // but good to keep clean if schema supports it. Leaving as null or default.
-            } elseif ($request->has('payee') && !empty($request->payee)) {
-                $payeeParts = explode('_', $request->payee);
-                if (count($payeeParts) === 2) {
-                    $payeeType = $payeeParts[0]; // 'employee', 'customer', or 'vendor'
-                    $payeeId = $payeeParts[1];
+                $payeeId = null;
+                
+                 $payeeParts = explode('_', $request->payee);
+                 if (count($payeeParts) !== 2) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => __('Invalid payee format.')
+                        ], 422);
+                    }
+                    return redirect()->back()->with('error', __('Invalid payee format.'));
                 }
-            }
+                
+                $payeeType = $payeeParts[0]; // 'customer', 'vendor', or 'employee'
+                $payeeId = $payeeParts[1];
 
             // Update expense main fields
             $expense->vender_id = $payeeId;

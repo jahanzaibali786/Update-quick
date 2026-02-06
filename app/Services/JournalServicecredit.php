@@ -162,7 +162,7 @@ class JournalServicecredit
                     }
                 }
             }
-            
+
             // Validate debit = credit balance
             if (abs($totalCredit - $totalDebit) > 0.0001) {
                 throw new Exception("Journal entry is not balanced. Debit: {$totalDebit}, Credit: {$totalCredit}");
@@ -229,7 +229,7 @@ class JournalServicecredit
     public static function updateJournalEntry($id, array $data)
     {
         DB::beginTransaction();
-        
+
         try {
             $journalEntry = JournalEntry::findOrFail($id);
             // Extract entry date for potential backdating
@@ -293,7 +293,7 @@ class JournalServicecredit
                 // ✅ Create the item
                 $apItem = JournalItem::create($apItemData);
                 
-                $totalCredit += $data['ap_amount'];
+                $totalDebit += $data['ap_amount'];
                 
                 // Create transaction line for AP
                 TransactionLines::create([
@@ -312,7 +312,7 @@ class JournalServicecredit
                     'updated_at' => $backdate ? $entryDate : now(),
                 ]);
             }
-            
+
             // Recreate journal items
             if (!empty($data['items']) && is_array($data['items'])) {
                 foreach ($data['items'] as $itemData) {
@@ -355,7 +355,7 @@ class JournalServicecredit
                     
                     $totalDebit += $journalItem->debit;
                     $totalCredit += $journalItem->credit;
-                    
+
                     // Create transaction line for this journal item
                     if ($journalItem->debit > 0 || $journalItem->credit > 0) {
                         TransactionLines::create([

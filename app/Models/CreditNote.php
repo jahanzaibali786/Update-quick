@@ -50,4 +50,17 @@ class CreditNote extends Model
     {
         return $this->hasMany('App\Models\CreditNoteProduct', 'credit_note_id', 'id');
     }
+
+    /**
+     * Relationship to invoice (alias for invoice_detail for consistency)
+     */
+    public function invoice()
+    {
+        return $this->belongsTo('App\Models\Invoice', 'invoice');
+    }
+
+    public function getCustomerNameAttribute()
+    {
+        return $this->customer_detail->name ?? '';
+    }
 }

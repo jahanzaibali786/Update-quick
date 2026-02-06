@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @section('page-title')
-    {{ __('Create Time Activity') }}
+    {{ __('Edit Time Activity') }}
 @endsection
 
 @section('content')
@@ -31,7 +31,8 @@
                                     d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353">
                                 </path>
                             </svg></a>
-                        <h5 class="mb-0" style="font-size: 22px; font-weight: 500; color: #393A3D;">Single Day Entry</h5>
+                        <h5 class="mb-0" style="font-size: 22px; font-weight: 500; color: #393A3D;">Edit Time Activity
+                        </h5>
                     </div>
                     <div class="TrowserHeader d-flex align-items-center">
                         <button type="button" class="header-action-btn">
@@ -79,9 +80,10 @@
 
                         </div>
                         <div class="TrowserHeader">
-                            <a href="{{route('sales.transactions.index')}}" class="text-dark me-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false"
-                                    aria-hidden="true" class="">
+                            <a href="{{ route('sales.transactions.index') }}" class="text-dark me-2"><svg
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true"
+                                    class="">
                                     <path fill="currentColor"
                                         d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z">
                                     </path>
@@ -102,7 +104,7 @@
                                 }
                             }
                         @endphp
-                        {{ Form::open(['route' => 'timeActivity.store', 'class' => 'w-100']) }}
+                        {{ Form::open(['route' => ['timeActivity.update', $timeActivity->id], 'method' => 'PUT', 'class' => 'w-100']) }}
                         <div class="col-12">
                             <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
                             <div class="card shadow-none border-0 qbo-card">
@@ -111,32 +113,35 @@
                                         <div class="col-md-6 qbo-left-column">
                                             <div class="form-group qbo-form-group" id="customer-box">
                                                 {{ Form::label('user_id', __('Name'), ['class' => 'form-label qbo-label']) }}
-                                                {{ Form::select('user_id', $venders, null, ['class' => 'form-control select2 qbo-select', 'id' => 'user_id', 'placeholder' => 'Select name']) }}
+                                                {{ Form::select('user_id', $venders, $timeActivity->user_id, ['class' => 'form-control select2 qbo-select', 'id' => 'user_id', 'placeholder' => 'Select name']) }}
                                             </div>
                                             <div class="form-group qbo-form-group">
                                                 {{ Form::label('customer_id', __('Customers'), ['class' => 'form-label qbo-label']) }}
-                                                {{ Form::select('customer_id', $customers, null, ['class' => 'form-control select2 qbo-select', 'id' => 'customer_id', 'placeholder' => 'Select Customers']) }}
+                                                {{ Form::select('customer_id', $customers, $timeActivity->customer_id, ['class' => 'form-control select2 qbo-select', 'id' => 'customer_id', 'placeholder' => 'Select Customers']) }}
                                             </div>
                                             <div class="form-group qbo-form-group">
                                                 {{ Form::label('service_id', __('Service'), ['class' => 'form-label qbo-label']) }}
-                                                {{ Form::select('service_id', $services, null, ['class' => 'form-control select2 qbo-select', 'id' => 'service_id', 'placeholder' => 'Select service']) }}
+                                                {{ Form::select('service_id', $services, $timeActivity->service_id, ['class' => 'form-control select2 qbo-select', 'id' => 'service_id', 'placeholder' => 'Select service']) }}
                                             </div>
                                             <div class="form-group qbo-form-group qbo-checkbox-group">
                                                 <div class="form-check form-check-inline qbo-checkbox-item">
                                                     <input class="form-check-input qbo-checkbox" type="checkbox"
-                                                        id="billable" name="billable" value="1" checked>
+                                                        id="billable" name="billable" value="1"
+                                                        {{ $timeActivity->billable ? 'checked' : '' }}>
                                                     <label class="form-check-label qbo-checkbox-label"
                                                         for="billable">{{ __('Billable (per hour)') }}</label>
                                                 </div>
-                                                <div class="form-check form-check-inline qbo-checkbox-item"
-                                                    id="rate_div">
+                                                <div class="form-check form-check-inline qbo-checkbox-item" id="rate_div"
+                                                    style="{{ $timeActivity->billable ? '' : 'display: none;' }}">
                                                     <input class="form-control qbo-input-inline" type="number"
                                                         id="rate" name="rate" placeholder="0.00"
+                                                        value="{{ $timeActivity->rate }}"
                                                         style="width: 100px; display: inline-block;">
                                                 </div>
                                                 <div class="form-check form-check-inline qbo-checkbox-item">
                                                     <input class="form-check-input qbo-checkbox" type="checkbox"
-                                                        id="taxable" name="taxable" value="1">
+                                                        id="taxable" name="taxable" value="1"
+                                                        {{ $timeActivity->taxable ? 'checked' : '' }}>
                                                     <label class="form-check-label qbo-checkbox-label"
                                                         for="taxable">{{ __('Taxable') }}</label>
                                                 </div>
@@ -164,7 +169,8 @@
                                                 <div class="form-group qbo-form-group qbo-toggle-group">
                                                     <div class="form-check form-switch qbo-switch">
                                                         <input type="checkbox" class="form-check-input qbo-switch-input"
-                                                            id="time_toggle" name="time_toggle">
+                                                            id="time_toggle" name="time_toggle"
+                                                            {{ $timeActivity->start_time ? 'checked' : '' }}>
                                                         <label class="form-check-label qbo-switch-label"
                                                             for="time_toggle">
                                                             {{ __('Set start and end time') }}
@@ -174,21 +180,21 @@
 
                                                 <div class="form-group qbo-form-group">
                                                     {{ Form::label('date', __('Start date'), ['class' => 'form-label qbo-label']) }}
-                                                    {{ Form::date('date', date('Y-m-d'), ['class' => 'form-control qbo-input', 'required' => 'required']) }}
+                                                    {{ Form::date('date', $timeActivity->date, ['class' => 'form-control qbo-input', 'required' => 'required']) }}
                                                 </div>
 
                                                 <div class="row qbo-time-inputs-row" id="time_inputs"
-                                                    style="display: none;">
+                                                    style="{{ $timeActivity->start_time ? '' : 'display: none;' }}">
                                                     <div class="col-md-6">
                                                         <div class="form-group qbo-form-group">
                                                             {{ Form::label('start_time', __('Start time'), ['class' => 'form-label qbo-label']) }}
-                                                            {{ Form::select('start_time', $times, null, ['class' => 'form-control select2 qbo-select', 'id' => 'start_time', 'placeholder' => 'Select Start Time']) }}
+                                                            {{ Form::select('start_time', $times, $timeActivity->start_time, ['class' => 'form-control select2 qbo-select', 'id' => 'start_time', 'placeholder' => 'Select Start Time']) }}
                                                         </div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <div class="form-group qbo-form-group">
                                                             {{ Form::label('end_time', __('End time'), ['class' => 'form-label qbo-label']) }}
-                                                            {{ Form::select('end_time', $times, null, ['class' => 'form-control select2 qbo-select', 'id' => 'end_time', 'placeholder' => 'Select End Time']) }}
+                                                            {{ Form::select('end_time', $times, $timeActivity->end_time, ['class' => 'form-control select2 qbo-select', 'id' => 'end_time', 'placeholder' => 'Select End Time']) }}
                                                         </div>
                                                     </div>
                                                     <div class="col-md-12">
@@ -198,23 +204,24 @@
                                                             {{ __('Add break') }}
                                                         </button>
                                                         <div id="break_div" class="qbo-break-div"
-                                                            style="display: none; margin-top: 10px;">
+                                                            style="{{ $timeActivity->break_duration ? '' : 'display: none;' }} margin-top: 10px;">
                                                             {{ Form::label('break_duration', __('Break (hh:mm)'), ['class' => 'form-label qbo-label']) }}
-                                                            {{ Form::text('break_duration', null, ['class' => 'form-control qbo-input', 'id' => 'break_duration', 'placeholder' => '00:00']) }}
+                                                            {{ Form::text('break_duration', $timeActivity->break_duration, ['class' => 'form-control qbo-input', 'id' => 'break_duration', 'placeholder' => '00:00']) }}
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div class="form-group qbo-form-group" id="duration_div">
+                                                <div class="form-group qbo-form-group" id="duration_div"
+                                                    style="{{ $timeActivity->start_time ? 'display: none;' : '' }}">
                                                     {{ Form::label('duration', __('Duration (hh:mm)'), ['class' => 'form-label qbo-label']) }}
-                                                    {{ Form::text('duration', null, ['class' => 'form-control qbo-input', 'id' => 'duration', 'placeholder' => 'hh:mm']) }}
+                                                    {{ Form::text('duration', $timeActivity->duration, ['class' => 'form-control qbo-input', 'id' => 'duration', 'placeholder' => 'hh:mm']) }}
                                                 </div>
                                             </div>
 
                                             {{-- NOTES – FULL WIDTH OF THE COLUMN --}}
                                             <div class="form-group qbo-form-group qbo-notes-group">
                                                 {{ Form::label('notes', __('Notes'), ['class' => 'form-label qbo-label']) }}
-                                                {{ Form::textarea('notes', null, ['class' => 'form-control qbo-textarea', 'rows' => 3]) }}
+                                                {{ Form::textarea('notes', $timeActivity->notes, ['class' => 'form-control qbo-textarea', 'rows' => 3]) }}
                                             </div>
 
                                             {{-- Summary calculation display --}}
@@ -226,7 +233,8 @@
                                             </div>
 
                                             {{-- Hidden input for calculated total amount --}}
-                                            <input type="hidden" name="total_amount" id="total_amount" value="0">
+                                            <input type="hidden" name="total_amount" id="total_amount"
+                                                value="{{ $timeActivity->total_amount ?? 0 }}">
 
                                         </div>
 
@@ -235,8 +243,8 @@
                                 <div class="modal-footer-custom fixed-footer">
                                     <!-- Left section: secondary actions -->
                                     <div class="footer-left d-flex align-items-center" style="gap:0px;">
-                                        <button type="button" class="btn btn-link text-success p-2 btn-cancel-custom"
-                                            data-bs-dismiss="modal"
+                                        <a href="{{ route('sales.transactions.index') }}"
+                                            class="btn btn-link text-success p-2 btn-cancel-custom"
                                             style="
                     background: #fff;
                         border: none;
@@ -248,7 +256,7 @@
                         cursor: pointer;
                         font-size: 14px;
                         white-space: nowrap;
-                                    ">Cancel</button>
+                                    ">Cancel</a>
                                     </div>
 
                                     <!-- Right section: primary actions -->
@@ -273,7 +281,6 @@
                                             <ul class="dropdown-menu">
                                                 <li><a class="dropdown-item" href="#">{{ __('Save and new') }}</a>
                                                 </li>
-                                                {{-- <li><a class="dropdown-item" href="#">{{ __('Save and print') }}</a></li> --}}
                                             </ul>
                                         </div>
                                     </div>
@@ -331,93 +338,8 @@
                                         fill: currentColor;
                                     }
 
-
-                                    #category-table thead tr {
-                                        border-bottom: 1px solid #cfd1d7 !important;
-                                    }
-
-                                    #category-table th {
-                                        border-right: 1px solid #e3e5eb !important;
-                                        border-bottom: 1px solid #e3e5eb !important;
-                                        border-top: 0px !important;
-                                        /* Header top open */
-                                        border-left: 0px !important;
-                                        /* Header left open */
-                                        padding: 12px 8px;
-                                        font-size: 13px;
-                                        font-weight: 600;
-                                        color: #5a5b5f;
-                                    }
-
-                                    #category-table td {
-                                        border-right: 1px solid #e3e5eb !important;
-                                        border-bottom: 1px solid #e3e5eb !important;
-                                        border-top: 0px !important;
-                                        /* Cells top open */
-                                        border-left: 0px !important;
-                                        /* Cells left open */
-                                        padding: 10px 8px;
-                                        font-size: 13px;
-                                        color: #2b2c30;
-                                        vertical-align: middle;
-                                    }
-
-                                    #category-table tbody tr {
-                                        background: white;
-                                    }
-
-                                    #category-table tbody tr:hover {
-                                        background: #fafafa;
-                                    }
-
-
-
-                                    .size {
-                                        width: 270px;
-                                    }
-
-                                    .field {
-                                        width: 185px;
-                                    }
-
-                                    .field1 {
-                                        width: 165px;
-                                    }
-
                                     .TrowserHeader {
                                         padding: 10px;
-                                    }
-
-                                    .txp-capability-expenseLayout-N1jWN header[class*='TrowserHeader-header'] button svg {
-                                        width: 33px;
-                                        height: 33px;
-                                    }
-
-                                    /* Container targeting */
-                                    .txp-capability-gridWrapper-dVsAS .txp-capability-gridButtons-Uh9M\+ [class*='Button-priority-primary'] {
-                                        background-color: var(--color-container-background-primary);
-                                        color: var(--color-text-primary);
-                                        border-color: var(--color-container-border-primary);
-                                        border-radius: 4px;
-                                        /* optional for rounded corners */
-                                        font-weight: 500;
-                                        cursor: pointer;
-                                        transition: all 0.2s ease-in-out;
-                                    }
-
-                                    /* Padding for label */
-                                    .Button-size-medium-6a785d2 .Button-label-6a785d2 {
-                                        padding-left: var(--padding-inline, 8px);
-                                        padding-right: var(--padding-inline, 8px);
-                                        display: inline-block;
-                                    }
-
-                                    /* Optional: Hover effect */
-                                    .Button-priority-primary-6a785d2:hover {
-                                        background-color: #6c6464c0;
-                                        /* QuickBooks blue hover */
-                                        color: #000000ff;
-
                                     }
                                 </style>
 
@@ -435,30 +357,24 @@
                                         justify-content: space-between;
                                         align-items: center;
                                         z-index: 1050;
-                                        /* above other content */
                                     }
 
-                                    /* Left section links/buttons */
                                     .fixed-footer .footer-left {
                                         display: flex;
                                         align-items: center;
-                                        /* gap: 1rem; */
                                     }
 
-                                    /* Center section */
                                     .fixed-footer .footer-center {
                                         display: flex;
                                         align-items: center;
                                     }
 
-                                    /* Right section action buttons */
                                     .fixed-footer .footer-right {
                                         display: flex;
                                         align-items: center;
                                         gap: 0.5rem;
                                     }
 
-                                    /* Cancel button custom style */
                                     .btn-cancel-custom {
                                         border: 1px solid #00892e;
                                         color: #00892e;
@@ -474,7 +390,6 @@
                                         color: #fff;
                                     }
 
-                                    /* Primary success button style */
                                     .btn-success {
                                         background-color: #2ca01c;
                                         border-color: #2ca01c;
@@ -486,7 +401,6 @@
                                         border-color: #25861b;
                                     }
 
-                                    /* Optional: adjust dropdown menu for split button */
                                     .fixed-footer .btn-group .dropdown-menu {
                                         min-width: auto;
                                     }
@@ -500,31 +414,25 @@
                                         border-top: 1px solid #dee2e6;
                                         display: flex;
                                         justify-content: space-between;
-                                        /* Left / center / right */
                                         align-items: center;
                                     }
 
-                                    /* Left section links/buttons */
                                     .modal-footer-custom .footer-left {
                                         display: flex;
                                         align-items: center;
-                                        /* gap: 1rem; */
                                     }
 
-                                    /* Center section (optional) */
                                     .modal-footer-custom .footer-center {
                                         display: flex;
                                         align-items: center;
                                     }
 
-                                    /* Right section action buttons */
                                     .modal-footer-custom .footer-right {
                                         display: flex;
                                         align-items: center;
                                         gap: 0.5rem;
                                     }
 
-                                    /* Primary success button style */
                                     .modal-footer-custom .btn-success {
                                         background-color: #00892e;
                                         border-color: #00892e;
@@ -536,22 +444,16 @@
                                         border-color: #25861b;
                                     }
 
-                                    /* Split button dropdown adjustments */
                                     .modal-footer-custom .btn-group .dropdown-menu {
                                         min-width: auto;
                                     }
 
                                     .btn-cancel-custom {
                                         border: 1px solid #00892e;
-                                        /* green border */
                                         color: #00892e;
-                                        /* text color green */
                                         padding: 0.25rem 0.75rem;
-                                        /* some padding to look like a button */
                                         border-radius: 4px;
-                                        /* slightly rounded corners */
                                         background-color: transparent;
-                                        /* keep background white/transparent */
                                         font-weight: 500;
                                         transition: background-color 0.2s, color 0.2s;
                                     }
@@ -1069,6 +971,7 @@
                 } else {
                     $('#rate_div').hide();
                 }
+                calculateTotal();
             });
 
             $('#add_break').click(function() {

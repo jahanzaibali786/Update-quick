@@ -615,6 +615,7 @@ class SalesReceipt extends Controller
 
         $account = $ChartOfAccount::where('type', $types->id)
             ->where('name', 'Sales Discounts')
+            ->where('created_by', $createdBy)
             ->first();
 
         if (!$account) {
@@ -882,6 +883,7 @@ class SalesReceipt extends Controller
      */
     public function update(Request $request, $id)
     {
+        // dd($request->all());
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('edit invoice')) {
@@ -897,7 +899,7 @@ class SalesReceipt extends Controller
                 $validator = \Validator::make($request->all(), [
                     'customer_id' => 'required',
                     'issue_date' => 'required',
-                    'items' => 'required',
+                    // 'items' => 'required',
                     'items_payload' => 'nullable',
                     'customer_email' => 'nullable|email',
                     'payment_type' => 'nullable|string',
@@ -1099,6 +1101,9 @@ class SalesReceipt extends Controller
                 }
                 
                 // Create new voucher
+                // Refresh the model to ensure new items are loaded
+                $salesReceipt->refresh();
+                $salesReceipt->load('items');
                 $this->createSalesReceiptJournalVoucher($salesReceipt);
 
                 \App\Models\Utility::makeActivityLog(\Auth::user()->id, 'Sales Receipt', $salesReceipt->id, 'Update Sales Receipt', 'Sales Receipt Updated');
@@ -1109,11 +1114,11 @@ class SalesReceipt extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Sales receipt successfully updated.'),
-                        'redirect' => route('sales-receipt.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('sales-receipt.index')->with('success', __('Sales receipt successfully updated.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Sales receipt successfully updated.'));
             } else {
                 if ($request->ajax()) {
                     return response()->json(['error' => __('Permission denied.')], 403);

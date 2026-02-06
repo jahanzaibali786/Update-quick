@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('sales.reciepts.index') }}">{{ __('Sales Receipts') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('sales.transactions.index') }}">{{ __('Sales Receipts') }}</a></li>
 
     <li class="breadcrumb-item">{{ __('Create Sales Receipt') }}</li>
 @endsection
@@ -94,14 +94,14 @@
 
         .customer-select-group {
             /* flex: 1;
-                                                                max-width: 400px; */
+                                                                                max-width: 400px; */
         }
 
         .email-group {
             /* flex: 1;
-                                                                max-width: 400px;
-                                                                display: flex;
-                                                                flex-direction: column; */
+                                                                                max-width: 400px;
+                                                                                display: flex;
+                                                                                flex-direction: column; */
         }
 
         .email-input-row {
@@ -2105,7 +2105,7 @@
 
                                 {{-- Close X --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('sales-receipt.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.transactions.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round">
@@ -2712,6 +2712,9 @@
                                     <input type="hidden" name="total_amount" id="hidden_total_amount"
                                         value="{{ isset($salesReceiptData) ? $salesReceiptData['total_amount'] : 0 }}">
 
+                                    {{-- Unified array for all line items --}}
+                                    <input type="hidden" name="items_payload" id="items_payload">
+
                                     {{-- Subtotal --}}
                                     <div class="total-row subtotal">
                                         <span>{{ __('Subtotal') }}</span>
@@ -2903,9 +2906,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                                            onclick="location.href = '{{ route('invoice.index') }}';">
-                                                                                                                                                                        {{ __('Cancel') }}
-                                                                                                                                                                    </button> -->
+                                                                                                                                                                                            onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                                                                                        {{ __('Cancel') }}
+                                                                                                                                                                                    </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -3372,10 +3375,11 @@
             }
         });
 
-        // Frontend validation to prevent saving without customer selection
+        // Frontend validation and collect items on form submit
         $(document).on('submit', '#invoice-form', function(e) {
             var customerId = $('#customer').val();
 
+            // Validate customer selection
             if (!customerId || customerId === '' || customerId === '__add__') {
                 e.preventDefault();
                 alert('{{ __('Please select a customer before saving.') }}');
@@ -3383,6 +3387,92 @@
                 return false;
             }
 
+            // Validate that at least one product is selected
+            var hasProduct = false;
+            $('#sortable-table').children('tbody').each(function() {
+                var $body = $(this);
+                var $productRow = $body.find('tr.product-row');
+                if ($productRow.length) {
+                    var itemId = $productRow.find('select.item').val();
+                    if (itemId && itemId !== '' && itemId !== '--') {
+                        hasProduct = true;
+                        return false; // break the loop
+                    }
+                }
+            });
+
+            if (!hasProduct) {
+                e.preventDefault();
+                alert('{{ __('Please add at least one product/service.') }}');
+                return false;
+            }
+
+            // Collect all line items into JSON array
+            var lines = [];
+
+            $('#sortable-table').children('tbody').each(function() {
+                var $body = $(this);
+
+                // 1) PRODUCT ROW
+                var $productRow = $body.find('tr.product-row');
+                if ($productRow.length) {
+                    var $row = $productRow;
+
+                    // Get existing item ID if this is an existing item
+                    var itemId = $body.attr('data-item-id') || null;
+
+                    var lineItem = {
+                        type: 'product',
+                        item_id: $row.find('select.item').val() || null,
+                        description: $row.find('.pro_description').val() || '',
+                        quantity: parseFloat($row.find('.quantity').val()) || 0,
+                        price: parseFloat($row.find('.price').val()) || 0,
+                        amount: parseFloat($row.find('.amount').val()) || 0,
+                        is_taxable: $row.find('.form-check-input[type="checkbox"]').prop('checked') ?
+                            1 : 0,
+                        tax: $row.find('.tax').val() || '',
+                        itemTaxPrice: parseFloat($row.find('.itemTaxPrice').val()) || 0,
+                        itemTaxRate: parseFloat($row.find('.itemTaxRate').val()) || 0,
+                        discount: parseFloat($row.find('.discount').val()) || 0
+                    };
+
+                    // Add item id if exists (for update)
+                    if (itemId) {
+                        lineItem.id = itemId;
+                    }
+
+                    lines.push(lineItem);
+                    return; // continue to next tbody
+                }
+
+                // 2) SUBTOTAL ROW (tbody created by createSubtotalBody)
+                var $subtotalRow = $body.find('tr.subtotal-row');
+                if ($subtotalRow.length) {
+                    var subtotalLine = {
+                        type: 'subtotal',
+                        label: 'Subtotal',
+                        amount: parseFloat($subtotalRow.find('.subtotal-amount').text()) || 0
+                    };
+                    lines.push(subtotalLine);
+                    return;
+                }
+
+                // 3) TEXT ROW (tbody created by createTextBody)
+                var $textRow = $body.find('tr.text-row');
+                if ($textRow.length) {
+                    var textLine = {
+                        type: 'text',
+                        text: $textRow.find('input[type="text"]').val() || ''
+                    };
+                    lines.push(textLine);
+                    return;
+                }
+            });
+
+            // Store JSON string in hidden input
+            $('#items_payload').val(JSON.stringify(lines));
+
+            // Let form submit normally
             return true;
         });
     </script>

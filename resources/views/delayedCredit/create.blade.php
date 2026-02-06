@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('delayed-credit.index') }}">{{ __('Delayed Credits') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('sales.transactions.index') }}">{{ __('Delayed Credits') }}</a></li>
     <li class="breadcrumb-item">{{ __('Create') }}</li>
 @endsection
 
@@ -390,7 +390,7 @@
                 </div>
 
                 <div class="header-right-controls">
-                    <a href="{{ route('delayed-credit.index') }}" class="close-button" aria-label="Close">
+                    <a href="{{ route('sales.transactions.index') }}" class="close-button" aria-label="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
                             <path fill="currentColor" d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z"></path>
                         </svg>
@@ -608,7 +608,7 @@
         {{-- Footer --}}
         <div class="dc-footer">
             <div class="footer-left">
-                <a href="{{ route('delayed-credit.index') }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
+                <a href="{{ route('sales.transactions.index') }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
             </div>
             <div class="footer-center">
                 <a href="#" class="text-primary">{{ __('Make recurring') }}</a>
@@ -762,10 +762,11 @@
                             product_id: productId
                         },
                         success: function(response) {
-                            if (response.productService) {
-                                $row.find('.item-description').val(response.productService.description || '');
+                            
+                            if (response.product) {
+                                $row.find('.item-description').val(response.product.description || '');
                                 $row.find('.item-quantity').val(1);
-                                $row.find('.item-price').val(response.productService.sale_price || 0);
+                                $row.find('.item-price').val(response.product.sale_price || 0);
                                 recalcRow($row);
                             }
                         }

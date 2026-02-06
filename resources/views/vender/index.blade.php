@@ -30,45 +30,10 @@
     </style>
 @endsection
 
-@section('action-btn')
-    <div class="d-flex align-items-center justify-content-end gap-2">
-        <!-- Give Feedback -->
-        <a href="#" class="fw-bold me-4 text-decoration-none" style="color: #00892E; font-size: 16px;">
-            <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="currentColor" focusable="false" aria-hidden="true"><path d="M14.35 2a1 1 0 0 1 0 2H6.49a2.54 2.54 0 0 0-2.57 2.5v7A2.538 2.538 0 0 0 6.49 16h1.43a1 1 0 0 1 1 1v1.74l2.727-2.48c.184-.167.424-.26.673-.26h5.03a2.538 2.538 0 0 0 2.57-2.5v-4a1 1 0 0 1 2 0v4a4.54 4.54 0 0 1-4.57 4.5h-4.643l-4.114 3.74A1.002 1.002 0 0 1 6.92 21v-3h-.43a4.541 4.541 0 0 1-4.57-4.5v-7A4.541 4.541 0 0 1 6.49 2h7.86Zm6.414.6.725.726c.79.791.79 2.074 0 2.865l-5.812 5.794c-.128.128-.29.219-.465.263l-2.9.721a.998.998 0 0 1-1.215-1.213l.728-2.9a.993.993 0 0 1 .264-.463L17.9 2.6a2.027 2.027 0 0 1 2.864 0Zm-1.412 1.413-.763.724L13.7 9.612l-.255 1.015 1.016-.252 5.616-5.6V4.74l-.725-.727Z" fill="currentColor"></path></svg>
-            {{ __('Give feedback') }}
-        </a>
 
-        <!-- Prepare 1099s Group -->
-        <div class="btn-group">
-            <button type="button" class="btn btn-light" style="border: 2px solid #00892E; color: #00892E; background-color: white; font-weight: 600;">
-                {{ __('Pay vendors') }}
-            </button>
-            <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid #00892E; border-left: none; color: #00892E; background-color: white;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true" class="btnIcon"><path fill="currentColor" d="M12.014 16.018a1 1 0 0 1-.708-.294L5.314 9.715A1.001 1.001 0 0 1 6.73 8.3l5.286 5.3 5.3-5.285a1 1 0 0 1 1.413 1.416l-6.009 5.995a1 1 0 0 1-.706.292"></path></svg>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#">{{ __('Prepare 1099s') }}</a></li>
-                <li><a class="dropdown-item" href="#">{{ __('Order checks') }}</a></li>
-            </ul>
-        </div>
-
-        <!-- New Vendor Group -->
-        <div class="btn-group ms-2">
-             <a href="#" data-size="lg" data-url="{{ route('vender.create') }}" data-ajax-popup="true" data-title="{{__('Create New Vendor')}}" class="btn btn-success" style="background-color: #00892E; border-color: #00892E; font-weight: 600;">
-                {{__('New Vendor')}}
-            </a>
-            <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #00892E; border-color: #00892E; border-left: 1px solid rgba(255,255,255,0.3);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true" class="btnIcon"><path fill="currentColor" d="M12.014 16.018a1 1 0 0 1-.708-.294L5.314 9.715A1.001 1.001 0 0 1 6.73 8.3l5.286 5.3 5.3-5.285a1 1 0 0 1 1.413 1.416l-6.009 5.995a1 1 0 0 1-.706.292"></path></svg>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#">{{ __('Import Vendors') }}</a></li>
-                <li><a class="dropdown-item" href="#">{{ __('Multiple Vendors') }}</a></li>
-            </ul>
-        </div>
-    </div>
-@endsection
 
 @section('content')
+
 {{-- MY APPS Sidebar (Fixed Position) --}}
 @include('partials.admin.allApps-subMenu-Sidebar', [
     'activeSection' => 'expenses',
@@ -218,7 +183,43 @@
 }
 
 </style>
+    <h2 style="position: absolute;">{{ __('Vendors') }}</h2>
+    <div class="d-flex align-items-center justify-content-end gap-2">
+        
+        <!-- Give Feedback -->
+        <a href="#" class="fw-bold me-4 text-decoration-none" style="color: #00892E; font-size: 16px;">
+            <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="currentColor" focusable="false" aria-hidden="true"><path d="M14.35 2a1 1 0 0 1 0 2H6.49a2.54 2.54 0 0 0-2.57 2.5v7A2.538 2.538 0 0 0 6.49 16h1.43a1 1 0 0 1 1 1v1.74l2.727-2.48c.184-.167.424-.26.673-.26h5.03a2.538 2.538 0 0 0 2.57-2.5v-4a1 1 0 0 1 2 0v4a4.54 4.54 0 0 1-4.57 4.5h-4.643l-4.114 3.74A1.002 1.002 0 0 1 6.92 21v-3h-.43a4.541 4.541 0 0 1-4.57-4.5v-7A4.541 4.541 0 0 1 6.49 2h7.86Zm6.414.6.725.726c.79.791.79 2.074 0 2.865l-5.812 5.794c-.128.128-.29.219-.465.263l-2.9.721a.998.998 0 0 1-1.215-1.213l.728-2.9a.993.993 0 0 1 .264-.463L17.9 2.6a2.027 2.027 0 0 1 2.864 0Zm-1.412 1.413-.763.724L13.7 9.612l-.255 1.015 1.016-.252 5.616-5.6V4.74l-.725-.727Z" fill="currentColor"></path></svg>
+            {{ __('Give feedback') }}
+        </a>
 
+        <!-- Prepare 1099s Group -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-light" style="border: 2px solid #00892E; color: #00892E; background-color: white; font-weight: 600;">
+                {{ __('Pay vendors') }}
+            </button>
+            <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid #00892E; border-left: none; color: #00892E; background-color: white;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true" class="btnIcon"><path fill="currentColor" d="M12.014 16.018a1 1 0 0 1-.708-.294L5.314 9.715A1.001 1.001 0 0 1 6.73 8.3l5.286 5.3 5.3-5.285a1 1 0 0 1 1.413 1.416l-6.009 5.995a1 1 0 0 1-.706.292"></path></svg>
+            </button>
+            <ul class="dropdown-menu">
+                {{-- <li><a class="dropdown-item" href="#">{{ __('Prepare 1099s') }}</a></li>
+                <li><a class="dropdown-item" href="#">{{ __('Order checks') }}</a></li> --}}
+            </ul>
+        </div>
+
+        <!-- New Vendor Group -->
+        <div class="btn-group ms-2">
+             <a href="#" data-size="lg" data-url="{{ route('vender.create') }}" data-ajax-popup="true" data-title="{{__('Create New Vendor')}}" class="btn btn-success" style="background-color: #00892E; border-color: #00892E; font-weight: 600;">
+                {{__('New Vendor')}}
+            </a>
+            <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #00892E; border-color: #00892E; border-left: 1px solid rgba(255,255,255,0.3);">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true" class="btnIcon"><path fill="currentColor" d="M12.014 16.018a1 1 0 0 1-.708-.294L5.314 9.715A1.001 1.001 0 0 1 6.73 8.3l5.286 5.3 5.3-5.285a1 1 0 0 1 1.413 1.416l-6.009 5.995a1 1 0 0 1-.706.292"></path></svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#">{{ __('Import Vendors') }}</a></li>
+                <li><a class="dropdown-item" href="#">{{ __('Multiple Vendors') }}</a></li>
+            </ul>
+        </div>
+    </div>
 
 <!-- style end -->
 <div class="row mb-4 mt-4">

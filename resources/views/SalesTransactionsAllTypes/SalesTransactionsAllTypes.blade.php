@@ -14,8 +14,8 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <style>
         /* =========================================
-               QBO Sales Transactions - Exact Design
-               ========================================= */
+                                       QBO Sales Transactions - Exact Design
+                                       ========================================= */
 
         /* Page Header */
         .qbo-page-header {
@@ -70,8 +70,8 @@
         }
 
         /* =========================================
-               Money Bar - QBO Exact Style
-               ========================================= */
+                                       Money Bar - QBO Exact Style
+                                       ========================================= */
         .qbo-money-bar {
             background: #fff;
             margin-bottom: 16px;
@@ -150,8 +150,8 @@
         }
 
         /* =========================================
-               Info Alert Box
-               ========================================= */
+                                       Info Alert Box
+                                       ========================================= */
         .qbo-info-alert {
             background: linear-gradient(white, white) padding-box, conic-gradient(from 180deg at 50% 50%, #009eac 0deg, #00d0e0 54deg, #236cff 126deg, #00d0e0 180deg, #c5ef71 234deg, #00a63b 306deg, #009eac 360deg) border-box;
             border: 2px solid transparent;
@@ -209,8 +209,8 @@
         }
 
         /* =========================================
-               Filter Bar - QBO Exact Layout
-               ========================================= */
+                                       Filter Bar - QBO Exact Layout
+                                       ========================================= */
         .qbo-filter-bar {
             background: #fff;
             padding: 16px 20px;
@@ -390,8 +390,8 @@
         }
 
         /* =========================================
-               Table - QBO Style
-               ========================================= */
+                                       Table - QBO Style
+                                       ========================================= */
         .qbo-table-wrapper {
             background: #fff;
             overflow-x: auto;
@@ -458,8 +458,8 @@
             padding: 12px 16px;
             text-align: left;
             position: sticky;
-            top: 60px;
-            /* Sticks below main header */
+            top: 0;
+            /* Sticks at top of table wrapper */
             z-index: 100;
         }
 
@@ -985,19 +985,34 @@
                             $totalAmount = collect($transactions ?? [])->sum('amount');
                         @endphp
 
-                        @forelse($transactions ?? [] as $txn)
+                        @forelse($transactions ?? [] as $key => $txn)
+                            @php
+                                // Handle both array and object access
+                                $id = is_array($txn) ? $txn['id'] ?? '' : $txn->id ?? '';
+                                $date = is_array($txn) ? $txn['date'] ?? '' : $txn->date ?? '';
+                                $type = is_array($txn) ? $txn['type'] ?? '' : $txn->type ?? '';
+                                $no = is_array($txn) ? $txn['no'] ?? '' : $txn->no ?? '';
+                                $customer = is_array($txn) ? $txn['customer'] ?? '' : $txn->customer ?? '';
+                                $memo = is_array($txn) ? $txn['memo'] ?? '' : $txn->memo ?? '';
+                                $amount = is_array($txn) ? $txn['amount'] ?? 0 : $txn->amount ?? 0;
+                                $statusVal = is_array($txn) ? $txn['status'] ?? '' : $txn->status ?? '';
+                                $viewUrl = is_array($txn) ? $txn['view_url'] ?? '' : $txn->view_url ?? '';
+                                $editPaymentUrl = is_array($txn)
+                                    ? $txn['edit_payment_url'] ?? ''
+                                    : $txn->edit_payment_url ?? '';
+                            @endphp
                             <tr>
                                 <td><input type="checkbox" class="form-check-input row-checkbox"
-                                        value="{{ $txn['id'] ?? '' }}"></td>
-                                <td>{{ \Carbon\Carbon::parse($txn['date'] ?? '')->format('m/d/y') }}</td>
-                                <td>{{ $txn['type'] ?? '' }}</td>
-                                <td>{{ str_replace('#', '', $txn['no'] ?? '') }}</td>
-                                <td>{{ $txn['customer'] ?? '' }}</td>
-                                <td>{{ Str::limit($txn['memo'] ?? '', 30) }}</td>
-                                <td class="text-end">{{ Auth::user()->priceFormat(abs($txn['amount'] ?? 0)) }}</td>
+                                        value="{{ $id }}"></td>
+                                <td>{{ $date ? \Carbon\Carbon::parse($date)->format('m/d/y') : '' }}</td>
+                                <td>{{ $type }}</td>
+                                <td>{{ str_replace('#', '', $no) }}</td>
+                                <td>{{ $customer }}</td>
+                                <td>{{ Str::limit($memo, 30) }}</td>
+                                <td class="text-end">{{ Auth::user()->priceFormat($amount) }}</td>
                                 <td>
                                     @php
-                                        $status = strtolower($txn['status'] ?? '');
+                                        $status = strtolower($statusVal);
                                         $statusClass = 'open';
                                         $icon = 'ti-clock';
                                         if (str_contains($status, 'overdue')) {
@@ -1013,16 +1028,16 @@
                                     @endphp
                                     <span class="qbo-status {{ $statusClass }}">
                                         <i class="ti {{ $icon }}"></i>
-                                        {{ $txn['status'] ?? '' }}
+                                        {{ $statusVal }}
                                     </span>
                                 </td>
                                 <td>
-                                    @if (!empty($txn['view_url']))
-                                        <a href="{{ $txn['view_url'] }}"
+                                    @if (!empty($viewUrl))
+                                        <a href="{{ $viewUrl }}"
                                             class="qbo-action-link">{{ __('View/Edit') }}</a>
                                     @endif
-                                    @if (!empty($txn['edit_payment_url']))
-                                        <a href="{{ $txn['edit_payment_url'] }}"
+                                    @if (!empty($editPaymentUrl))
+                                        <a href="{{ $editPaymentUrl }}"
                                             class="qbo-action-link">{{ __('| Receive Payment') }}</a>
                                     @endif
                                 </td>
@@ -1119,7 +1134,7 @@
             $('#delayedCreditModal').modal('show');
             $('#delayedCreditModal .modal-content').html(
                 '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>'
-                );
+            );
             $.ajax({
                 url: url,
                 type: 'GET',
@@ -1140,7 +1155,7 @@
             $('#delayedChargeModal').modal('show');
             $('#delayedChargeModal .modal-content').html(
                 '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>'
-                );
+            );
             $.ajax({
                 url: url,
                 type: 'GET',

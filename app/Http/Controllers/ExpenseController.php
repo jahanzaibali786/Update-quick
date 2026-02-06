@@ -118,9 +118,9 @@ class ExpenseController extends Controller
             $type = $request->get('txn_type', 'all');
             $vendorId = $request->get('vender', '');
             $statusFilter = $request->get('status', 'all');
-            $startDate = $request->get('start_date', \Carbon\Carbon::now()->subMonths(12)->toDateString());
-            $endDate = $request->get('end_date', \Carbon\Carbon::now()->toDateString());
-
+            $startDate = $request->get('date_from', \Carbon\Carbon::now()->subMonths(12)->toDateString());
+            $endDate = $request->get('date_to', \Carbon\Carbon::now()->addMonths(1)->toDateString());
+// dd($startDate,$endDate,'df');
             // Get transactions using the helper class
             $dataHelper = new \App\DataTables\ExpenseTransactionsDataTable();
             $dataHelper->type = $type;
@@ -2194,6 +2194,28 @@ class ExpenseController extends Controller
         }
     }
 
+    public function editTimeActivity($id)
+    {
+        if (\Auth::user()->can('edit bill')) {
+            $timeActivity = \App\Models\TimeActivity::find($id);
+            if (!$timeActivity || $timeActivity->created_by != \Auth::user()->creatorId()) {
+                return redirect()->back()->with('error', __('Time Activity not found or permission denied.'));
+            }
+
+            $employees = Employee::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $venders = Vender::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            
+            $customers = Customer::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $projects = Project::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('project_name', 'id');
+
+            $services = ProductService::where('created_by', \Auth::user()->creatorId())->where('type', 'service')->get()->pluck('name', 'id');
+
+            return view('expense.edit_time_activity', compact('timeActivity', 'employees', 'venders', 'customers', 'projects', 'services'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
     public function storeTimeActivity(Request $request)
     {
         if (\Auth::user()->can('create bill')) {
@@ -2222,11 +2244,12 @@ class ExpenseController extends Controller
             $timeActivity->billable = $request->has('billable') ? 1 : 0;
             $timeActivity->rate = $request->rate;
             $timeActivity->taxable = $request->has('taxable') ? 1 : 0;
+            $timeActivity->total_amount = $request->total_amount ?? 0;
             $timeActivity->notes = $request->notes;
             $timeActivity->created_by = \Auth::user()->creatorId();
             $timeActivity->save();
 
-            return redirect()->route('')->with('success', __('Time Activity successfully created.'));
+            return redirect()->route('sales.transactions.index')->with('success', __('Time Activity successfully created.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -2261,10 +2284,11 @@ class ExpenseController extends Controller
                 $timeActivity->billable = $request->has('billable') ? 1 : 0;
                 $timeActivity->rate = $request->rate;
                 $timeActivity->taxable = $request->has('taxable') ? 1 : 0;
+                $timeActivity->total_amount = $request->total_amount ?? 0;
                 $timeActivity->notes = $request->notes;
                 $timeActivity->save();
 
-                return redirect()->route('timeActivity.create')->with('success', __('Time Activity successfully updated.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Time Activity successfully updated.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -2277,8 +2301,10 @@ class ExpenseController extends Controller
     {
         if (\Auth::user()->can('create bill')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+             $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'bill')->get();
             $category = ProductServiceCategory::where('created_by', \Auth::user()->creatorId())
                 ->whereNotIn('type', ['product & service', 'income'])

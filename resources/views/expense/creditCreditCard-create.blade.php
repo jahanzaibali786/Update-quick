@@ -1361,16 +1361,50 @@
                     <div class="bill-header-top" style="display: flex; align-items: flex-start; gap: 24px;">
                         <div class="bill-field-group" style="flex: 0 0 200px;">
                             <label>{{ __('Payee') }}</label>
-                            <select name="vender_id" id="vender" class="form-control select2" data-url="{{ route('creditcreditcard.vender') }}">
-                                <option value="">{{ __('Who did you pay?') }}</option>
-                                <option value="__add_vendor" data-create-type="vendor" data-create-url="{{ route('vender.create') }}" data-create-title="Add New Vendor">
-                                    ➕ {{ __('Add New') }}
-                                </option>
-                                @foreach ($vendorOptions as $id => $opt)
-                                    @if($id && $id != 'add' && $id != '')
-                                        <option value="{{ $id }}">{{ $opt['name'] }}</option>
-                                    @endif
-                                @endforeach
+                             <select id="payee_all" name="payee" class="form-control select" required>
+                                <option value="">Who did you pay?</option>
+
+                                            {{-- Employees --}}
+                                            <optgroup label="employee">
+                                                 <option value="__add_employee" data-create-type="employee"
+                                                            data-create-url="{{ route('user.create') }}"
+                                                            data-create-title="Add New Employee">
+                                                        ➕ Add New Employee
+                                                    </option>
+                                                @foreach ($employees as $id => $name)
+                                                    <option value="employee_{{ $id }}"> 
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+
+                                            {{-- Customers --}}
+                                            <optgroup label="customer">
+                                                <option value="__add_customer" data-create-type="customer"
+                                                            data-create-url="{{ route('customer.create') }}"
+                                                            data-create-title="Add New Customer">
+                                                        ➕ Add New Customer
+                                                    </option>
+                                                @foreach ($customers as $id => $name)
+                                                    <option value="customer_{{ $id }}"> 
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+
+                                            {{-- Vendors --}}
+                                            <optgroup label="vendor">
+                                                <option value="__add_vendor" data-create-type="vendor"
+                                                            data-create-url="{{ route('vender.create') }}"
+                                                            data-create-title="Add New Vendor">
+                                                        ➕ Add New vendor
+                                                    </option>
+                                                @foreach ($venders as $id => $name)
+                                                    <option value="vendor_{{ $id }}">
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
                             </select>
                         </div>
                         <div class="bill-field-group" style="flex: 0 0 220px;">

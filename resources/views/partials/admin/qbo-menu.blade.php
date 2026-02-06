@@ -36,7 +36,7 @@
                             <li><a href="#">Refund receipt</a></li>
                             <li><a href="#">Delayed credit</a></li>
                             <li><a href="#">Delayed charge</a></li>
-                            <li><a href="{{ route('customer.create') }}">Add customer</a></li>
+                            <li><a href="{{ route('customer.index') }}">Add customer</a></li>
                         </ul>
                     </div>
                     {{-- Vendors Column --}}
@@ -44,14 +44,14 @@
                         <h5 class="qbo-flyout-heading">Vendors</h5>
                         <ul class="qbo-flyout-list">
                             <li><a href="{{ route('expense.index') }}">Expense</a></li>
-                            <li><a href="{{ route('checks.create') }}">Check</a></li>
+                            <li><a href="#">Check</a></li>
                             <li><a href="{{ route('bill.create', 0) }}">Bill</a></li>
                             <li><a href="#">Pay bills</a></li>
                             <li><a href="{{ route('purchase.create', 0) }}">Purchase order</a></li>
                             <li><a href="#">Vendor credit</a></li>
                             <li><a href="#">Credit card credit</a></li>
                             <li><a href="#">Print checks</a></li>
-                            <li><a href="{{ route('vender.create') }}">Add vendor</a></li>
+                            <li><a href="{{ route('vender.index') }}">Add vendor</a></li>
                         </ul>
                     </div>
                     {{-- Team Column --}}
@@ -85,7 +85,7 @@
                             <li><a href="{{ route('journal-entry.create') }}">Journal entry</a></li>
                             <li><a href="{{ route('productservice.create') }}">Inventory qty adjustment</a></li>
                             <li><a href="#">Pay down credit card</a></li>
-                            <li><a href="{{ route('productservice.create') }}">Add product/service</a></li>
+                            <li><a href="{{ route('productservice.index') }}">Add product/service</a></li>
                         </ul>
                     </div>
                 </div>
