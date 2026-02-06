@@ -121,7 +121,7 @@
     ])
 
     {{-- Include Sales Tabs --}}
-    @include('transaction.sales-tabs')
+    <!-- @include('transaction.sales-tabs') -->
 
     {{-- Bars / Sales Data --}}
     <div class="row">

@@ -2818,6 +2818,9 @@
                                             <span>
                                                 <select name="sales_tax_rate" class="form-select totals-tax-rate-select">
                                                     <option value="">{{ __('Select a tax rate') }}</option>
+                                                    @foreach ($taxes as $taxRate)
+                                                        <option value="{{ $taxRate->rate }}">{{ $taxRate->name }}</option>
+                                                    @endforeach
                                                 </select>
                                             </span>
                                         </div>
