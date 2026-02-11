@@ -501,7 +501,7 @@
         .bottom-section {
             padding: 24px 0px;
             /* display: grid;
-            grid-template-columns: 1fr 400px; */
+                grid-template-columns: 1fr 400px; */
             /* gap: 350px; */
             background: #ffffff;
         }
@@ -1339,10 +1339,12 @@
 
                 // Populate hidden inputs with calculated totals
                 var subtotal = parseFloat($('.subTotal').text().replace(/[^0-9.-]+/g, '')) || 0;
-                var taxableSubtotal = parseFloat($('.taxableSubtotal').text().replace(/[^0-9.-]+/g, '')) || 0;
+                var taxableSubtotal = parseFloat($('.taxableSubtotal').text().replace(/[^0-9.-]+/g, '')) ||
+                    0;
                 var totalDiscount = parseFloat($('.totalDiscount').text().replace(/[^0-9.-]+/g, '')) || 0;
                 var totalTax = parseFloat($('.totalTax').text().replace(/[^0-9.-]+/g, '')) || 0;
-                var salesTaxAmount = parseFloat($('#sales_tax_amount').text().replace(/[^0-9.-]+/g, '')) || 0;
+                var salesTaxAmount = parseFloat($('#sales_tax_amount').text().replace(/[^0-9.-]+/g, '')) ||
+                    0;
                 var totalAmount = parseFloat($('.totalAmount').text().replace(/[^0-9.-]+/g, '')) || 0;
 
                 $('#hidden_subtotal').val(subtotal);
@@ -1513,8 +1515,9 @@
                 }
             });
 
-            // sales tax rate select (value should be numeric percentage)
-            var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
+            // sales tax rate - get from data-rate attribute, not value (which is the tax ID)
+            var $selectedTax = $('select[name="sales_tax_rate"]').find(':selected');
+            var taxRate = parseFloat($selectedTax.data('rate')) || 0;
             var totalTax = taxableSubtotal * taxRate / 100;
 
             // update bottom totals
@@ -1527,6 +1530,11 @@
             // update all subtotal rows inside table
             recalcSubtotals();
         }
+
+        // Tax rate selector change handler
+        $(document).on('change', 'select[name="sales_tax_rate"]', function() {
+            recalcTotals();
+        });
     </script>
     <script>
         var selector = "body";
@@ -2251,11 +2259,11 @@
                                                 ]) }}
                                             </td>
                                             <!-- <td>
-                                                                                                        {{ Form::text('discount', '', [
-                                                                                                            'class' => 'form-control input-right discount',
-                                                                                                            'placeholder' => '0.00',
-                                                                                                        ]) }}
-                                                                                                    </td> -->
+                                                                                                            {{ Form::text('discount', '', [
+                                                                                                                'class' => 'form-control input-right discount',
+                                                                                                                'placeholder' => '0.00',
+                                                                                                            ]) }}
+                                                                                                        </td> -->
                                             <td>
                                                 <input type="text" name="amount"
                                                     class="form-control input-right amount" value="0.00">
@@ -2818,8 +2826,11 @@
                                             <span>
                                                 <select name="sales_tax_rate" class="form-select totals-tax-rate-select">
                                                     <option value="">{{ __('Select a tax rate') }}</option>
-                                                    @foreach ($taxes as $taxRate)
-                                                        <option value="{{ $taxRate->rate }}">{{ $taxRate->name }}</option>
+                                                    @foreach ($taxes as $tax)
+                                                        <option value="{{ $tax->id }}"
+                                                            data-rate="{{ $tax->rate }}"
+                                                            {{ isset($salesReceiptData) && $salesReceiptData['sales_tax_rate'] == $tax->id ? 'selected' : '' }}>
+                                                            {{ $tax->name }} ({{ $tax->rate }}%)</option>
                                                     @endforeach
                                                 </select>
                                             </span>
@@ -2902,9 +2913,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                onclick="location.href = '{{ route('invoice.index') }}';">
-                                                            {{ __('Cancel') }}
-                                                        </button> -->
+                                                                    onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                {{ __('Cancel') }}
+                                                            </button> -->
                         </div>
 
                         <div class="footer-center">

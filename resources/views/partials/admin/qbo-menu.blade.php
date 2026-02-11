@@ -72,6 +72,7 @@
                             <li><a href="{{ route('timeActivity.create') }}">Single time activity</a></li>
                             <li><a href="#">Weekly timesheet</a></li>
                             <li><a href="#">Review time</a></li>
+                            <li><a href="{{ route('product.categories') }}">products/categories</a></li>
                             <li><a href="#">Add contractor</a></li>
                         </ul>
                     </div>
@@ -81,10 +82,13 @@
                         <ul class="qbo-flyout-list">
                             <li><a href="#">Task</a></li>
                             <li><a href="#">Bank deposit</a></li>
-                            <li><a href="{{ route('bank-transfer.create') }}">Transfer</a></li>
-                            <li><a href="{{ route('journal-entry.create') }}">Journal entry</a></li>
+                            <li><a href="{{ route('bank-transfer.index') }}">Transfer</a></li>
+                            <li><a href="{{ route('journal-entry.index') }}">Journal entry</a></li>
                             <li><a href="{{ route('productservice.create') }}">Inventory qty adjustment</a></li>
                             <li><a href="#">Pay down credit card</a></li>
+                            <li><a href="{{ route('taxes.index') }}">Add Tax</a></li>
+                            <li><a href="{{ route('users.index') }}">Add User</a></li>
+                            <li><a href="{{ route('roles.index') }}">Add Role</a></li>
                             <li><a href="{{ route('productservice.index') }}">Add product/service</a></li>
                         </ul>
                     </div>
