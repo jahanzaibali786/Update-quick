@@ -933,6 +933,9 @@ Route::group(['middleware' => ['verified']], function () {
             ->name('allSales');
         Route::get('/sales/transactions', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'index'])
             ->name('sales.transactions.index');
+            Route::get('/sales/transaction-activity/{type}/{id}', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'viewActivity'])
+    ->name('sales.transaction.activity')
+    ->middleware(['auth', 'XSS']);
 
         Route::prefix('report')->group(function () {
             Route::get('receipts/{invoice?}', [TransactionController::class, 'receipts'])
