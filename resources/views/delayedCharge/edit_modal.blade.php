@@ -759,10 +759,10 @@
                         product_id: productId
                     },
                     success: function(response) {
-                        if (response.productService) {
-                            $row.find('.item-description').val(response.productService.description || '');
+                        if (response.product) {
+                            $row.find('.item-description').val(response.product.description || '');
                             $row.find('.item-quantity').val(1);
-                            $row.find('.item-price').val(response.productService.sale_price || 0);
+                            $row.find('.item-price').val(response.product.sale_price || 0);
                             recalcRow($row);
                         }
                     }

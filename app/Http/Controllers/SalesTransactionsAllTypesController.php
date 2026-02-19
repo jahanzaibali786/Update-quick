@@ -9,6 +9,10 @@ use App\Models\SalesReceipt;
 use App\Models\Proposal;
 use App\Models\CreditNote;
 use App\Models\Customer;
+use App\Models\DelayedCharges;
+use App\Models\DelayedCredits;
+use App\Models\RefundReceipt;
+use App\Models\TimeActivity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
@@ -111,12 +115,26 @@ class SalesTransactionsAllTypesController extends Controller
 
         // Invoices
         if ($type === 'all' || $type === 'invoice') {
+            // Debug: Log all invoices before filtering
+            $allInvoices = Invoice::where('created_by', $companyId)->get();
+            \Log::info('All Invoices (before date filter)', [
+                'total' => $allInvoices->count(),
+                'ids' => $allInvoices->pluck('id')->toArray(),
+                'dates' => $allInvoices->pluck('issue_date', 'id')->toArray(),
+                'date_range' => ['start' => $startDate, 'end' => $endDate],
+            ]);
+
             $invoices = Invoice::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
                 ->when($status !== 'all', fn($q) => $this->applyInvoiceStatusFilter($q, $status))
                 ->with('customer')
                 ->get();
+
+            \Log::info('Invoices after filters', [
+                'count' => $invoices->count(),
+                'ids' => $invoices->pluck('id')->toArray(),
+            ]);
 
             foreach ($invoices as $inv) {
                 $statusText = $this->getInvoiceStatusText($inv);
@@ -129,7 +147,12 @@ class SalesTransactionsAllTypesController extends Controller
                     'memo' => $inv->memo ?? $inv->ref_number ?? '',
                     'amount' => $inv->total_amount ?? (method_exists($inv, 'getTotal') ? $inv->getTotal() : 0),
                     'status' => $statusText,
-                    'view_url' => route('invoice.show', Crypt::encrypt($inv->id)),
+                    'view_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
+                    'edit_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
+                    'edit_payment_url' => route(
+                        'receive-payment.payment',
+                        ['invoice_id' => Crypt::encrypt($inv->id)]
+                    ),
                 ]);
             }
         }
@@ -182,7 +205,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'memo' => '',
                     'amount' => $prop->total_amount ?? (method_exists($prop, 'getTotal') ? $prop->getTotal() : 0),
                     'status' => __($statusText),
-                    'view_url' => route('proposal.show', Crypt::encrypt($prop->id)),
+                    'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
                 ]);
             }
         }
@@ -206,11 +229,32 @@ class SalesTransactionsAllTypesController extends Controller
                     'memo' => $sr->memo ?? '',
                     'amount' => $sr->total_amount ?? 0,
                     'status' => __($statusText),
-                    'view_url' => route('sales-receipt.show', $sr->id),
+                    'view_url' => route('sales-receipt.edit', $sr->id),
                 ]);
             }
         }
 
+        // Refund Receipts (Refund Receipts)
+        if ($type === 'all' || $type === 'refund') {
+            $creditNotes = RefundReceipt::where('created_by', $companyId)
+                ->whereBetween('issue_date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->issue_date,
+                    'type' => __('Refund'),
+                    'no' => '#' . ($cn->ref_number ?? $cn->refund_receipt_id),
+                    'customer' => optional($cn->customer)->name ?? '-',
+                    'memo' => $cn->memo ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Paid'),
+                    'view_url' => route('refund-receipt.edit', $cn->id),
+                ]);
+            }
+        }
         // Credit Memos (Credit Notes)
         if ($type === 'all' || $type === 'credit_memo') {
             $creditNotes = CreditNote::where('created_by', $companyId)
@@ -224,14 +268,81 @@ class SalesTransactionsAllTypesController extends Controller
                     'date' => $cn->date,
                     'type' => __('Credit Memo'),
                     'no' => '#' . ($cn->credit_note_id ?? $cn->id),
-                    'customer' => '-',
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
                     'memo' => $cn->description ?? '',
                     'amount' => -$cn->amount,
-                    'status' => __('Applied'),
-                    'view_url' => route('credit.note', $cn->id),
+                    'status' => __('Unapplied'),
+                    'view_url' => route('creditmemo.edit', $cn->id),
                 ]);
             }
         }
+        if ($type === 'all' || $type === 'delayed_credits') {
+            $creditNotes = DelayedCredits::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Delayed Credit'),
+                    'no' => '#' . ($cn->credit_id ?? $cn->id),
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'memo' => $cn->description ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('delayed-credit.edit', $cn->id),
+                ]);
+            }
+        }
+        if ($type === 'all' || $type === 'delayed_charges') {
+            $creditNotes = DelayedCharges::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Delayed Charge'),
+                    'no' => '#' . ($cn->credit_id ?? $cn->id),
+                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'memo' => $cn->description ?? '',
+                    'amount' => -$cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('delayed-charge.edit', $cn->id),
+                ]);
+            }
+        }
+        if ($type === 'all' || $type === 'time_charges') {
+            $creditNotes = TimeActivity::where('created_by', $companyId)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->get();
+
+            foreach ($creditNotes as $cn) {
+                $transactions->push([
+                    'id' => $cn->id,
+                    'date' => $cn->date,
+                    'type' => __('Time Charge'),
+                    'no' => '#' . ($cn->id ?? $cn->id),
+                    'customer' => optional($cn->customer)->name ?? '-',
+                    'memo' => $cn->notes ?? '',
+                    'amount' => $cn->total_amount,
+                    'status' => __('Open'),
+                    'view_url' => route('timeActivity.edit', $cn->id),
+                ]);
+            }
+        }
+
+        // Debug logging to track transaction counts
+        \Log::info('Sales Transactions Debug', [
+            'type_filter' => $type,
+            'total_count' => $transactions->count(),
+            'by_type' => $transactions->groupBy('type')->map->count()->toArray(),
+        ]);
 
         // Sort by date descending
         return $transactions->sortByDesc('date')->values()->toArray();

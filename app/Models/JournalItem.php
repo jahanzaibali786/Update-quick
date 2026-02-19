@@ -27,6 +27,10 @@ class JournalItem extends Model
         'updated_at',
         'quickbooks_id',
     ];
+    public function journalItem()
+    {
+        return $this->hasmany('App\Models\JournalItem', 'journal', 'id');
+    }
 
     public function accounts()
     {

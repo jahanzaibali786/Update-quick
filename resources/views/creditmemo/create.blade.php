@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('creditmemo.index') }}">{{ __('Credit Memo') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('sales.transactions.index') }}">{{ __('Credit Memo') }}</a></li>
     <li class="breadcrumb-item">{{ __('Create Credit Memo') }}</li>
 @endsection
 
@@ -93,14 +93,14 @@
 
         .customer-select-group {
             /* flex: 1;
-                            max-width: 400px; */
+                                                    max-width: 400px; */
         }
 
         .email-group {
             /* flex: 1;
-                            max-width: 400px;
-                            display: flex;
-                            flex-direction: column; */
+                                                    max-width: 400px;
+                                                    display: flex;
+                                                    flex-direction: column; */
         }
 
         .email-input-row {
@@ -291,7 +291,7 @@
         }
 
         .delete-icon {
-            opacity: 0;
+            opacity: 1;
             cursor: pointer;
             color: var(--qbo-gray-text);
             transition: opacity 0.2s;
@@ -1705,7 +1705,7 @@
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
                 <div class="invoice-container">
-                    {{ Form::open(['url' => 'invoice', 'id' => 'invoice-form']) }}
+                    {{ Form::open(['route' => 'creditmemo.store', 'method' => 'POST', 'id' => 'creditmemo-form', 'enctype' => 'multipart/form-data']) }}
                     <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
                     <style>
                         .header-actions {
@@ -1830,7 +1830,7 @@
 
                                 {{-- Close X --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('sales.reciepts.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.transactions.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round">
@@ -1961,7 +1961,8 @@
                                             </td>
                                             <td>
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" value="">
+                                                    <input class="form-check-input" type="checkbox" name="tax_checkbox"
+                                                        value="">
                                                 </div>
                                                 {{ Form::hidden('tax', '', ['class' => 'form-control tax']) }}
                                                 {{ Form::hidden('itemTaxPrice', '', ['class' => 'form-control itemTaxPrice']) }}
@@ -2295,10 +2296,15 @@
                                             </button>
 
                                             <select name="sales_tax_rate" class="form-select totals-tax-rate-select">
-                                                <option value="">{{ __('Select sales tax rate') }}</option>
-                                                <option value="5">5%</option>
-                                                <option value="10">10%</option>
-                                                <option value="15">15%</option>
+                                                <option value="" data-rate="0">{{ __('Select sales tax rate') }}
+                                                </option>
+                                                @if (isset($taxes))
+                                                    @foreach ($taxes as $tax)
+                                                        <option value="{{ $tax->id }}"
+                                                            data-rate="{{ $tax->rate }}">
+                                                            {{ $tax->name }} ({{ $tax->rate }}%)</option>
+                                                    @endforeach
+                                                @endif
                                             </select>
                                         </div>
 
@@ -2317,6 +2323,14 @@
                                         <span>{{ __('Sales tax') }}</span>
                                         <span class="totalTax">0.00</span>
                                     </div>
+
+                                    {{-- Hidden fields for totals --}}
+                                    <input type="hidden" name="subtotal" value="0.00">
+                                    <input type="hidden" name="taxable_subtotal" value="0.00">
+                                    <input type="hidden" name="total_discount" value="0.00">
+                                    <input type="hidden" name="total_tax" value="0.00">
+                                    <input type="hidden" name="sales_tax_amount" value="0.00">
+                                    <input type="hidden" name="total_amount" value="0.00">
 
                                     <script>
                                         $(function() {
@@ -2425,9 +2439,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                        onclick="location.href = '{{ route('invoice.index') }}';">
-                                                                                                                                    {{ __('Cancel') }}
-                                                                                                                                </button> -->
+                                                                                                                                                                onclick="location.href = '{{ route('sales.transactions.index') }}';">
+                                                                                                                                                            {{ __('Cancel') }}
+                                                                                                                                                        </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -2641,7 +2655,8 @@
                     $(el.parent().parent().find('.itemTaxRate')).val(totalItemTaxRate.toFixed(2));
                     $(el.parent().parent().find('.tax')).val(tax);
                     $(el.parent().parent().find('.discount')).val(0);
-                    $(el.parent().parent().find('.amount')).html(parseFloat(item.totalAmount));
+                    $(el.parent().parent().find('.amount')).val(parseFloat(item.totalAmount).toFixed(
+                        2));
 
                     // Recalculate totals
                     recalcTotals();
@@ -2660,7 +2675,7 @@
             var itemTaxPrice = parseFloat((totalItemTaxRate / 100) * (totalItemPrice));
 
             $(el.find('.itemTaxPrice')).val(itemTaxPrice.toFixed(2));
-            $(el.find('.amount')).html((parseFloat(totalItemPrice) + parseFloat(itemTaxPrice)).toFixed(2));
+            $(el.find('.amount')).val((parseFloat(totalItemPrice) + parseFloat(itemTaxPrice)).toFixed(2));
 
             // Recalculate totals
             recalcTotals();
@@ -2688,7 +2703,7 @@
                 if (!$productRow.length) return;
 
                 // line amount from column
-                var amountText = $productRow.find('.amount').text();
+                var amountText = $productRow.find('.amount').val();
                 var amount = parseFloat(amountText) || 0;
                 grandSubtotal += amount;
 
@@ -2703,7 +2718,8 @@
             });
 
             // Tax from dropdown
-            var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
+            var $selectedTax = $('select[name="sales_tax_rate"]').find(':selected');
+            var taxRate = parseFloat($selectedTax.data('rate')) || 0;
             var totalTax = taxableSubtotal * taxRate / 100;
 
             // Discount from new controls
@@ -2730,6 +2746,14 @@
 
             var grandTotal = grandSubtotal - totalDiscount + totalTax;
             $('.totalAmount').text(grandTotal.toFixed(2));
+
+            // Populate hidden fields
+            $('input[name="subtotal"]').val(grandSubtotal.toFixed(2));
+            $('input[name="taxable_subtotal"]').val(taxableSubtotal.toFixed(2));
+            $('input[name="total_discount"]').val(totalDiscount.toFixed(2));
+            $('input[name="total_tax"]').val(totalTax.toFixed(2));
+            $('input[name="sales_tax_amount"]').val(totalTax.toFixed(2));
+            $('input[name="total_amount"]').val(grandTotal.toFixed(2));
 
             // For sales receipts, amount received = total
             $('.amountReceived').text(grandTotal.toFixed(2));

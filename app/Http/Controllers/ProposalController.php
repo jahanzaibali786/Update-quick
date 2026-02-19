@@ -39,8 +39,10 @@ class ProposalController extends Controller
         if(\Auth::user()->can('manage proposal'))
         {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customer = Customer::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $customer->prepend('All', '');
 
@@ -77,8 +79,10 @@ class ProposalController extends Controller
         if(\Auth::user()->can('create proposal'))
         {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customFields    = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
             $proposal_number = \Auth::user()->proposalNumberFormat($this->proposalNumber());
             $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
@@ -125,6 +129,7 @@ class ProposalController extends Controller
 
     public function store(Request $request)
     {
+        // dd($request->all());
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create proposal')) {
@@ -153,6 +158,12 @@ class ProposalController extends Controller
                         return response()->json(['errors' => $validator->errors()], 422);
                     }
                     return redirect()->back()->with('error', $messages->first());
+                }
+                if($request->customer_id == '__add__' || $request->customer_id == ''){
+                    if ($request->ajax()) {
+                        return response()->json(['error' => __('Please select a customer.')], 422);
+                    }
+                    return redirect()->back()->with('error', __('Please select a customer.'));
                 }
 
                 $proposal                 = new Proposal();
@@ -287,11 +298,11 @@ class ProposalController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Proposal successfully created.'),
-                        'redirect' => route('proposal.index')
+                        'redirect' => route('sales.transactions.index')
                     ]);
                 }
 
-                return redirect()->route('proposal.index', $proposal->id)->with('success', __('Proposal successfully created.'));
+                return redirect()->route('sales.transactions.index', $proposal->id)->with('success', __('Proposal successfully created.'));
             }
             else
             {
@@ -318,8 +329,10 @@ class ProposalController extends Controller
             }
 
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+                // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+                // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+                $ownerId = $user->creatorId();
+                $column = 'created_by';
 
             $proposal = Proposal::find($id);
             $proposal_number = \Auth::user()->proposalNumberFormat($proposal->proposal_id);
@@ -468,6 +481,12 @@ class ProposalController extends Controller
                         }
                         return redirect()->route('proposal.index')->with('error', $messages->first());
                     }
+                    if($request->customer_id == '__add__' || $request->customer_id == ''){
+                        if ($request->ajax()) {
+                            return response()->json(['error' => __('Please select a customer.')], 422);
+                        }
+                         return redirect()->back()->with('error', __('Please select a customer.'));
+                    }
 
                     $proposal->customer_id = $request->customer_id;
                     $proposal->issue_date = $request->issue_date;
@@ -602,7 +621,7 @@ class ProposalController extends Controller
                     if ($request->ajax()) {
                         return response()->json(['success' => __('Proposal successfully updated.')]);
                     }
-                    return redirect()->route('proposal.index', $proposal->id)->with('success', __('Proposal successfully updated.'));
+                    return redirect()->route('sales.transactions.index', $proposal->id)->with('success', __('Proposal successfully updated.'));
 
                 }
                 else
@@ -626,8 +645,10 @@ class ProposalController extends Controller
     function proposalNumber()
     {
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+            $column = 'created_by';
         $latest = Proposal::where($column, '=',$ownerId)->latest()->first();
         if(!$latest)
         {
@@ -1338,8 +1359,10 @@ class ProposalController extends Controller
         }
 
         // Respect company/owner separation like the rest of this controller
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column  = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+        $column = 'created_by';
 
         // Get proposals (= estimates) for this customer
         $proposals = Proposal::where('customer_id', $customerId)

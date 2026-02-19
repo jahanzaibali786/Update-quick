@@ -20,6 +20,7 @@ class JournalService
      */
     public static function createJournalEntry(array $data)
     {
+        // dd($data);
         DB::beginTransaction();
         try {
             // Extract entry date for potential backdating
@@ -227,6 +228,7 @@ class JournalService
      */
     public static function updateJournalEntry($id, array $data)
     {
+        // dd($data);
         DB::beginTransaction();
         
         try {

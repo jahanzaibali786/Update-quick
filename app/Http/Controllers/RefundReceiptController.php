@@ -181,6 +181,11 @@ class RefundReceiptController extends Controller
                 // Save Custom Fields
                 CustomField::saveData($refundReceipt, $request->customField);
 
+                // Create Journal Voucher for refund receipt
+                $this->createRefundReceiptJournalVoucher($refundReceipt);
+                $refundReceipt->status = 2; // Approved
+                $refundReceipt->save();
+
                 // Parse items
                 $products = $request->items;
                 if (is_string($products)) {
@@ -262,11 +267,11 @@ class RefundReceiptController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Refund receipt successfully created.'),
-                        'redirect' => route('refund-receipt.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('refund-receipt.index')->with('success', __('Refund receipt successfully created.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Refund receipt successfully created.'));
             } else {
                 if ($request->ajax()) {
                     return response()->json(['error' => __('Permission denied.')], 403);
@@ -537,6 +542,19 @@ class RefundReceiptController extends Controller
                 // Save Custom Fields
                 CustomField::saveData($refundReceipt, $request->customField);
 
+                // Update Journal Voucher - delete old entries and create new voucher
+                if ($refundReceipt->voucher_id) {
+                    // Delete old journal items and transaction lines
+                    \App\Models\JournalItem::where('journal', $refundReceipt->voucher_id)->delete();
+                    \App\Models\TransactionLines::where('reference_id', $refundReceipt->voucher_id)
+                        ->where('reference', 'Refund Receipt Journal')
+                        ->delete();
+                    \App\Models\JournalEntry::where('id', $refundReceipt->voucher_id)->delete();
+                }
+
+                // Create new voucher
+                $this->createRefundReceiptJournalVoucher($refundReceipt);
+
                 // Reverse old inventory changes (for refunds, we previously added, so now subtract)
                 foreach ($oldItems as $oldItem) {
                     if ($oldItem['product_id']) {
@@ -629,11 +647,11 @@ class RefundReceiptController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Refund receipt successfully updated.'),
-                        'redirect' => route('refund-receipt.index'),
+                        'redirect' => route('sales.transactions.index'),
                     ]);
                 }
 
-                return redirect()->route('refund-receipt.index')->with('success', __('Refund receipt successfully updated.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Refund receipt successfully updated.'));
             } else {
                 if ($request->ajax()) {
                     return response()->json(['error' => __('Permission denied.')], 403);
@@ -665,6 +683,15 @@ class RefundReceiptController extends Controller
 
             if ($refundReceipt->created_by != \Auth::user()->creatorId()) {
                 return redirect()->back()->with('error', __('Permission denied.'));
+            }
+
+            // Delete journal entry if exists
+            if ($refundReceipt->voucher_id) {
+                \App\Models\TransactionLines::where('reference_id', $refundReceipt->voucher_id)
+                    ->where('reference', 'Refund Receipt Journal')
+                    ->delete();
+                \App\Models\JournalItem::where('journal', $refundReceipt->voucher_id)->delete();
+                \App\Models\JournalEntry::where('id', $refundReceipt->voucher_id)->where('category', 'Refund Receipt')->delete();
             }
 
             // Reverse inventory changes before deletion
@@ -702,5 +729,345 @@ class RefundReceiptController extends Controller
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
+    }
+
+    private function createRefundReceiptJournalVoucher(\App\Models\RefundReceipt $refundReceipt)
+    {
+        // Import required models
+        $JournalEntry = \App\Models\JournalEntry::class;
+        $JournalItem = \App\Models\JournalItem::class;
+        $ChartOfAccount = \App\Models\ChartOfAccount::class;
+        $ChartOfAccountType = \App\Models\ChartOfAccountType::class;
+        $ChartOfAccountSubType = \App\Models\ChartOfAccountSubType::class;
+        $BankAccount = \App\Models\BankAccount::class;
+        $ProductService = \App\Models\ProductService::class;
+        $Tax = \App\Models\Tax::class;
+        $Utility = \App\Models\Utility::class;
+        $TransactionLines = \App\Models\TransactionLines::class;
+
+        // Get next journal ID
+        $latest = $JournalEntry::where('created_by', '=', $refundReceipt->created_by)
+            ->where('voucher_type', 'JV')
+            ->orderBy('id', 'Desc')
+            ->first();
+        $journalId = $latest ? $latest->journal_id + 1 : 1;
+
+        // Create Journal Entry
+        $journal = new $JournalEntry();
+        $journal->journal_id = $journalId;
+        $journal->date = $refundReceipt->issue_date;
+        $journal->reference = $refundReceipt->ref_number;
+        $journal->description = 'Refund Receipt No: ' . $refundReceipt->refund_receipt_id;
+        $journal->reference_id = $refundReceipt->id;
+        $journal->category = 'Refund Receipt';
+        $journal->voucher_type = 'JV';
+        $journal->owned_by = $refundReceipt->owned_by;
+        $journal->created_by = $refundReceipt->created_by;
+        $journal->save();
+
+        $totalDebits = 0; // Debits (sales returns + tax)
+        $totalCredits = 0;  // Credits (bank + discount)
+
+        // Get customer info for journal items
+        $customer = \App\Models\Customer::find($refundReceipt->customer_id);
+        $customerName = $customer ? $customer->name : '';
+        $customerId = $refundReceipt->customer_id;
+
+        // ============================================================
+        // 1. Debit entry for Sales Return
+        // ============================================================
+        $salesReturnAmount = floatval($refundReceipt->subtotal ?? 0);
+        if ($salesReturnAmount > 0) {
+            $salesReturnAccountId = $this->getOrCreateSalesReturnAccount($refundReceipt->created_by);
+
+            if ($salesReturnAccountId) {
+                $journalItem = new $JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = $salesReturnAccountId;
+                $journalItem->description = 'Sales Return for Refund Receipt No: ' . $refundReceipt->refund_receipt_id;
+                $journalItem->debit = $salesReturnAmount;
+                $journalItem->credit = 0;
+                $journalItem->type = 'Refund Receipt';
+                $journalItem->name = $customerName;
+                $journalItem->customer_id = $customerId;
+                $journalItem->save();
+                $totalDebits += $salesReturnAmount;
+
+                $Utility::addTransactionLines([
+                    'account_id' => $salesReturnAccountId,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $salesReturnAmount,
+                    'reference' => 'Refund Receipt Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'product_id' => $refundReceipt->id,
+                    'product_type' => 'Refund Receipt Sales Return',
+                ], 'create');
+            }
+        }
+
+        // ============================================================
+        // 3. Debit entry for invoice-level Sales Tax (if any)
+        // ============================================================
+        $invoiceTax = floatval($refundReceipt->sales_tax_amount ?? 0);
+        if ($invoiceTax > 0) {
+            // Get tax account from sales_tax_rate if it's a tax ID, otherwise use default
+            $taxAccountId = null;
+            if ($refundReceipt->sales_tax_rate) {
+                $taxModel = $Tax::find($refundReceipt->sales_tax_rate);
+                $taxAccountId = $taxModel ? $taxModel->chart_account_id : null;
+            }
+            if (!$taxAccountId) {
+                $taxAccountId = $this->getOrCreateTaxLiabilityAccount($refundReceipt->created_by);
+            }
+
+            if ($taxAccountId) {
+                $journalItem = new $JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = $taxAccountId;
+                $journalItem->description = 'Sales Tax Refund on Refund Receipt No: ' . $refundReceipt->refund_receipt_id;
+                $journalItem->debit = $invoiceTax;
+                $journalItem->credit = 0;
+                $journalItem->type = 'Refund Receipt';
+                $journalItem->name = $customerName;
+                $journalItem->customer_id = $customerId;
+                $journalItem->save();
+                $totalDebits += $invoiceTax;
+
+                $Utility::addTransactionLines([
+                    'account_id' => $taxAccountId,
+                    'transaction_type' => 'Debit',
+                    'transaction_amount' => $invoiceTax,
+                    'reference' => 'Refund Receipt Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'product_id' => $refundReceipt->id,
+                    'product_type' => 'Refund Receipt Sales Tax',
+                ], 'create');
+            }
+        }
+
+        // ============================================================
+        // 4. Credit entry for Discount (if any)
+        // ============================================================
+        $totalDiscount = floatval($refundReceipt->total_discount ?? 0);
+        if ($totalDiscount > 0) {
+            $discountAccountId = $this->getOrCreateSalesDiscountAccount($refundReceipt->created_by);
+
+            if ($discountAccountId) {
+                $journalItem = new $JournalItem();
+                $journalItem->journal = $journal->id;
+                $journalItem->account = $discountAccountId;
+                $journalItem->description = 'Discount on Refund Receipt No: ' . $refundReceipt->refund_receipt_id;
+                $journalItem->debit = 0;
+                $journalItem->credit = $totalDiscount;
+                $journalItem->type = 'Refund Receipt';
+                $journalItem->name = $customerName;
+                $journalItem->customer_id = $customerId;
+                $journalItem->save();
+                $totalCredits += $totalDiscount;
+
+                $Utility::addTransactionLines([
+                    'account_id' => $discountAccountId,
+                    'transaction_type' => 'Credit',
+                    'transaction_amount' => $totalDiscount,
+                    'reference' => 'Refund Receipt Journal',
+                    'reference_id' => $journal->id,
+                    'reference_sub_id' => $journalItem->id,
+                    'date' => $journal->date,
+                    'product_id' => $refundReceipt->id,
+                    'product_type' => 'Refund Receipt Discount',
+                ], 'create');
+            }
+        }
+
+        // ============================================================
+        // 5. Credit entry for Bank/Refund From
+        // ============================================================
+        $bankAccountId = null;
+        if ($refundReceipt->refund_from) {
+            $bankAccount = $BankAccount::find($refundReceipt->refund_from);
+            if ($bankAccount && $bankAccount->chart_account_id) {
+                $bankAccountId = $bankAccount->chart_account_id;
+            }
+        }
+
+        // If no bank account, use default Cash account
+        if (!$bankAccountId) {
+            $bankAccountId = $this->getOrCreateCashAccount($refundReceipt->created_by);
+        }
+
+        // The bank credit should equal the total amount refunded
+        $amountRefunded = floatval($refundReceipt->total_amount ?? 0);
+
+        if ($bankAccountId && $amountRefunded > 0) {
+            $journalItem = new $JournalItem();
+            $journalItem->journal = $journal->id;
+            $journalItem->account = $bankAccountId;
+            $journalItem->description = 'Refund payment from Refund Receipt No: ' . $refundReceipt->refund_receipt_id;
+            $journalItem->debit = 0;
+            $journalItem->credit = $amountRefunded;
+            $journalItem->type = 'Refund Receipt';
+            $journalItem->name = $customerName;
+            $journalItem->customer_id = $customerId;
+            $journalItem->save();
+            $totalCredits += $amountRefunded;
+
+            $Utility::addTransactionLines([
+                'account_id' => $bankAccountId,
+                'transaction_type' => 'Credit',
+                'transaction_amount' => $amountRefunded,
+                'reference' => 'Refund Receipt Journal',
+                'reference_id' => $journal->id,
+                'reference_sub_id' => $journalItem->id,
+                'date' => $journal->date,
+                'product_id' => $refundReceipt->id,
+                'product_type' => 'Refund Receipt Bank Refund',
+            ], 'create');
+        }
+
+        // Save voucher ID to refund receipt
+        $refundReceipt->voucher_id = $journal->id;
+        $refundReceipt->save();
+
+        return $journal->id;
+    }
+
+    /**
+     * Get or create Tax Liability account
+     */
+    private function getOrCreateTaxLiabilityAccount($createdBy)
+    {
+        $ChartOfAccount = \App\Models\ChartOfAccount::class;
+        $ChartOfAccountType = \App\Models\ChartOfAccountType::class;
+        $ChartOfAccountSubType = \App\Models\ChartOfAccountSubType::class;
+
+        $types = $ChartOfAccountType::where('created_by', '=', $createdBy)->where('name', 'Liabilities')->first();
+        if (!$types) return null;
+
+        $subType = $ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+        if (!$subType) return null;
+
+        $account = $ChartOfAccount::where('type', $types->id)
+            ->where('sub_type', $subType->id)
+            ->where('name', 'Sales Tax Payable')
+            ->first();
+
+        if (!$account) {
+            $account = $ChartOfAccount::create([
+                'name' => 'Sales Tax Payable',
+                'code' => '20100',
+                'type' => $types->id,
+                'sub_type' => $subType->id,
+                'is_enabled' => 1,
+                'created_by' => $createdBy,
+            ]);
+        }
+
+        return $account->id;
+    }
+
+    /**
+     * Get or create Sales Discount account
+     */
+    private function getOrCreateSalesDiscountAccount($createdBy)
+    {
+        $ChartOfAccount = \App\Models\ChartOfAccount::class;
+        $ChartOfAccountType = \App\Models\ChartOfAccountType::class;
+        $ChartOfAccountSubType = \App\Models\ChartOfAccountSubType::class;
+
+        // Sales Discount is typically an Income contra account (reduces revenue)
+        $types = $ChartOfAccountType::where('created_by', '=', $createdBy)->where('name', 'Income')->first();
+        if (!$types) return null;
+
+        $subType = $ChartOfAccountSubType::where('type', $types->id)->first();
+        if (!$subType) return null;
+
+        $account = $ChartOfAccount::where('type', $types->id)
+            ->where('name', 'Sales Discounts')
+            ->first();
+
+        if (!$account) {
+            $account = $ChartOfAccount::create([
+                'name' => 'Sales Discounts',
+                'code' => '40100',
+                'type' => $types->id,
+                'sub_type' => $subType->id,
+                'is_enabled' => 1,
+                'created_by' => $createdBy,
+            ]);
+        }
+
+        return $account->id;
+    }
+
+    /**
+     * Get or create Sales Return account
+     */
+    private function getOrCreateSalesReturnAccount($createdBy)
+    {
+        $ChartOfAccount = \App\Models\ChartOfAccount::class;
+        $ChartOfAccountType = \App\Models\ChartOfAccountType::class;
+        $ChartOfAccountSubType = \App\Models\ChartOfAccountSubType::class;
+
+        // Sales Return is typically an Income contra account (reduces revenue)
+        $types = $ChartOfAccountType::where('created_by', '=', $createdBy)->where('name', 'Income')->first();
+        if (!$types) return null;
+
+        $subType = $ChartOfAccountSubType::where('type', $types->id)->first();
+        if (!$subType) return null;
+
+        $account = $ChartOfAccount::where('type', $types->id)
+            ->where('name', 'Sales Returns')
+            ->first();
+
+        if (!$account) {
+            $account = $ChartOfAccount::create([
+                'name' => 'Sales Returns',
+                'code' => '40200',
+                'type' => $types->id,
+                'sub_type' => $subType->id,
+                'is_enabled' => 1,
+                'created_by' => $createdBy,
+            ]);
+        }
+
+        return $account->id;
+    }
+
+    /**
+     * Get or create Cash account
+     */
+    private function getOrCreateCashAccount($createdBy)
+    {
+        $ChartOfAccount = \App\Models\ChartOfAccount::class;
+        $ChartOfAccountType = \App\Models\ChartOfAccountType::class;
+        $ChartOfAccountSubType = \App\Models\ChartOfAccountSubType::class;
+
+        $types = $ChartOfAccountType::where('created_by', '=', $createdBy)->where('name', 'Assets')->first();
+        if (!$types) return null;
+
+        $subType = $ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+        if (!$subType) return null;
+
+        $account = $ChartOfAccount::where('type', $types->id)
+            ->where('sub_type', $subType->id)
+            ->whereRaw('LOWER(name) LIKE ?', ['%cash%'])
+            ->first();
+
+        if (!$account) {
+            $account = $ChartOfAccount::create([
+                'name' => 'Cash',
+                'code' => '10100',
+                'type' => $types->id,
+                'sub_type' => $subType->id,
+                'is_enabled' => 1,
+                'created_by' => $createdBy,
+            ]);
+        }
+
+        return $account->id;
     }
 }

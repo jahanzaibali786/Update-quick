@@ -217,11 +217,13 @@ Route::get('/fix-autoload', function () {
 
 // for time activity
 Route::get('/timeActivity', [ExpenseController::class, 'timeActivityCreate'])->name('timeActivity.create');
+Route::get('/timeActivity/{id}/edit', [ExpenseController::class, 'editTimeActivity'])->name('timeActivity.edit');
 Route::post('/timeActivity/store', [ExpenseController::class, 'storeTimeActivity'])->name('timeActivity.store');
 Route::put('/timeActivity/update/{id}', [ExpenseController::class, 'updateTimeActivity'])->name('timeActivity.update');
 
 // for checks(cheque)
 Route::get('/check', [ExpenseController::class, 'checksCreate'])->name('checks.create');
+Route::post('/check/store', [ExpenseController::class, 'checkstore'])->name('checks.store');
 
 // page and api endpoints
 Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');
@@ -799,6 +801,10 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('creditmemo', [CreditNoteController::class, 'creditmemoIndex'])->name('creditmemo.index');
             //sales reciepts create
             Route::get('creditmemo/create/{cid}', [CreditNoteController::class, 'creditmemoCreate'])->name('creditmemo.create');
+            Route::post('creditmemo/store', [CreditNoteController::class, 'creditmemoStore'])->name('creditmemo.store');
+            Route::get('creditmemo/edit/{id}', [CreditNoteController::class, 'creditmemoEdit'])->name('creditmemo.edit');
+            Route::post('creditmemo/update/{id}', [CreditNoteController::class, 'creditmemoUpdate'])->name('creditmemo.update');
+            Route::delete('creditmemo/destroy/{id}', [CreditNoteController::class, 'creditmemoDestroy'])->name('creditmemo.destroy');
         }
     );
 

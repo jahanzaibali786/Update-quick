@@ -59,7 +59,7 @@ class ReceivePaymentController extends Controller
                         (!empty($account->institution_name) ? $account->institution_name : $account->holder_name);
                     return [$account->id => $displayName];
                 });
-            $bankAccounts = ['' => 'Undeposited Funds'] + $bankAccounts->toArray();
+            $bankAccounts = ['' => 'Select Bank Account'] + $bankAccounts->toArray();
 
             // Get outstanding invoices if customer is selected
             $outstandingInvoices = collect();
@@ -285,6 +285,10 @@ class ReceivePaymentController extends Controller
                                 'created_by' => Auth::user()->creatorId(),
                                 'created_at' => date('Y-m-d H:i:s', strtotime($invoicePayment->date)),
                                 'account_id' => $bankAccount->chart_account_id,
+                                'customer_id' => $customer->id ?? null,
+                                'customer_name' => $customer->name ?? null,
+                                'customer_type' => 'Customer',
+                                'type' => 'Payment'
                             ];
 
                             if (preg_match('/\bcash\b/i', $bankAccount->bank_name) ||
@@ -642,6 +646,10 @@ class ReceivePaymentController extends Controller
                             'created_by' => Auth::user()->creatorId(),
                             'created_at' => date('Y-m-d H:i:s', strtotime($request->payment_date)),
                             'account_id' => $bankAccount->chart_account_id,
+                            'customer_id' => $customer->id ?? $request->customer_id,
+                            'customer_name' => $customer->name ?? null,
+                            'customer_type' => 'Customer',
+                            'type' => 'Payment',
                         ];
 
                         if (preg_match('/\bcash\b/i', $bankAccount->bank_name) || preg_match('/\bcash\b/i', $bankAccount->holder_name)) {

@@ -179,11 +179,11 @@ class DelayedChargeController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Delayed Charge created successfully.'),
-                        'redirect' => route('delayed-charge.index')
+                        'redirect' => route('sales.transactions.index')
                     ]);
                 }
 
-                return redirect()->route('delayed-charge.index')->with('success', __('Delayed Charge created successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Charge created successfully.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -333,11 +333,11 @@ class DelayedChargeController extends Controller
                     return response()->json([
                         'success' => true,
                         'message' => __('Delayed Charge updated successfully.'),
-                        'redirect' => route('delayed-charge.index')
+                        'redirect' => route('sales.transactions.index')
                     ]);
                 }
 
-                return redirect()->route('delayed-charge.index')->with('success', __('Delayed Charge updated successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Charge updated successfully.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }

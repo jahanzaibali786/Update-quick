@@ -20,6 +20,9 @@ class JournalEntry extends Model
         'status',
         'module',
         'source',
+        'customer_id',
+        'customer_name',
+        'customer_type',
     ];
 
 

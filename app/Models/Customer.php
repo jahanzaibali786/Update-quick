@@ -42,6 +42,24 @@ class Customer extends Authenticatable
         'created_by',
         'owned_by',
         'email_verified_at',
+        // Name fields
+        'title',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'suffix',
+        'company_name',
+        'print_on_check_name',
+        // Contact fields
+        'cc',
+        'bcc',
+        'mobile',
+        'fax',
+        'other',
+        'website',
+        // Sub-customer
+        'is_sub_customer',
+        // Billing address
         'billing_name',
         'billing_country',
         'billing_state',
@@ -49,6 +67,8 @@ class Customer extends Authenticatable
         'billing_phone',
         'billing_zip',
         'billing_address',
+        'billing_address_2',
+        // Shipping address
         'shipping_name',
         'shipping_country',
         'shipping_state',
@@ -56,6 +76,22 @@ class Customer extends Authenticatable
         'shipping_phone',
         'shipping_zip',
         'shipping_address',
+        'shipping_address_2',
+        // Notes
+        'notes',
+        // Payment fields
+        'primary_payment_method',
+        'terms',
+        'delivery_method',
+        'lang',
+        'credit_limit',
+        // Additional info
+        'customer_type',
+        'tax_exemption_details',
+        'is_taxable',
+        'default_tax_code',
+        'opening_balance',
+        'opening_balance_as_of',
     ];
 
     protected $hidden = [

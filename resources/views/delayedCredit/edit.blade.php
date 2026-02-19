@@ -385,6 +385,9 @@
 @endpush
 
 @section('content')
+<div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true" style="background: #ffffff;">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
     <div class="dc-container">
         {{ Form::model($delayedCredit, ['route' => ['delayed-credit.update', $delayedCredit->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
 
@@ -654,6 +657,9 @@
 
         {{ Form::close() }}
     </div>
+    </div>
+    </div>
+    </div>
 @endsection
 
 @push('script-page')
@@ -782,15 +788,16 @@
                     $.ajax({
                         url: '{{ route("invoice.product") }}',
                         type: 'POST',
+                        dataType: 'json', // 🔥 THIS LINE
                         data: {
                             _token: '{{ csrf_token() }}',
                             product_id: productId
                         },
                         success: function(response) {
-                            if (response.productService) {
-                                $row.find('.item-description').val(response.productService.description || '');
+                            if (response.product) {
+                                $row.find('.item-description').val(response.product.description || '');
                                 $row.find('.item-quantity').val(1);
-                                $row.find('.item-price').val(response.productService.sale_price || 0);
+                                $row.find('.item-price').val(response.product.sale_price || 0);
                                 recalcRow($row);
                             }
                         }
@@ -815,5 +822,13 @@
                 }
             });
         });
+
+           $(document).ready(function() {
+        var expenseModal = new bootstrap.Modal(document.getElementById('expense-modal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        expenseModal.show();
+    });
     </script>
 @endpush
