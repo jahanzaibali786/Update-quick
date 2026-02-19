@@ -8,15 +8,31 @@ use Illuminate\Database\Eloquent\Model;
 class VendorCredit extends Model
 {
     use HasFactory;
+    
+    // Status constants
+    const STATUS_OPEN = 'Open';
+    const STATUS_PARTIALLY_PAID = 'Partially Paid';
+    const STATUS_PAID = 'Paid';
+    
     protected $fillable = [
         'vendor_credit_id',
         'vender_id',
         'date',
         'amount',
         'memo',
+        'status',
+        'voucher_id',
         'created_by',
         'owned_by',
     ];
+
+    /**
+     * Get the vendor credit payments (how this credit was applied)
+     */
+    public function payments()
+    {
+        return $this->hasMany(VendorCreditPayment::class, 'vendor_credit_id');
+    }
 
     /**
      * Get the vendor that owns the credit
@@ -24,6 +40,22 @@ class VendorCredit extends Model
     public function vendor()
     {
         return $this->belongsTo(Vender::class, 'vender_id');
+    }
+
+    /**
+     * Get the account-based expense lines for this credit
+     */
+    public function accounts()
+    {
+        return $this->hasMany(VendorCreditAccount::class, 'vendor_credit_id');
+    }
+
+    /**
+     * Get the product-based expense lines for this credit
+     */
+    public function products()
+    {
+        return $this->hasMany(VendorCreditProduct::class, 'vendor_credit_id');
     }
 
     /**
@@ -45,11 +77,62 @@ class VendorCredit extends Model
     }
 
     /**
+     * Get total amount applied from vendor_credit_payments
+     */
+    public function getTotalAppliedAttribute()
+    {
+        return $this->payments()->sum('amount');
+    }
+
+    /**
+     * Get remaining amount (total - applied)
+     */
+    public function getRemainingAmountAttribute()
+    {
+        return max(0, $this->amount - $this->total_applied);
+    }
+
+    /**
      * Check if credit is available for use
      */
     public function isAvailable()
     {
-        return $this->status === 'available' && $this->remaining_amount > 0;
+        return $this->status !== self::STATUS_PAID && $this->remaining_amount > 0;
+    }
+
+    /**
+     * Get the total amount of the vendor credit
+     * Calculates from line items (accounts + products) or returns stored amount
+     */
+    public function getTotal()
+    {
+        $accountsTotal = $this->accounts()->sum('price');
+        $productsTotal = $this->products()->sum(\DB::raw('quantity * price'));
+        
+        $lineItemsTotal = $accountsTotal + $productsTotal;
+        
+        // If line items exist, use their total; otherwise use the stored amount
+        return $lineItemsTotal > 0 ? $lineItemsTotal : ($this->amount ?? 0);
+    }
+
+    /**
+     * Update the status based on applied payments
+     */
+    public function updatePaymentStatus()
+    {
+        $totalApplied = $this->payments()->sum('amount');
+        $creditAmount = (float) $this->amount;
+
+        if ($totalApplied >= $creditAmount) {
+            $this->status = self::STATUS_PAID;
+        } elseif ($totalApplied > 0) {
+            $this->status = self::STATUS_PARTIALLY_PAID;
+        } else {
+            $this->status = self::STATUS_OPEN;
+        }
+
+        $this->save();
+        return $this->status;
     }
 
     /**
@@ -71,14 +154,8 @@ class VendorCredit extends Model
             'applied_by' => auth()->id(),
         ]);
 
-        // Update remaining amount
-        $this->remaining_amount -= $amount;
-        
-        if ($this->remaining_amount <= 0) {
-            $this->status = 'applied';
-        }
-        
-        $this->save();
+        // Update status
+        $this->updatePaymentStatus();
 
         return true;
     }
@@ -89,12 +166,12 @@ class VendorCredit extends Model
     public static function generateCreditNumber()
     {
         $prefix = 'VC-';
-        $lastCredit = static::where('credit_number', 'like', $prefix . '%')
+        $lastCredit = static::where('vendor_credit_id', 'like', $prefix . '%')
                            ->orderBy('created_at', 'desc')
                            ->first();
 
         if ($lastCredit) {
-            $lastNumber = (int) str_replace($prefix, '', $lastCredit->credit_number);
+            $lastNumber = (int) str_replace($prefix, '', $lastCredit->vendor_credit_id);
             $nextNumber = $lastNumber + 1;
         } else {
             $nextNumber = 1;

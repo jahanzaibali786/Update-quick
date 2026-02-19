@@ -27,24 +27,23 @@ class OpenInvoiceList extends DataTable
         // $depositData = $this->getUnappliedDeposits();
 
         // Get unapplied credit notes (credit notes not linked to invoices or payments)
-        // $creditNoteData = $this->getUnappliedCreditNotes();
+        $creditNoteData = $this->getUnappliedCreditNotes();
 
         // Get overpayments (customer credits from excess payments)
         $overpaymentData = $this->getCustomerOverpayments();
 
         // Merge all data: invoices + overpayments (negative)
-        // $allData = $invoiceData
-        //     ->merge($depositData)
-        //     ->merge($creditNoteData);
-
-        // For now, show invoices and overpayments
-        $allData = $invoiceData->merge($overpaymentData);
+        // Merge all data: invoices + overpayments (negative) + credit notes
+        $allData = $invoiceData;
+            // ->merge($overpaymentData)
+            // ->merge($creditNoteData);
+            // ->merge($depositData);
 
         $grandTotalAmount = 0;
         $grandBalanceDue = 0;
 
         // Group by Customer Name
-        $groupedData = $allData->groupBy('name');
+        $groupedData = $allData->groupBy('name')->sortKeys();
 
         $finalData = collect();
 
@@ -274,26 +273,22 @@ class OpenInvoiceList extends DataTable
         $creatorId = \Auth::user()->creatorId();
         
         // Credit notes that are not linked to any invoice (invoice = 0 or null) 
-        // and not linked to any payment (payment_id = 0 or null)
         $creditNotes = DB::table('credit_notes')
             ->leftJoin('customers', 'customers.id', '=', 'credit_notes.customer')
-            ->where('credit_notes.created_by', $creatorId)
             ->where(function ($q) {
                 $q->whereNull('credit_notes.invoice')
                   ->orWhere('credit_notes.invoice', 0);
             })
-            ->where(function ($q) {
-                $q->whereNull('credit_notes.payment_id')
-                  ->orWhere('credit_notes.payment_id', 0);
-            })
             ->select(
                 'credit_notes.id',
-                'credit_notes.credit_note_id',
+                'credit_notes.id as credit_note_id', // Use ID as credit_note_id since column is missing/problematic
                 'credit_notes.date as issue_date',
                 'credit_notes.amount',
                 'customers.name'
             )
             ->get();
+
+
 
         return $creditNotes->map(function ($credit) {
             return (object) [
@@ -336,13 +331,8 @@ class OpenInvoiceList extends DataTable
                     WHERE invoice_products.invoice_id = invoices.id
                 ) AS subtotal'),
 
-                // Tax
-                DB::raw('(
-                    SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)), 0)
-                    FROM invoice_products
-                    LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                    WHERE invoice_products.invoice_id = invoices.id
-                ) AS total_tax'),
+                // Tax - use sales_tax_amount directly from invoices table
+                DB::raw('IFNULL(invoices.sales_tax_amount, 0) AS total_tax'),
 
                 // Payments (already includes credit memo applications from QBO)
                 DB::raw('(
@@ -358,10 +348,7 @@ class OpenInvoiceList extends DataTable
                          FROM invoice_products
                          WHERE invoice_products.invoice_id = invoices.id)
                         +
-                        (SELECT IFNULL(SUM((price * quantity - discount) * (taxes.rate / 100)), 0)
-                         FROM invoice_products
-                         LEFT JOIN taxes ON FIND_IN_SET(taxes.id, invoice_products.tax) > 0
-                         WHERE invoice_products.invoice_id = invoices.id)
+                        IFNULL(invoices.sales_tax_amount, 0)
                     )
                     -
                     (SELECT IFNULL(SUM(amount), 0)

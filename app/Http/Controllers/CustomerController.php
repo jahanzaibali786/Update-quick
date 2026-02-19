@@ -119,6 +119,17 @@ class CustomerController extends Controller
         return view('customer.dashboard', $data);
     }
 
+    /**
+     * Display the Customer Hub Overview page.
+     */
+    public function overview()
+    {
+        if (\Auth::user()->can('manage customer')) {
+            return view('customer.customer-overview');
+        }
+        return redirect()->back()->with('error', __('Permission denied.'));
+    }
+
     public function index()
     {
         if (\Auth::user()->can('manage customer')) {
@@ -323,29 +334,16 @@ class CustomerController extends Controller
             if ($total_customer < $plan->max_customers || $plan->max_customers == -1) {
                 $customer = new Customer();
                 $customer->customer_id = $this->customerNumber();
-                $customer->name = $request->name;
-                $customer->contact = $request->contact;
-                $customer->email = $request->email;
-                $customer->tax_number = $request->tax_number;
                 $customer->created_by = \Auth::user()->creatorId();
                 $customer->owned_by = \Auth::user()->ownedId();
-                $customer->billing_name = $request->billing_name;
-                $customer->billing_country = $request->billing_country;
-                $customer->billing_state = $request->billing_state;
-                $customer->billing_city = $request->billing_city;
-                $customer->billing_phone = $request->billing_phone;
-                $customer->billing_zip = $request->billing_zip;
-                $customer->billing_address = $request->billing_address;
-
-                $customer->shipping_name = $request->shipping_name;
-                $customer->shipping_country = $request->shipping_country;
-                $customer->shipping_state = $request->shipping_state;
-                $customer->shipping_city = $request->shipping_city;
-                $customer->shipping_phone = $request->shipping_phone;
-                $customer->shipping_zip = $request->shipping_zip;
-                $customer->shipping_address = $request->shipping_address;
-
-                $customer->lang = !empty($default_language) ? $default_language->value : '';
+                
+                // Set default language if not provided
+                if (empty($request->lang)) {
+                    $customer->lang = !empty($default_language) ? $default_language->value : '';
+                }
+                
+                // Fill all other fields from the request
+                $customer->fill($request->all());
 
                 $customer->save();
 
@@ -356,92 +354,92 @@ class CustomerController extends Controller
                 $us_notify = 'false';
                 $us_approve = 'false';
                 $usr_Notification = [];
-                $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
-                if ($workflow) {
-                    $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
-                    foreach ($workflowaction as $action) {
-                        $useraction = json_decode($action->assigned_users);
-                        if (strtolower('add-customer') == $action->node_id) {
-                            // Pick that stage user assign or change on lead
-                            if (@$useraction != '') {
-                                $useraction = json_decode($useraction);
-                                foreach ($useraction as $anyaction) {
-                                    // make new user array
-                                    if ($anyaction->type == 'user') {
-                                        $usr_Notification[] = $anyaction->id;
-                                    }
-                                }
-                            }
-                            $raw_json = trim($action->applied_conditions, '"');
-                            $cleaned_json = stripslashes($raw_json);
-                            $applied_conditions = json_decode($cleaned_json, true);
+                // $workflow = WorkFlow::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'accounts')->where('status', 1)->first();
+                // if ($workflow) {
+                //     $workflowaction = WorkFlowAction::where('workflow_id', $workflow->id)->where('status', 1)->get();
+                //     foreach ($workflowaction as $action) {
+                //         $useraction = json_decode($action->assigned_users);
+                //         if (strtolower('add-customer') == $action->node_id) {
+                //             // Pick that stage user assign or change on lead
+                //             if (@$useraction != '') {
+                //                 $useraction = json_decode($useraction);
+                //                 foreach ($useraction as $anyaction) {
+                //                     // make new user array
+                //                     if ($anyaction->type == 'user') {
+                //                         $usr_Notification[] = $anyaction->id;
+                //                     }
+                //                 }
+                //             }
+                //             $raw_json = trim($action->applied_conditions, '"');
+                //             $cleaned_json = stripslashes($raw_json);
+                //             $applied_conditions = json_decode($cleaned_json, true);
 
-                            if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
-                                $arr = [
-                                    'name' => 'name',
-                                    'email' => 'email',
-                                    'contact' => 'contact',
-                                ];
-                                $relate = [];
-                                foreach ($applied_conditions['conditions'] as $conditionGroup) {
+                //             if (isset($applied_conditions['conditions']) && is_array($applied_conditions['conditions'])) {
+                //                 $arr = [
+                //                     'name' => 'name',
+                //                     'email' => 'email',
+                //                     'contact' => 'contact',
+                //                 ];
+                //                 $relate = [];
+                //                 foreach ($applied_conditions['conditions'] as $conditionGroup) {
 
-                                    if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
-                                        $query = Customer::where('id', $customer->id);
-                                        foreach ($conditionGroup['conditions'] as $condition) {
-                                            $field = $condition['field'];
-                                            $operator = $condition['operator'];
-                                            $value = $condition['value'];
-                                            if (isset($arr[$field], $relate[$arr[$field]])) {
-                                                $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
-                                                $relation = $relate[$arr[$field]];
+                //                     if (in_array($conditionGroup['action'], ['send_email', 'send_notification', 'send_approval'])) {
+                //                         $query = Customer::where('id', $customer->id);
+                //                         foreach ($conditionGroup['conditions'] as $condition) {
+                //                             $field = $condition['field'];
+                //                             $operator = $condition['operator'];
+                //                             $value = $condition['value'];
+                //                             if (isset($arr[$field], $relate[$arr[$field]])) {
+                //                                 $relatedField = strpos($arr[$field], '_') !== false ? explode('_', $arr[$field], 2)[1] : $arr[$field];
+                //                                 $relation = $relate[$arr[$field]];
 
-                                                // Apply condition to the related model
-                                                $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
-                                                    $relatedQuery->where($relatedField, $operator, $value);
-                                                });
-                                            } else {
-                                                // Apply condition directly to the contract model
-                                                $query->where($arr[$field], $operator, $value);
-                                            }
-                                        }
-                                        $result = $query->first();
+                //                                 // Apply condition to the related model
+                //                                 $query->whereHas($relation, function ($relatedQuery) use ($relatedField, $operator, $value) {
+                //                                     $relatedQuery->where($relatedField, $operator, $value);
+                //                                 });
+                //                             } else {
+                //                                 // Apply condition directly to the contract model
+                //                                 $query->where($arr[$field], $operator, $value);
+                //                             }
+                //                         }
+                //                         $result = $query->first();
 
-                                        if (!empty($result)) {
-                                            if ($conditionGroup['action'] === 'send_email') {
-                                                $us_mail = 'true';
-                                            } elseif ($conditionGroup['action'] === 'send_notification') {
-                                                $us_notify = 'true';
-                                            } elseif ($conditionGroup['action'] === 'send_approval') {
-                                                $us_approve = 'true';
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if ($us_mail == 'true') {
-                                // email send
-                            }
-                            if ($us_notify == 'true' || $us_approve == 'true') {
-                                // notification generate
-                                if (count($usr_Notification) > 0) {
-                                    $usr_Notification[] = Auth::user()->creatorId();
-                                    foreach ($usr_Notification as $usrLead) {
-                                        $data = [
-                                            "updated_by" => Auth::user()->id,
-                                            "data_id" => $customer->id,
-                                            "name" => @$customer->name,
-                                        ];
-                                        if ($us_notify == 'true') {
-                                            Utility::makeNotification($usrLead, 'create_customer', $data, $customer->id, 'create Customer');
-                                        } elseif ($us_approve == 'true') {
-                                            Utility::makeNotification($usrLead, 'approve_customer', $data, $customer->id, 'For Approval Customer');
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                //                         if (!empty($result)) {
+                //                             if ($conditionGroup['action'] === 'send_email') {
+                //                                 $us_mail = 'true';
+                //                             } elseif ($conditionGroup['action'] === 'send_notification') {
+                //                                 $us_notify = 'true';
+                //                             } elseif ($conditionGroup['action'] === 'send_approval') {
+                //                                 $us_approve = 'true';
+                //                             }
+                //                         }
+                //                     }
+                //                 }
+                //             }
+                //             if ($us_mail == 'true') {
+                //                 // email send
+                //             }
+                //             if ($us_notify == 'true' || $us_approve == 'true') {
+                //                 // notification generate
+                //                 if (count($usr_Notification) > 0) {
+                //                     $usr_Notification[] = Auth::user()->creatorId();
+                //                     foreach ($usr_Notification as $usrLead) {
+                //                         $data = [
+                //                             "updated_by" => Auth::user()->id,
+                //                             "data_id" => $customer->id,
+                //                             "name" => @$customer->name,
+                //                         ];
+                //                         if ($us_notify == 'true') {
+                //                             Utility::makeNotification($usrLead, 'create_customer', $data, $customer->id, 'create Customer');
+                //                         } elseif ($us_approve == 'true') {
+                //                             Utility::makeNotification($usrLead, 'approve_customer', $data, $customer->id, 'For Approval Customer');
+                //                         }
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
             } else {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json(['message' => __('Your user limit is over, Please upgrade plan.')], 402);
@@ -533,26 +531,9 @@ class CustomerController extends Controller
                 return redirect()->route('customer.index')->with('error', $messages->first());
             }
 
-            $customer->name = $request->name;
-            $customer->contact = $request->contact;
-            $customer->email = $request->email;
-            $customer->tax_number = $request->tax_number;
+            // Fill all fields from the request
+            $customer->fill($request->all());
             $customer->created_by = \Auth::user()->creatorId();
-            $customer->billing_name = $request->billing_name;
-            $customer->billing_country = $request->billing_country;
-            $customer->billing_state = $request->billing_state;
-            $customer->billing_city = $request->billing_city;
-            $customer->billing_phone = $request->billing_phone;
-            $customer->billing_zip = $request->billing_zip;
-            $customer->billing_address = $request->billing_address;
-            $customer->shipping_name = $request->shipping_name;
-            $customer->shipping_country = $request->shipping_country;
-            $customer->shipping_state = $request->shipping_state;
-            $customer->shipping_city = $request->shipping_city;
-            $customer->shipping_phone = $request->shipping_phone;
-            $customer->shipping_zip = $request->shipping_zip;
-            $customer->shipping_address = $request->shipping_address;
-            $customer->lang = $request->lang;
             $customer->save();
             //log
             CustomField::saveData($customer, $request->customField);

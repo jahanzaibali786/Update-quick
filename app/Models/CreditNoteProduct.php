@@ -16,5 +16,9 @@ class CreditNoteProduct extends Model
         'discount',
         'price',
         'description',
+        'taxable',
+        'item_tax_price',
+        'item_tax_rate',
+        'amount',
     ];
 }

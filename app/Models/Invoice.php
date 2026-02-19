@@ -38,6 +38,8 @@ class Invoice extends Model
         'subtotal',
         'taxable_subtotal',
         'total_discount',
+        'discount_type',
+        'discount_value',
         'tax_id',
         'tax_rate',
         'sales_tax_amount',
@@ -47,6 +49,9 @@ class Invoice extends Model
         'memo',
         'terms',
         'note',
+        'owned_by',
+        'total_tax',
+        'voucher_id',
     ];
 
     

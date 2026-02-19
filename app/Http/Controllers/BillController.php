@@ -87,8 +87,10 @@ public function index(Request $request)
     {
         if (\Auth::user()->can('manage bill')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+             $ownerId = $user->creatorId();
+            $column = 'created_by';
             $vender = Vender::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $vender->prepend('Select Vendor', '');
 
@@ -161,8 +163,10 @@ public function index(Request $request)
 
         if (\Auth::user()->can('create bill')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'bill')->get();
             $category = ProductServiceCategory::where($column, $ownerId)
                 ->whereNotIn('type', ['product & service', 'income',])
@@ -625,8 +629,8 @@ public function index(Request $request)
                 $newitems = [];
 
                 // Process CATEGORY DETAILS (Account-based expenses)
-                if ($request->has('category') && is_array($request->category)) {
-                    foreach ($request->category as $index => $categoryData) {
+                if ($request->has('categories') && is_array($request->categories)) {
+                    foreach ($request->categories as $index => $categoryData) {
                         // Skip empty rows
                         if (empty($categoryData['account_id']) && empty($categoryData['amount'])) {
                             continue;
@@ -684,7 +688,7 @@ public function index(Request $request)
                         $billProduct->product_id = $itemData['product_id'];
                         $billProduct->description = $itemData['description'] ?? '';
                         $billProduct->quantity = $itemData['quantity'] ?? 1;
-                        $billProduct->price = $itemData['price'] ?? 0;
+                        $billProduct->price = $itemData['amount'] ?? 0;
                         $billProduct->discount = $itemData['discount'] ?? 0;
                         $billProduct->account_id = $account;
                         
@@ -747,7 +751,7 @@ public function index(Request $request)
                 }
 
                 // Auto-approve and create journal entry for company users
-                if (Auth::user()->type == 'company') {
+                // if (Auth::user()->type == 'company') {
                     $bill->status = 6; // Approved
                     $bill->save();
                     
@@ -755,7 +759,7 @@ public function index(Request $request)
                     $this->createBillJournalEntry($bill);
                     
                     Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Create Bill', 'Bill Created & Approved');
-                }
+                // }
                 
                 // Webhook
                 $module = 'New Bill';
@@ -990,8 +994,10 @@ public function index(Request $request)
     function venderNumber()
     {
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+         $ownerId = $user->creatorId();
+            $column = 'created_by';
         $latest = Vender::where($column, '=', $ownerId)->latest()->first();
         if (!$latest) {
             return 1;
@@ -1054,7 +1060,7 @@ public function index(Request $request)
 
     public function edit($ids)
     {
-
+        
         if (\Auth::user()->can('edit bill')) {
             try {
                 $id = Crypt::decrypt($ids);
@@ -1067,8 +1073,10 @@ public function index(Request $request)
 
             if (!empty($bill)) {
                 $user = \Auth::user();
-                $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-                $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+                // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+                // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+                $ownerId = $user->creatorId();
+                $column = 'created_by';
                 $category = ProductServiceCategory::where($column, $ownerId)
                     ->whereNotIn('type', ['product & service', 'income',])
                     ->get()->pluck('name', 'id')->toArray();
@@ -1478,6 +1486,7 @@ public function index(Request $request)
     // }
     public function update(Request $request, Bill $bill)
     {
+        // dd($request->all());
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('edit bill')) {
@@ -1503,8 +1512,8 @@ public function index(Request $request)
                     $billableValidationError = null;
                     
                     // Check category items
-                    if ($request->has('category') && is_array($request->category)) {
-                        foreach ($request->category as $index => $categoryData) {
+                    if ($request->has('categories') && is_array($request->categories)) {
+                        foreach ($request->categories as $index => $categoryData) {
                             if (isset($categoryData['billable']) && $categoryData['billable']) {
                                 if (empty($categoryData['customer_id'])) {
                                     $billableValidationError = __('Select a customer for each billable split line.') . ' (Category row ' . ($index + 1) . ')';
@@ -1559,7 +1568,7 @@ public function index(Request $request)
 
                     $isApproved = !is_null($voucher);
 
-                    if ($isApproved) {
+                    // if ($isApproved) {
                         // SCENARIO 1: Bill is approved - Update journal entries
                         $updateResult = $this->updateApprovedBill($bill, $voucher, $request);
                         
@@ -1568,20 +1577,24 @@ public function index(Request $request)
                             \DB::rollBack();
                             return $updateResult;
                         }
-                        
-                        // Update the journal entry to reflect bill changes
-                        $this->updateBillJournalEntry($bill, $voucher);
-                    } else {
-                        // SCENARIO 2: Bill is not approved yet - Just update bill products and categories
-                        $this->updateDraftBill($bill, $request);
-                    }
+                        if($isApproved){
+                            // Update the journal entry to reflect bill changes
+                            $this->updateBillJournalEntry($bill, $voucher);
+                        }else{
+                            $this->createBillJournalEntry($bill);
+                        }
+                    // } else {
+                    //     // SCENARIO 2: Bill is not approved yet - Just update bill products and categories
+                    //     $this->updateDraftBill($bill, $request);
+                    // }
 
                     // Utility activity log
                     Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Update Bill', $bill->type);
                     \DB::commit();
                     return response()->json([
                         'status' => 'success',
-                        'message' => __('Bill successfully updated.')
+                        'message' => __('Bill successfully updated.'),
+                        'redirect' => url()->previous()
                     ], 200);
                     // return redirect()->route('bill.index')->with('success', __('Bill successfully updated.'));
                 } else {
@@ -1661,7 +1674,7 @@ public function index(Request $request)
         if ($request->has('items') && is_array($request->items)) {
             foreach ($request->items as $index => $itemData) {
                 // Skip empty rows
-                if (empty($itemData['product_id']) && empty($itemData['quantity']) && empty($itemData['price'])) {
+                if (empty($itemData['product_id']) && empty($itemData['quantity']) && empty($itemData['amount'])) {
                     continue;
                 }
 
@@ -1780,8 +1793,8 @@ public function index(Request $request)
         // ========================================
         $existingAccountIds = [];
         
-        if ($request->has('category') && is_array($request->category)) {
-            foreach ($request->category as $index => $categoryData) {
+        if ($request->has('categories') && is_array($request->categories)) {
+            foreach ($request->categories as $index => $categoryData) {
                 // Skip empty rows
                 if (empty($categoryData['account_id']) && empty($categoryData['amount'])) {
                     continue;
@@ -2431,8 +2444,10 @@ public function index(Request $request)
     function billNumber()
     {
         $user = \Auth::user();
-        $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-        $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+        // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+        $ownerId = $user->creatorId();
+            $column = 'created_by';
         $latest = Bill::where($column, '=', $ownerId)->latest()->first();
         if (!$latest) {
             return 1;
@@ -2831,7 +2846,7 @@ public function index(Request $request)
             }
         } catch (\Exception $e) {
             \DB::rollback();
-            return redirect()->back()->with('error', $e);
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
@@ -2943,8 +2958,10 @@ public function index(Request $request)
         // dd($request->all());
         if (\Auth::user()->can('create payment bill')) {
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+             $ownerId = $user->creatorId();
+            $column = 'created_by';
 
             $vender = Vender::where($column, '=', $ownerId)->get()->pluck('name', 'id');
             $vender->prepend('Select Vendor', '');
@@ -2978,8 +2995,10 @@ public function index(Request $request)
 
             $status = Bill::$statues;
             $user = \Auth::user();
-            $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
-            $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            // $ownerId = $user->type === 'company' ? $user->creatorId() : $user->ownedId();
+            // $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
+            $ownerId = $user->creatorId();
+            $column = 'created_by';
             $query = Bill::where('vender_id', '=', \Auth::user()->vender_id)->where('status', '!=', '0')->where($column, $ownerId);
 
             if (!empty($request->vender)) {
@@ -3504,8 +3523,8 @@ public function index(Request $request)
         if (!$accountPayable) {
             throw new \Exception('Accounts Payable account not found. Please configure your chart of accounts.');
         }
-    //    dd all
-    // dd($bill, $billProducts, $billAccounts);
+        //    dd all
+
         // Create journal entry using JournalService
         // This will throw an exception if creation fails, causing the entire bill transaction to rollback
         $journalEntry = JournalService::createJournalEntry([

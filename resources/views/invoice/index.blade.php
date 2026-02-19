@@ -301,8 +301,14 @@
 
 
 @section('content')
+{{-- MY APPS Sidebar (Fixed Position) --}}
+@include('partials.admin.allApps-subMenu-Sidebar', [
+    'activeSection' => 'sales',
+    'activeItem' => 'invoices'
+])
+
     {{-- Include Sales Tabs --}}
-    @include('transaction.sales-tabs')
+   {{-- <!--  @include('transaction.sales-tabs') --> --}}
 
     {{-- Financial Accordion --}}
     <div class="financial-accordion mt-2 mb-2">
@@ -443,8 +449,7 @@
                     </div>
                     <div class="col-auto mt-4">
                         @can('create invoice')
-                            <a href="{{ route('invoice.create', 0) }}" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#createInvoiceModal" data-bs-toggle="tooltip" title="{{ __('Create') }}">
+                            <a href="{{ route('invoice.create', 0) }}" class="btn btn-sm btn-primary"  title="{{ __('Create') }}">
                                 {{ __('Create Invoice') }}
                                 <i class="ti ti-plus"></i>
                             </a>

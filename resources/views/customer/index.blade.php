@@ -114,8 +114,14 @@
 @endsection
 
 @section('content')
+    {{-- MY APPS Sidebar --}}
+    @include('partials.admin.allApps-subMenu-Sidebar', [
+        'activeSection' => 'customers',
+        'activeItem' => 'customers'
+    ])
+
     {{-- Include Sales Tabs --}}
-    @include('transaction.sales-tabs')
+    <!-- @include('transaction.sales-tabs') -->
 
     {{-- Bars / Sales Data --}}
     <div class="row">
@@ -224,7 +230,12 @@
             </div>
         </div>
     </div>
-
+    <a href="#" data-size="lg" data-url="{{ route('customer.create') }}" data-ajax-popup="true"
+            data-bs-toggle="tooltip" title="{{ __('Create') }}" data-title="{{ __('Create Customer') }}"
+            class="btn btn-sm btn-primary">
+            <span>{{ __('Add Customer') }}</span>
+            <i class="ti ti-plus"></i>
+        </a>
     <div class="row mt-2">
         <div class="col-md-12">
             <div class="card">

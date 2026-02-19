@@ -214,6 +214,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return $settings["invoice_prefix"] . sprintf("%05d", $number);
     }
+    public function refundReceiptNumberFormat($number){
+        $settings = Utility::settings();
+
+        return 'RR-' . sprintf("%05d", $number);
+    }
     public function proposalNumberFormat($number)
     {
         $settings = Utility::settings();
@@ -239,6 +244,11 @@ class User extends Authenticatable implements MustVerifyEmail
         $settings = Utility::settings();
 
         return $settings["expense_prefix"] . sprintf("%05d", $number);
+    }
+
+    public function checkNumberFormat($number)
+    {
+        return 'CHK' . sprintf("%05d", $number);
     }
 
     public function journalNumberFormat($number)

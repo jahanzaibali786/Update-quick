@@ -221,10 +221,16 @@
     --}}
     
     {{-- NEW QBO-STYLE MENU AND HEADER --}}
-    @include('partials.admin.qbo-menu')
-    @include('partials.admin.qbo-header')
-    <!-- [ navigation menu ] end -->
-    <!-- [ Header ] start -->
+    @if (\Auth::user()->type != 'super admin')
+
+        @include('partials.admin.qbo-menu')
+        @include('partials.admin.qbo-header')
+        <!-- [ navigation menu ] end -->
+        <!-- [ Header ] start -->
+    @else
+        @include('partials.admin.menu')
+        @include('partials.admin.header')
+    @endif
 
     <!-- Modal -->
     <div class="modal notification-modal fade" id="notification-modal" tabindex="-1" role="dialog" aria-hidden="true">

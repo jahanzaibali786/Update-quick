@@ -5,7 +5,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('invoice.index') }}">{{ __('Invoice') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('sales.transactions.index') }}">{{ __('Invoice') }}</a></li>
     <li class="breadcrumb-item">{{ __('Invoice Create') }}</li>
 @endsection
 
@@ -1290,7 +1290,7 @@
                     if (returnUrl) {
                         location.href = decodeURIComponent(returnUrl);
                     } else {
-                        location.href = '{{ route("invoice.index") }}';
+                        location.href = '{{ route("sales.transactions.index") }}';
                     }
                 });
 
@@ -3382,8 +3382,8 @@
 
                                         <div class="totals-section col-md-4">
                                             {{-- Subtotal --}}
-                                            <div class="total-row subtotal">
-                                                <span>{{ __('Subtotal') }}</span>
+                                            <div class="total-row subTotal">
+                                                <span>Subtotal</span>
                                                 <span class="subTotal">0.00</span>
                                             </div>
 
@@ -3827,7 +3827,7 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                        onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                                                        onclick="location.href = '{{ route('sales.transactions.index') }}';">
                                                                                                                                                     {{ __('Cancel') }}
                                                                                                                                                 </button> -->
                         </div>

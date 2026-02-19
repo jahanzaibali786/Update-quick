@@ -3977,7 +3977,7 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                    onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                                                    onclick="location.href = '{{ route('sales.transactions.index') }}';">
                                                                                                                 {{ __('Cancel') }}
                                                                                                             </button> -->
                         </div>
