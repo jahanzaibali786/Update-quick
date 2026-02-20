@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -2053,7 +2058,7 @@
 
                     var $modal = $(`
             <div class="modal fade" id="globalAddNewModal" tabindex="-1">
-              <div class="modal-dialog">
+              <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                   <div class="modal-header">
                     <h5 class="modal-title">${title}</h5>
@@ -2594,7 +2599,7 @@
                                                     'required' => 'required',
                                                     'data-create-url' => route('customer.create'),
                                                     'data-create-title' => __('Create New Customer'),
-                                                    'style' => 'width: 80%;',
+                                                    'style' => 'width: 60%;',
                                                 ]) }}
                                             </div>
                                         </div>
@@ -3836,9 +3841,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                                    onclick="location.href = '{{ route('sales.transactions.index') }}';">
-                                                                                                                                                                {{ __('Cancel') }}
-                                                                                                                                                            </button> -->
+                                                                                                                                                                            onclick="location.href = '{{ route('sales.transactions.index') }}';">
+                                                                                                                                                                        {{ __('Cancel') }}
+                                                                                                                                                                    </button> -->
                         </div>
 
                         <div class="footer-center">

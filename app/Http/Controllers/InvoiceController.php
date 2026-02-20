@@ -1190,6 +1190,7 @@ class InvoiceController extends Controller
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
+            $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
 
             // Always return modal view for AJAX requests
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
@@ -1249,6 +1250,7 @@ class InvoiceController extends Controller
                 'bill_to' => $invoice->bill_to,
                 'ship_to' => $invoice->ship_to,
                 'terms' => $invoice->terms,
+                'paymentTerms' => $invoice->payment_term,
                 'logo' => $logoUrl,
                 'attachments' => $attachmentsData,
                 'subtotal' => $invoice->subtotal,
@@ -1291,7 +1293,7 @@ class InvoiceController extends Controller
                     ->toArray(),
             ];
             // dd($invoiceData);
-            return view('invoice.edit_modal', compact('customers', 'invoice', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'billTo', 'shipTo', 'invoiceData'))->with('mode', 'edit');
+            return view('invoice.edit_modal', compact('customers', 'invoice', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'billTo', 'shipTo', 'invoiceData', 'paymentTerms'))->with('mode', 'edit');
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -1729,7 +1731,7 @@ class InvoiceController extends Controller
                     if ($returnUrl) {
                         return redirect($returnUrl)->with('success', __('Invoice successfully updated.'));
                     }
-                    return redirect()->route('invoice.index')->with('success', __('Invoice successfully updated.'));
+                    return redirect()->route('sales.transactions.index')->with('success', __('Invoice successfully updated.'));
                 } else {
                     return redirect()->back()->with('error', __('Permission denied.'));
                 }
