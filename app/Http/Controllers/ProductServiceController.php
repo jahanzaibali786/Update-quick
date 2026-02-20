@@ -447,9 +447,13 @@ class ProductServiceController extends Controller
         if (\Auth::user()->can('create product & service')) {
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'product')->get();
             $category = ProductServiceCategory::where('created_by', '=', \Auth::user()->creatorId())->where('type', '=', 'product & service')->get()->pluck('name', 'id');
+            $category->prepend('Select Category', '');
             $category->prepend('➕  Add New', 'add_new');
+
             $unit = ProductServiceUnit::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $unit->prepend('Select Unit', '');
             $unit->prepend('➕  Add New', 'add_new');
+
             $tax = Tax::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
             $tax = $tax->prepend('Select Tax', '');
             $tax->prepend('➕  Add New', 'add_new');
@@ -485,7 +489,22 @@ class ProductServiceController extends Controller
             $expenseSubAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
             $expenseSubAccounts = $expenseSubAccounts->get()->toArray();
 
-            return view('productservice.create', compact('category', 'unit', 'tax', 'customFields', 'incomeChartAccounts', 'incomeSubAccounts', 'expenseChartAccounts', 'expenseSubAccounts'));
+        $assetChartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name, chart_of_accounts.id as id'))
+            ->leftjoin('chart_of_account_types', 'chart_of_account_types.id', 'chart_of_accounts.type')
+            ->where('chart_of_account_types.name', 'Assets')
+            ->where('parent', '=', 0)
+            ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())->get()
+            ->pluck('code_name', 'id');
+
+        $assetSubAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name,chart_of_accounts.id, chart_of_accounts.code, chart_of_account_parents.account'));
+        $assetSubAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
+        $assetSubAccounts->leftjoin('chart_of_account_types', 'chart_of_account_types.id', 'chart_of_accounts.type');
+        $assetSubAccounts->where('chart_of_account_types.name', 'Assets');
+        $assetSubAccounts->where('chart_of_accounts.parent', '!=', 0);
+        $assetSubAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
+        $assetSubAccounts = $assetSubAccounts->get()->toArray();
+
+        return view('productservice.create', compact('category', 'unit', 'tax', 'customFields', 'incomeChartAccounts', 'incomeSubAccounts', 'expenseChartAccounts', 'expenseSubAccounts', 'assetChartAccounts', 'assetSubAccounts'));
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -511,6 +530,7 @@ class ProductServiceController extends Controller
                 'type' => 'required',
                 'sale_chartaccount_id' => 'required',
                 'expense_chartaccount_id' => 'required',
+                'asset_chartaccount_id' => 'nullable',
             ];
 
             $validator = \Validator::make($request->all(), $rules);
@@ -537,6 +557,7 @@ class ProductServiceController extends Controller
             $productService->type = $request->type;
             $productService->sale_chartaccount_id = $request->sale_chartaccount_id;
             $productService->expense_chartaccount_id = $request->expense_chartaccount_id;
+            $productService->asset_chartaccount_id = $request->asset_chartaccount_id;
             $productService->category_id = $request->category_id;
 
             if (!empty($request->pro_image)) {
@@ -624,7 +645,22 @@ class ProductServiceController extends Controller
                 $expenseSubAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
                 $expenseSubAccounts = $expenseSubAccounts->get()->toArray();
 
-                return view('productservice.edit', compact('category', 'unit', 'tax', 'productService', 'customFields', 'incomeChartAccounts', 'expenseChartAccounts', 'incomeSubAccounts', 'expenseSubAccounts'));
+            $assetChartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(chart_of_accounts.code, " - ", chart_of_accounts.name) AS code_name, chart_of_accounts.id as id'))
+                ->leftjoin('chart_of_account_types', 'chart_of_account_types.id', 'chart_of_accounts.type')
+                ->where('chart_of_account_types.name', 'Assets')
+                ->where('parent', '=', 0)
+                ->where('chart_of_accounts.created_by', \Auth::user()->creatorId())->get()
+                ->pluck('code_name', 'id');
+
+            $assetSubAccounts = ChartOfAccount::select('chart_of_accounts.id', 'chart_of_accounts.code', 'chart_of_accounts.name', 'chart_of_account_parents.account');
+            $assetSubAccounts->leftjoin('chart_of_account_parents', 'chart_of_accounts.parent', 'chart_of_account_parents.id');
+            $assetSubAccounts->leftjoin('chart_of_account_types', 'chart_of_account_types.id', 'chart_of_accounts.type');
+            $assetSubAccounts->where('chart_of_account_types.name', 'Assets');
+            $assetSubAccounts->where('chart_of_accounts.parent', '!=', 0);
+            $assetSubAccounts->where('chart_of_accounts.created_by', \Auth::user()->creatorId());
+            $assetSubAccounts = $assetSubAccounts->get()->toArray();
+
+            return view('productservice.edit', compact('category', 'unit', 'tax', 'productService', 'customFields', 'incomeChartAccounts', 'expenseChartAccounts', 'incomeSubAccounts', 'expenseSubAccounts', 'assetChartAccounts', 'assetSubAccounts'));
             } else {
                 return response()->json(['error' => __('Permission denied.')], 401);
             }
@@ -650,6 +686,7 @@ class ProductServiceController extends Controller
                     'type' => 'required',
                     'sale_chartaccount_id' => 'required',
                     'expense_chartaccount_id' => 'required',
+                    'asset_chartaccount_id' => 'nullable',
                 ];
 
                 $validator = \Validator::make($request->all(), $rules);
@@ -676,7 +713,8 @@ class ProductServiceController extends Controller
                 $productService->type = $request->type;
                 $productService->sale_chartaccount_id = $request->sale_chartaccount_id;
                 $productService->expense_chartaccount_id = $request->expense_chartaccount_id;
-                $productService->category_id = $request->category_id;
+        $productService->asset_chartaccount_id = $request->asset_chartaccount_id;
+        $productService->category_id = $request->category_id;
 
                 if (!empty($request->pro_image)) {
                     //storage limit

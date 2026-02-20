@@ -48,10 +48,13 @@
             </div>
         </div>
         <div class="form-group col-md-6">
-            {{ Form::label('sale_chartaccount_id', __('Income Account'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            <select name="sale_chartaccount_id" class="form-control" required="required" data-create-url="{{ route('chart-of-account.create') }}" data-create-title="{{ __('Create New Account') }}">
-                <option value="add_new">➕  Add New</option>
-                <option value="0" selected>Select Account</option>                
+            {{ Form::label('sale_chartaccount_id', __('Income Account'), ['class' => 'form-label']) }}<span
+                class="text-danger">*</span>
+            <select name="sale_chartaccount_id" class="form-control" required="required"
+                data-create-url="{{ route('chart-of-account.create') }}"
+                data-create-title="{{ __('Create New Account') }}">
+                <option value="add_new">➕ Add New</option>
+                <option value="0" selected>Select Account</option>
                 @foreach ($incomeChartAccounts as $key => $chartAccount)
                     <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
                     @foreach ($incomeSubAccounts as $subAccount)
@@ -61,7 +64,7 @@
                         @endif
                     @endforeach
                 @endforeach
-          
+
             </select>
         </div>
         <div class="col-md-6">
@@ -72,10 +75,13 @@
             </div>
         </div>
         <div class="form-group col-md-6">
-            {{ Form::label('expense_chartaccount_id', __('Expense Account'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            <select name="expense_chartaccount_id" class="form-control" required="required" data-create-url="{{ route('chart-of-account.create') }}" data-create-title="{{ __('Create New Account') }}">
-                <option value="add_new">➕  Add New</option>
-                <option value="0" selected>Select Account</option>                
+            {{ Form::label('expense_chartaccount_id', __('Expense Account'), ['class' => 'form-label']) }}<span
+                class="text-danger">*</span>
+            <select name="expense_chartaccount_id" class="form-control" required="required"
+                data-create-url="{{ route('chart-of-account.create') }}"
+                data-create-title="{{ __('Create New Account') }}">
+                <option value="add_new">➕ Add New</option>
+                <option value="0" selected>Select Account</option>
                 @foreach ($expenseChartAccounts as $key => $chartAccount)
                     <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
                     @foreach ($expenseSubAccounts as $subAccount)
@@ -85,23 +91,44 @@
                         @endif
                     @endforeach
                 @endforeach
-              
+
+            </select>
+        </div>
+        <div class="form-group col-md-6">
+            {{ Form::label('asset_chartaccount_id', __('Asset Account'), ['class' => 'form-label']) }}<span
+                class="text-danger">*</span>
+            <select name="asset_chartaccount_id" class="form-control" required="required"
+                data-create-url="{{ route('chart-of-account.create') }}"
+                data-create-title="{{ __('Create New Account') }}">
+                <option value="add_new">➕ Add New</option>
+                <option value="" selected>Select Account</option>
+                @foreach ($assetChartAccounts as $key => $chartAccount)
+                    <option value="{{ $key }}" class="subAccount">{{ $chartAccount }}</option>
+                    @foreach ($assetSubAccounts as $subAccount)
+                        @if ($key == $subAccount['account'])
+                            <option value="{{ $subAccount['id'] }}" class="ms-5"> &nbsp; &nbsp;&nbsp;
+                                {{ $subAccount['code_name'] }}</option>
+                        @endif
+                    @endforeach
+                @endforeach
+
             </select>
         </div>
 
-        <div class="form-group col-md-6">
+        {{-- <div class="form-group col-md-6">
             {{ Form::label('tax_id', __('Tax'), ['class' => 'form-label']) }}
-            {{ Form::select('tax_id[]',   $tax->toArray(), null, ['class' => 'form-control select2', 'data-create-url' => route('taxes.create'), 'data-create-title' => __('Create New Tax')]) }}
+            {{ Form::select('tax_id[]', $tax->toArray(), null, ['class' => 'form-control select2', 'data-create-url' => route('taxes.create'), 'data-create-title' => __('Create New Tax')]) }}
             <!-- {{ Form::select('tax_id[]', $tax, null, ['class' => 'form-control select2', 'id' => 'choices-multiple1', 'multiple']) }} -->
-        </div>
+        </div> --}}
         <div class="form-group col-md-6">
-            {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('category_id', $category->toArray() , null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category')]) }}
+            {{ Form::label('category_id', __('Category'), ['class' => 'form-label']) }}<span
+                class="text-danger">*</span>
+            {{ Form::select('category_id', $category->toArray(), null, ['class' => 'form-control select', 'required' => 'required', 'data-create-url' => route('product-category.create'), 'data-create-title' => __('Create New Category')]) }}
 
         </div>
         <div class="form-group col-md-6">
             {{ Form::label('unit_id', __('Unit'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::select('unit_id',  $unit->toArray(), null, ['class' => 'form-control select', 'required' => 'required',  'data-create-url' => route('product-unit.create'), 'data-create-title' => __('Create New Unit')]) }}
+            {{ Form::select('unit_id', $unit->toArray(), null, ['class' => 'form-control select', 'required' => 'required', 'data-create-url' => route('product-unit.create'), 'data-create-title' => __('Create New Unit')]) }}
         </div>
         <div class="col-md-6 form-group">
             {{ Form::label('pro_image', __('Product Image'), ['class' => 'form-label']) }}
@@ -145,7 +172,7 @@
 
         <div class="form-group col-md-6 quantity">
             {{ Form::label('quantity', __('Quantity'), ['class' => 'form-label']) }}<span class="text-danger">*</span>
-            {{ Form::text('quantity', null, ['class' => 'form-control']) }}
+            {{ Form::text('quantity', 0, ['class' => 'form-control']) }}
         </div>
 
         <div class="form-group col-md-12">
@@ -190,23 +217,23 @@
 
 
 
-$(document).ready(function() {
-    var currentSelect = null;
+    $(document).ready(function() {
+        var currentSelect = null;
 
-    function openAddNewModal($select) {
-        if ($select.val() !== 'add_new') return;
-        $select.val(''); // reset dropdown
-        currentSelect = $select; // save reference
-        var url = $select.data('create-url');
-        var title = $select.data('create-title') || 'Create New';
+        function openAddNewModal($select) {
+            if ($select.val() !== 'add_new') return;
+            $select.val(''); // reset dropdown
+            currentSelect = $select; // save reference
+            var url = $select.data('create-url');
+            var title = $select.data('create-title') || 'Create New';
 
-        // prevent duplicate modal
-        if ($('#globalAddNewModal').length) {
-            $('#globalAddNewModal').modal('show');
-            return;
-        }
+            // prevent duplicate modal
+            if ($('#globalAddNewModal').length) {
+                $('#globalAddNewModal').modal('show');
+                return;
+            }
 
-        var $modal = $(`
+            var $modal = $(`
             <div class="modal fade" id="globalAddNewModal" tabindex="-1">
               <div class="modal-dialog">
                 <div class="modal-content">
@@ -220,84 +247,86 @@ $(document).ready(function() {
             </div>
         `);
 
-        $('body').append($modal);
+            $('body').append($modal);
 
-        $.get(url, function(html) {
-            $modal.find('.modal-body').html(html);
+            $.get(url, function(html) {
+                $modal.find('.modal-body').html(html);
 
-            // z-index stacking
-            var zIndex = 1070 + ($('.modal:visible').length * 10);
-            $modal.css('z-index', zIndex);
-            setTimeout(function() {
-                $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass('modal-stack');
-            }, 0);
+                // z-index stacking
+                var zIndex = 1070 + ($('.modal:visible').length * 10);
+                $modal.css('z-index', zIndex);
+                setTimeout(function() {
+                    $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                        'modal-stack');
+                }, 0);
 
-            $modal.modal('show');
-        });
+                $modal.modal('show');
+            });
 
-        $modal.on('hidden.bs.modal', function() {
-            $modal.remove();
-        });
-    }
-
-    // Detect "Add New" selection
-    $(document).on('change', 'select', function() {
-        var $select = $(this);
-        if ($select.val() === 'add_new') {
-            openAddNewModal($select);
+            $modal.on('hidden.bs.modal', function() {
+                $modal.remove();
+            });
         }
-    });
 
-    // AJAX submit for dynamic modal
-    $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(e) {
-        e.preventDefault();
-        var $form = $(this);
-        var $modal = $form.closest('#globalAddNewModal');
-
-        // Find the select that triggered this modal
-        var $select = currentSelect;
-
-        $.ajax({
-            url: $form.attr('action'),
-            method: $form.attr('method') || 'POST',
-            data: $form.serialize(),
-            success: function(response) {
-                if (response.success) {
-                    // 🔹 Insert new option before the "Add New" of the same select
-                    var $addNewOption = $select.find('option[value="add_new"]').first();
-                    var $newOption = $('<option>', {
-                        value: response.data.id,
-                        text: response.data.name
-                    });
-
-                    if ($addNewOption.length) {
-                        $select.append($newOption);
-                        // $newOption.insertBefore($addNewOption);
-                    } else {
-                        $select.append($newOption);
-                    }
-
-                    $select.val(response.data.id).trigger('change');
-                    $modal.modal('hide');
-                } else {
-                    alert(response.message || 'Something went wrong!');
-                }
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    var errors = xhr.responseJSON.errors;
-                    $form.find('.invalid-feedback').remove();
-                    $.each(errors, function(key, msgs) {
-                        $form.find('[name="'+key+'"]').after(`<small class="invalid-feedback text-danger">${msgs[0]}</small>`);
-                    });
-                } else {
-                    alert('Server error!');
-                }
+        // Detect "Add New" selection
+        $(document).on('change', 'select', function() {
+            var $select = $(this);
+            if ($select.val() === 'add_new') {
+                openAddNewModal($select);
             }
         });
+
+        // AJAX submit for dynamic modal
+        $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+        e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $modal = $form.closest('#globalAddNewModal');
+
+            // Find the select that triggered this modal
+            var $select = currentSelect;
+
+            $.ajax({
+                url: $form.attr('action'),
+                method: $form.attr('method') || 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        // 🔹 Insert new option before the "Add New" of the same select
+                        var $addNewOption = $select.find('option[value="add_new"]').first();
+                        var $newOption = $('<option>', {
+                            value: response.data.id,
+                            text: response.data.name
+                        });
+
+                        if ($addNewOption.length) {
+                            $select.append($newOption);
+                            // $newOption.insertBefore($addNewOption);
+                        } else {
+                            $select.append($newOption);
+                        }
+
+                        $select.val(response.data.id).trigger('change');
+                        $modal.modal('hide');
+                    } else {
+                        alert(response.message || 'Something went wrong!');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        var errors = xhr.responseJSON.errors;
+                        $form.find('.invalid-feedback').remove();
+                        $.each(errors, function(key, msgs) {
+                            $form.find('[name="' + key + '"]').after(
+                                `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                );
+                        });
+                    } else {
+                        alert('Server error!');
+                    }
+                }
+            });
+        });
+
     });
-
-});
-
-
 </script>

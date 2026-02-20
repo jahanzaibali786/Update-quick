@@ -17,6 +17,7 @@ use App\Models\InvoiceProduct;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
 use App\Models\Notification;
+use App\Models\PaymentTerm;
 use App\Models\WorkFlow;
 use App\Models\WorkFlowAction;
 use App\Models\Plan;
@@ -240,15 +241,16 @@ class InvoiceController extends Controller
                 ->get();
             $invoice_number = \Auth::user()->invoiceNumberFormat($this->invoiceNumber());
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers = ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $category = ['' => 'Select Category'] + ['__add__' => '➕ Add new category'] + $category;
             $product_services = ProductService::get()->pluck('name', 'id');
             $product_services->prepend('--', '');
+            $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
 
             // Always return modal view
-            return view('invoice.create_modal', compact('customers', 'invoice_number', 'product_services', 'category', 'customFields', 'customerId', 'taxes'));
+            return view('invoice.create_modal', compact('customers', 'invoice_number', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'paymentTerms'));
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }

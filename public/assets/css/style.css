@@ -16261,7 +16261,7 @@ body.theme-3 .dash-sidebar.light-sidebar .dash-item .dash-submenu .dash-item.act
 }
 
 body.theme-3 a:not([class]) {
-    color: #6FD943;
+    color: #393a3d !important;
 }
 
 body.theme-3 a:not([class]):hover {

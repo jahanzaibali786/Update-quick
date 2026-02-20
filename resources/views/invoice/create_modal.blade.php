@@ -1290,7 +1290,7 @@
                     if (returnUrl) {
                         location.href = decodeURIComponent(returnUrl);
                     } else {
-                        location.href = '{{ route("sales.transactions.index") }}';
+                        location.href = '{{ route('sales.transactions.index') }}';
                     }
                 });
 
@@ -1368,7 +1368,8 @@
                         var $subtotalRow = $body.find('tr.subtotal-row');
                         if ($subtotalRow.length) {
                             var subtotalEstimateId = $body.attr('data-estimate-id') || null;
-                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') || null;
+                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') ||
+                                null;
                             var subtotalLine = {
                                 type: 'subtotal',
                                 label: 'Subtotal',
@@ -2116,9 +2117,13 @@
                                     text: response.data.name
                                 });
 
+                                // Add data attributes if they exist in the response
+                                if (response.data.due_in_days !== undefined) {
+                                    $newOption.attr('data-days', response.data.due_in_days);
+                                }
+
                                 if ($addNewOption.length) {
-                                    $select.append($newOption);
-                                    // $newOption.insertBefore($addNewOption);
+                                    $newOption.insertBefore($addNewOption);
                                 } else {
                                     $select.append($newOption);
                                 }
@@ -2589,7 +2594,7 @@
                                                     'required' => 'required',
                                                     'data-create-url' => route('customer.create'),
                                                     'data-create-title' => __('Create New Customer'),
-                                                    'style' => 'width: 60%;',
+                                                    'style' => 'width: 80%;',
                                                 ]) }}
                                             </div>
                                         </div>
@@ -2630,16 +2635,15 @@
                                                 <label class="form-label"
                                                     style="font-size: 13px; margin: 0; min-width: 80px;">{{ __('Terms') }}</label>
                                                 <div style="flex: 1;">
-                                                    {{ Form::select(
-                                                        'terms',
-                                                        [
-                                                            'Net 30' => 'Net 30',
-                                                            'Net 15' => 'Net 15',
-                                                            'Due on receipt' => 'Due on receipt',
-                                                        ],
-                                                        'Net 30',
-                                                        ['class' => 'form-select', 'style' => 'font-size: 13px; width: 50%;'],
-                                                    ) }}
+                                                    <select name="terms" id="terms" class="form-select"
+                                                        style="font-size: 13px;  width: 50%;">
+                                                        <option value="">{{ __('Select Terms') }}</option>
+                                                        @foreach ($paymentTerms as $term)
+                                                            <option value="{{ $term->id }}"
+                                                                data-days="{{ $term->due_in_days }}">{{ $term->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
@@ -2665,8 +2669,9 @@
                                                 <label class="form-label"
                                                     style="font-size: 13px; margin: 0; min-width: 80px;">{{ __('Due date') }}</label>
                                                 <div style="flex: 1;">
-                                                    {{ Form::date('due_date', date('Y-m-d', strtotime('+30 days')), [
+                                                    {{ Form::date('due_date', date('Y-m-d', strtotime('+25 days')), [
                                                         'class' => 'form-control',
+                                                        'id' => 'due_date',
                                                         'required' => 'required',
                                                         'style' => 'font-size: 13px; width: 50%;',
                                                     ]) }}
@@ -3422,9 +3427,13 @@
                                                 <span>{{ __('Select sales tax rate') }}</span>
                                                 <span>
                                                     <select name="tax_id" class="form-select totals-tax-rate-select">
-                                                        <option value="" data-rate="0">{{ __('Select a tax rate') }}</option>
-                                                        @foreach($taxes as $tax)
-                                                            <option value="{{ $tax->id }}" data-rate="{{ $tax->rate }}">{{ $tax->name }} ({{ $tax->rate }}%)</option>
+                                                        <option value="" data-rate="0">
+                                                            {{ __('Select a tax rate') }}</option>
+                                                        @foreach ($taxes as $tax)
+                                                            <option value="{{ $tax->id }}"
+                                                                data-rate="{{ $tax->rate }}">{{ $tax->name }}
+                                                                ({{ $tax->rate }}%)
+                                                            </option>
                                                         @endforeach
                                                     </select>
                                                 </span>
@@ -3827,9 +3836,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                        onclick="location.href = '{{ route('sales.transactions.index') }}';">
-                                                                                                                                                    {{ __('Cancel') }}
-                                                                                                                                                </button> -->
+                                                                                                                                                                    onclick="location.href = '{{ route('sales.transactions.index') }}';">
+                                                                                                                                                                {{ __('Cancel') }}
+                                                                                                                                                            </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -4064,7 +4073,7 @@
 
                 items.forEach(function(item) {
                     let cardHtml = '';
-                    
+
                     if (item.type === 'estimate') {
                         cardHtml = renderEstimateCard(item);
                     } else if (item.type === 'time') {
@@ -4072,7 +4081,7 @@
                     } else if (item.type === 'expense') {
                         cardHtml = renderExpenseCard(item);
                     }
-                    
+
                     $list.append(cardHtml);
                 });
             }
@@ -4086,9 +4095,18 @@
 
                 // Combine all types into a single list with type markers
                 let allItems = [];
-                allSuggestions.estimates.forEach(e => allItems.push({...e, type: 'estimate'}));
-                allSuggestions.billable_time.forEach(t => allItems.push({...t, type: 'time'}));
-                allSuggestions.billable_expenses.forEach(x => allItems.push({...x, type: 'expense'}));
+                allSuggestions.estimates.forEach(e => allItems.push({
+                    ...e,
+                    type: 'estimate'
+                }));
+                allSuggestions.billable_time.forEach(t => allItems.push({
+                    ...t,
+                    type: 'time'
+                }));
+                allSuggestions.billable_expenses.forEach(x => allItems.push({
+                    ...x,
+                    type: 'expense'
+                }));
 
                 // Apply type filter
                 if (typeFilter !== 'all') {
@@ -4122,7 +4140,11 @@
                         'Select a customer to see suggested transactions.' +
                         '</p>'
                     );
-                    allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                    allSuggestions = {
+                        estimates: [],
+                        billable_time: [],
+                        billable_expenses: []
+                    };
                     filteredItems = [];
                     showSuggestionsPanel(false);
                     return;
@@ -4130,7 +4152,8 @@
 
                 // Check if suggestionsUrl is available
                 if (!suggestionsUrl) {
-                    console.error('Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
+                    console.error(
+                        'Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
                     $list.html(
                         '<p style="font-size:12px;color:#d9534f;">' +
                         'Configuration error: Suggestions URL not defined.' +
@@ -4152,10 +4175,10 @@
                             billable_time: data.billable_time || [],
                             billable_expenses: data.billable_expenses || []
                         };
-                        
-                        const totalCount = allSuggestions.estimates.length + 
-                                          allSuggestions.billable_time.length + 
-                                          allSuggestions.billable_expenses.length;
+
+                        const totalCount = allSuggestions.estimates.length +
+                            allSuggestions.billable_time.length +
+                            allSuggestions.billable_expenses.length;
 
                         console.log('Total suggestions:', totalCount);
                         applyFilter();
@@ -4168,7 +4191,11 @@
                             'Failed to load suggested transactions.' +
                             '</p>'
                         );
-                        allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                        allSuggestions = {
+                            estimates: [],
+                            billable_time: [],
+                            billable_expenses: []
+                        };
                         filteredItems = [];
                         showSuggestionsPanel(false);
                     });
@@ -4274,9 +4301,9 @@
 
                 // Row is empty if no product selected and no quantity/price/description
                 return (!itemId || itemId === '' || itemId === '--') &&
-                       (!qty || qty === '' || parseFloat(qty) === 0) &&
-                       (!price || price === '' || parseFloat(price) === 0) &&
-                       (!desc || desc.trim() === '');
+                    (!qty || qty === '' || parseFloat(qty) === 0) &&
+                    (!price || price === '' || parseFloat(price) === 0) &&
+                    (!desc || desc.trim() === '');
             }
 
             // Helper: Remove empty default row if estimate has items
@@ -4298,7 +4325,7 @@
             $(document).on('click', '.suggestion-add-button', function() {
                 const type = $(this).data('type');
                 const id = String($(this).data('id'));
-                
+
                 // Determine insertion point: before trailing special rows, if any
                 var $lastBody = $('#sortable-table').find('tbody').last();
                 var $insertBefore = null;
@@ -4322,7 +4349,8 @@
                         insertProposalItem({
                             product_id: p.product_id || null,
                             description: (p.note && p.note.length) ?
-                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number : 'Estimate'),
+                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number :
+                                    'Estimate'),
                             quantity: 1,
                             price: Number(p.total_amount || 0),
                             amount: Number(p.total_amount || 0)
@@ -4331,7 +4359,7 @@
 
                     // Remove from suggestions
                     allSuggestions.estimates = allSuggestions.estimates.filter(x => String(x.id) !== id);
-                    
+
                 } else if (type === 'time') {
                     const t = allSuggestions.billable_time.find(x => String(x.id) === id);
                     if (!t) return;
@@ -4368,8 +4396,9 @@
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !== id);
-                    
+                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !==
+                        id);
+
                 } else if (type === 'expense') {
                     const e = allSuggestions.billable_expenses.find(x => String(x.id) === id);
                     if (!e) return;
@@ -4393,20 +4422,21 @@
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x.id) !== id);
+                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x
+                        .id) !== id);
                 }
 
                 // Remove card from UI
                 $(this).closest('.suggestion-card').remove();
-                
+
                 // Update filteredItems
                 filteredItems = filteredItems.filter(x => !(x.type === type && String(x.id) === id));
 
                 // Check if any suggestions remain
-                const totalCount = allSuggestions.estimates.length + 
-                                  allSuggestions.billable_time.length + 
-                                  allSuggestions.billable_expenses.length;
-                
+                const totalCount = allSuggestions.estimates.length +
+                    allSuggestions.billable_time.length +
+                    allSuggestions.billable_expenses.length;
+
                 if (totalCount === 0) {
                     $list.html(
                         '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4450,7 +4480,8 @@
                             insertProposalItem({
                                 product_id: item.product_id || null,
                                 description: (item.note && item.note.length) ?
-                                    item.note : (item.proposal_number ? 'Estimate ' + item.proposal_number : 'Estimate'),
+                                    item.note : (item.proposal_number ? 'Estimate ' + item
+                                        .proposal_number : 'Estimate'),
                                 quantity: 1,
                                 price: Number(item.total_amount || 0),
                                 amount: Number(item.total_amount || 0)
@@ -4500,7 +4531,11 @@
                     }
                 });
 
-                allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                allSuggestions = {
+                    estimates: [],
+                    billable_time: [],
+                    billable_expenses: []
+                };
                 filteredItems = [];
                 $list.html(
                     '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4542,6 +4577,31 @@
                 applyFilter();
                 $filterPanel.removeClass('show');
             });
+
+            // Update Due Date function
+            function updateDueDate() {
+                const selectedOption = $('#terms').find(':selected');
+                const days = selectedOption.data('days');
+                const issueDateVal = $('input[name="issue_date"]').val();
+
+                if (days !== undefined && days !== '' && issueDateVal) {
+                    const issueDate = new Date(issueDateVal);
+                    if (!isNaN(issueDate.getTime())) {
+                        const dueDate = new Date(issueDate);
+                        dueDate.setDate(dueDate.getDate() + parseInt(days));
+
+                        const year = dueDate.getFullYear();
+                        const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(dueDate.getDate()).padStart(2, '0');
+                        const newDueDate = `${year}-${month}-${day}`;
+
+                        $('input[name="due_date"]').val(newDueDate);
+                    }
+                }
+            }
+
+            $(document).on('change', '#terms', updateDueDate);
+            $(document).on('change', 'input[name="issue_date"]', updateDueDate);
         });
     </script>
 @endsection

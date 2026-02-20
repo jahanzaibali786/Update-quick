@@ -78,7 +78,7 @@
     ])
 
     {{-- tabs --}}
-    @include('transaction.transactions-tabs')
+    {{-- @include('transaction.transactions-tabs') --}}
 
     {{-- Chart of Account Date Filter Dropdown --}}
     <div class="dropdown card-header mt-4 mb-2">

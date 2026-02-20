@@ -36,12 +36,12 @@
                     </div>
                 </div>
 
-                <div class="form-check mb-3">
+                {{-- <div class="form-check mb-3">
                     <input class="form-check-input" type="radio" name="type" id="type_day_of_month" value="day_of_month">
                     <label class="form-check-label" for="type_day_of_month">
                         {{ __('Due by certain day of the month') }}
                     </label>
-                </div>
+                </div> --}}
                 <div class="term-field-container ms-4 mb-3" id="day_of_month_field" style="display: none;">
                     <div class="row align-items-center mb-3">
                         <div class="col-auto">

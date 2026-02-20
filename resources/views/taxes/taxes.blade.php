@@ -49,7 +49,7 @@
                                                 </a>
                                                 </div>
                                             @endcan
-                                            @can('delete constant tax')
+                                            {{-- @can('delete constant tax')
                                                 <div class="action-btn bg-danger ms-2">
                                                     {!! Form::open(['method' => 'DELETE', 'route' => ['taxes.destroy', $taxe->id],'id'=>'delete-form-'.$taxe->id]) !!}
                                                         <a href="#" class="mx-3 btn btn-sm align-items-center bs-pass-para" data-bs-toggle="tooltip" title="{{__('Delete')}}" data-original-title="{{__('Delete')}}" data-confirm="{{__('Are You Sure?').'|'.__('This action can not be undone. Do you want to continue?')}}" data-confirm-yes="document.getElementById('delete-form-{{$taxe->id}}').submit();">
@@ -57,7 +57,7 @@
                                             </a>
                                                     {!! Form::close() !!}
                                                 </div>
-                                            @endcan
+                                            @endcan --}}
                                         </span>
                                     </td>
                                 </tr>
