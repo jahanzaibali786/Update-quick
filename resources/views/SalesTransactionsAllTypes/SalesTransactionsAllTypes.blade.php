@@ -1002,6 +1002,7 @@
     : $txn->edit_payment_url ?? '';
 $deleteUrl   = is_array($txn) ? $txn['delete_url']   ?? '' : $txn->delete_url   ?? '';
 $activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url ?? '';
+$convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? '';
                             @endphp
                             <tr>
                                 <td><input type="checkbox" class="form-check-input row-checkbox"
@@ -1059,6 +1060,15 @@ $activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url 
                 </a>
             </li>
             @endif
+
+            @if (!empty($convertUrl))
+<li>
+    <a class="dropdown-item" href="{{ $convertUrl }}"
+       style="padding:10px 16px;color:#000000">
+        {{ __('Estimate to Invoice') }}
+    </a>
+</li>
+@endif
             @if (!empty($deleteUrl))
             <li>
                 <a class="dropdown-item txn-delete-link" href="#"

@@ -1234,6 +1234,7 @@
 
         });
     </script>
+
 @endpush
 
 @section('content')

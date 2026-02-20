@@ -937,6 +937,8 @@ Route::group(['middleware' => ['verified']], function () {
     ->name('sales.transaction.activity')
     ->middleware(['auth', 'XSS']);
 
+    Route::get('estimate-to-invoice/{id}', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'convertEstimateToInvoice'])->name('estimate.to.invoice');
+
         Route::prefix('report')->group(function () {
             Route::get('receipts/{invoice?}', [TransactionController::class, 'receipts'])
                 ->name('receipts.index');

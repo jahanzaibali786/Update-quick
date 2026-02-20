@@ -153,7 +153,7 @@ class SalesTransactionsAllTypesController extends Controller
                         'receive-payment.payment',
                         ['invoice_id' => Crypt::encrypt($inv->id)]
                     ),
-                    'delete_url' => route('invoice.destroy', Crypt::encrypt($inv->id)),
+                    'delete_url' => route('invoice.destroy', $inv->id),
                     'activity_url' => route('sales.transaction.activity', ['type' => 'invoice', 'id' => $inv->id]),
                 ]);
             }
@@ -210,7 +210,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => $prop->total_amount ?? (method_exists($prop, 'getTotal') ? $prop->getTotal() : 0),
                     'status' => __($statusText),
                     'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
-                    'delete_url' => route('proposal.destroy', Crypt::encrypt($prop->id)),
+                    'delete_url' => route('proposal.destroy', $prop->id),
+                    'convert_url' => route('estimate.to.invoice', $prop->id),
                     'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
@@ -749,5 +750,67 @@ public function viewActivity(Request $request, $type, $id)
             return response('<div style="padding:20px;color:red;">Error: ' . e($e->getMessage()) . '</div>', 500);
         }
     }
+
+
+/**
+ * Convert an Estimate (Proposal) to an Invoice - redirect to invoice create with pre-filled session data.
+ */
+public function convertEstimateToInvoice(Request $request, $id)
+{
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $user = Auth::user();
+    $companyId = $user->creatorId();
+
+    $proposal = Proposal::where('created_by', $companyId)->where('id', $id)->first();
+
+    if (!$proposal) {
+        return redirect()->back()->with('error', __('Estimate not found or access denied.'));
+    }
+
+    // Load proposal items/products
+    $proposalProducts = \DB::table('proposal_products')
+        ->where('proposal_id', $proposal->id)
+        ->get();
+
+    // Flash all estimate data to session for the invoice create page to read
+$flashData = [
+    'customer_id'   => $proposal->customer_id,
+    'issue_date'    => $proposal->issue_date,
+    'expiry_date' => $proposal->expire_date ?? $proposal->expiry_date ?? $proposal->due_date ?? null,
+    'ref_number'    => $proposal->proposal_id ?? '',
+    'bill_to'       => $proposal->bill_to ?? '',
+    'discount'      => $proposal->discount ?? 0,
+    'discount_type' => $proposal->discount_type ?? 0,
+    'tax_id'        => $proposal->tax_id ?? null,
+    'shipping'      => $proposal->shipping ?? 0,
+    'note'          => $proposal->note ?? '',
+    'total_amount'  => $proposal->total_amount ?? 0,
+    'from_estimate' => $proposal->id,
+    'products'      => $proposalProducts->map(function ($p) {
+        return [
+            'product_id'  => $p->product_id ?? null,
+            'description' => $p->description ?? '',
+            'quantity'    => $p->quantity ?? 1,
+            'price'       => $p->price ?? 0,
+            'tax'         => $p->tax ?? null,
+            'discount'    => $p->discount ?? 0,
+            'amount'      => $p->amount ?? 0,
+        ];
+    })->toArray(),
+];
+
+\Log::info('ESTIMATE_PREFILL_FLASH', $flashData);
+\Log::info('PROPOSAL_PRODUCTS_COUNT', ['count' => $proposalProducts->count()]);
+
+session()->flash('estimate_prefill', $flashData);
+
+\Log::info('SESSION_AFTER_FLASH', ['has_key' => session()->has('estimate_prefill')]);
+
+
+    return redirect()->route('invoice.create', 0);
+}
 
 }

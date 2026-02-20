@@ -3897,6 +3897,147 @@
                 </div>
             </div>
         </div>
+ @if(session('estimate_prefill'))
+<script>
+var __estimatePrefill__ = @json(session('estimate_prefill'));
+
+document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('invoice-modal');
+    if (!modalEl) return;
+    modalEl.addEventListener('shown.bs.modal', function () {
+        runPrefill(__estimatePrefill__);
+    });
+});
+
+function runPrefill(p) {
+    // 1. Customer — but detach item change handler first to prevent cascading resets
+    $(document).off('change', '.item');
+
+    if (p.customer_id) {
+        $('#customer_id').val(p.customer_id).trigger('change');
+    }
+
+    setTimeout(function () {
+        if (p.issue_date) $('input[name="issue_date"]').val(p.issue_date);
+        if (p.bill_to)    { $('textarea[name="bill_to"]').val(p.bill_to); $('#bill-to-section').show(); }
+        if (p.note)       $('textarea[name="note"]').val(p.note);
+        if (p.memo)       $('textarea[name="memo"]').val(p.memo);
+        if (p.terms)      $('select[name="terms"]').val(p.terms);
+    }, 400);
+
+    if (p.products && p.products.length > 0) {
+        setTimeout(function () {
+            fillEstimateRows(p.products, function() {
+                // Re-attach item change handler after all rows are filled
+                reattachItemHandler();
+            });
+        }, 800);
+    } else {
+        setTimeout(reattachItemHandler, 800);
+    }
+}
+
+function reattachItemHandler() {
+    $(document).on('change', '.item', function () {
+        if ($(this).data('ignore-ajax')) return;
+        var iteams_id = $(this).val();
+        var url = $(this).data('url');
+        var el = $(this);
+        if (!iteams_id) {
+            var $row = el.closest('tr.product-row');
+            $row.find('.pro_description').val('');
+            $row.find('.quantity').val('');
+            $row.find('.price').val('');
+            $row.find('.amount').val('0.00');
+            el.closest('tbody').find('.form-check-input[type="checkbox"]').prop('checked', false);
+            recalcTotals();
+            return;
+        }
+        $.ajax({
+            url: url, type: 'POST',
+            headers: { 'X-CSRF-TOKEN': jQuery('#token').val() },
+            data: { 'product_id': iteams_id },
+            cache: false,
+            success: function (data) {
+                if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
+                var item = data;
+                var $row = el.closest('tr.product-row');
+                $row.find('.quantity').val(1);
+                $row.find('.price').val(item.product.sale_price);
+                $row.find('.pro_description').val(item.product.description);
+                var totalItemTaxRate = 0, taxesHtml = '', taxIds = [];
+                if (item.taxes && item.taxes.length) {
+                    for (var i = 0; i < item.taxes.length; i++) {
+                        taxesHtml += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name + ' (' + item.taxes[i].rate + '%)</span>';
+                        taxIds.push(item.taxes[i].id);
+                        totalItemTaxRate += parseFloat(item.taxes[i].rate);
+                    }
+                } else { taxesHtml = '-'; }
+                $row.find('.taxes').html(taxesHtml);
+                $row.find('.tax').val(taxIds.join(','));
+                $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
+                recalcRowAmount($row);
+                recalcTotals();
+            }
+        });
+    });
+}
+
+function fillEstimateRows(products, onComplete) {
+    var $table       = $('#sortable-table');
+    var $firstBody   = $table.children('tbody').first();
+    var $firstRow    = $firstBody.find('tr.product-row');
+    var defaultEmpty = !$firstRow.find('select.item').val();
+    var total        = products.length;
+    var done         = 0;
+
+    $.each(products, function (idx, lineItem) {
+        (function (rowIndex, item) {
+            setTimeout(function () {
+
+                if (rowIndex === 0 && defaultEmpty) {
+                    var $row = $table.children('tbody').first().find('tr.product-row');
+
+                    // Set product select silently — NO .trigger('change') — handler is detached anyway
+                    if (item.product_id) {
+                        $row.find('select.item').val(item.product_id);
+                    }
+
+                    // Set all values directly
+                    $row.find('.quantity')[0]      && ($row.find('.quantity')[0].value      = parseFloat(item.quantity) || 1);
+                    $row.find('.price')[0]         && ($row.find('.price')[0].value         = parseFloat(item.price)    || 0);
+                    $row.find('.pro_description')[0] && ($row.find('.pro_description')[0].value = item.description      || '');
+
+                    recalcRowAmount($row);
+                    recalcTotals();
+
+                    console.log('Row 0 set | qty:', parseFloat(item.quantity), '| price:', parseFloat(item.price), '| desc:', item.description);
+
+                } else {
+                    window.qbProposalToAdd = {
+                        product_id:  item.product_id  || null,
+                        description: item.description || '',
+                        quantity:    parseFloat(item.quantity) || 1,
+                        price:       parseFloat(item.price)    || 0,
+                        amount:      parseFloat(item.amount)   || 0,
+                    };
+                    window.qbInsertAfterTbody  = null;
+                    window.qbInsertBeforeTbody = null;
+                    window.qbDuplicateSource   = null;
+                    $('[data-repeater-create]').first().trigger('click');
+                }
+
+                done++;
+                if (done === total && typeof onComplete === 'function') {
+                    onComplete();
+                }
+
+            }, rowIndex * 500);
+        })(idx, lineItem);
+    });
+}
+</script>
+@endif
     </div>
     <script>
         $(function() {
