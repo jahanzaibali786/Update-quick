@@ -1976,7 +1976,7 @@ class InvoiceController extends Controller
 
                     $tax += floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
                     $reciveable += floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0) + floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
-
+dd($journalItem);
                     // Create transaction line for product
                     $dataline = [
                         'account_id' => $product->sale_chartaccount_id,
