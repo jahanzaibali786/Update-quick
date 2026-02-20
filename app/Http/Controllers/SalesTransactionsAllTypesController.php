@@ -215,7 +215,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
-        }
+        }         
 
         // Sales Receipts
         if ($type === 'all' || $type === 'sales_receipt') {
