@@ -59,7 +59,7 @@ class ReceivePaymentController extends Controller
                         (!empty($account->institution_name) ? $account->institution_name : $account->holder_name);
                     return [$account->id => $displayName];
                 });
-            $bankAccounts = ['' => 'Select Bank Account'] + $bankAccounts->toArray();
+            $bankAccounts = ['' => 'Select Bank Account']+ ['__add__' => '➕ Add new Bank Account'] + $bankAccounts->toArray();
 
             // Get outstanding invoices if customer is selected
             $outstandingInvoices = collect();

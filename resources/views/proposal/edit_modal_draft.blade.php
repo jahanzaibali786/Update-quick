@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -2288,7 +2293,7 @@
                                                                                                                     ]) }}
                                                                                                                 </td> -->
                                             <td>
-                                                <input type="text" name="amount"
+                                                <input type="text" name="amount" readonly
                                                     class="form-control input-right amount" value="0.00">
                                             </td>
 

@@ -43,9 +43,12 @@ public function create()
 {
     if(\Auth::user()->can('create bank account'))
     {
+        // only bank account type where type is asset.
+        $bankAccountType = ChartOfAccountType::where('name', 'Assets')->first();
         $chartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
             ->where('parent', 0)
             ->where('created_by', \Auth::user()->creatorId())
+            ->where('type', $bankAccountType->id)
             ->get()
             ->pluck('code_name', 'id');
         $chartAccounts->prepend('Select Account', 0);

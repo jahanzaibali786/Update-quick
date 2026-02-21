@@ -997,9 +997,12 @@
                                 $amount = is_array($txn) ? $txn['amount'] ?? 0 : $txn->amount ?? 0;
                                 $statusVal = is_array($txn) ? $txn['status'] ?? '' : $txn->status ?? '';
                                 $viewUrl = is_array($txn) ? $txn['view_url'] ?? '' : $txn->view_url ?? '';
-                                $editPaymentUrl = is_array($txn)
+                               $editPaymentUrl = is_array($txn)
                                     ? $txn['edit_payment_url'] ?? ''
                                     : $txn->edit_payment_url ?? '';
+                                $deleteUrl   = is_array($txn) ? $txn['delete_url']   ?? '' : $txn->delete_url   ?? '';
+                                $activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url ?? '';
+                                $convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? '';
                             @endphp
                             <tr>
                                 <td><input type="checkbox" class="form-check-input row-checkbox"
@@ -1031,16 +1034,104 @@
                                         {{ $statusVal }}
                                     </span>
                                 </td>
-                                <td>
-                                    @if (!empty($viewUrl))
-                                        <a href="{{ $viewUrl }}"
-                                            class="qbo-action-link">{{ __('View/Edit') }}</a>
-                                    @endif
-                                    @if (!empty($editPaymentUrl))
-                                        <a href="{{ $editPaymentUrl }}"
-                                            class="qbo-action-link">{{ __('| Receive Payment') }}</a>
-                                    @endif
-                                </td>
+                                <td style="white-space:nowrap;">
+    @if (!empty($viewUrl))
+        <a href="{{ $viewUrl }}" class="qbo-action-link">{{ __('View/Edit') }}</a>
+    @endif
+    @if (!empty($editPaymentUrl))
+        <a href="{{ $editPaymentUrl }}" class="qbo-action-link ms-1">{{ __('| Receive Payment') }}</a>
+    @endif
+
+    {{-- Dropup ▼ --}}
+    <div class="dropup d-inline-block ms-1">
+        <button type="button"
+                class="btn btn-sm p-0 border-0 bg-transparent txn-dropup-btn"
+                data-bs-toggle="dropdown"
+                data-bs-strategy="fixed"
+                aria-expanded="false"
+                title="{{ __('More actions') }}"
+                style="color:#0077c5;font-size:9px;vertical-align:middle;line-height:1;">&#9650;</button>
+<ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:200px;border-radius:8px;padding:4px 0;border:1px solid #e0e3e5;z-index:99999;">
+
+    {{-- View/Edit — all types --}}
+    @if (!empty($viewUrl))
+    <li>
+        <a class="dropdown-item" href="{{ $viewUrl }}"
+           style="padding:10px 16px;font-size:14px;color:#393a3d;">
+            {{ __('View/Edit') }}
+        </a>
+    </li>
+    @endif
+
+    {{-- ── INVOICE ── controller pushes __('Invoice') --}}
+    @if (strtolower($type) === 'invoice')
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send reminder') }}</a></li> --}}
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Create task') }}</a></li>
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share invoice link') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Make recurring payment') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li> --}}
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+
+    {{-- ── ESTIMATE ── controller pushes __('Estimate') --}}
+    @elseif (strtolower($type) === 'estimate')
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li> --}}
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share estimate link') }}</a></li> --}}
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Update Status') }}</a></li>
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Copy to purchase order') }}</a></li> --}}
+        @if (!empty($convertUrl))
+        <li>
+            <a class="dropdown-item" href="{{ $convertUrl }}"
+               style="padding:10px 16px;font-size:14px;color:#393a3d;">
+                {{ __('Estimate to Invoice') }}
+            </a>
+        </li>
+        @endif
+
+    {{-- ── CREDIT MEMO ── controller pushes __('Credit Memo') --}}
+    @elseif (strtolower($type) === 'credit memo')
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+
+    {{-- ── SALES RECEIPT ── controller pushes __('Sales Receipt') --}}
+    @elseif (strtolower($type) === 'sales receipt')
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+
+    {{-- All other types (Payment, Refund, Delayed Credit/Charge, Time Charge) — no extra items --}}
+    @endif
+
+    {{-- Delete — all types --}}
+    @if (!empty($deleteUrl))
+    <li>
+        <a class="dropdown-item txn-delete-link" href="#"
+           data-url="{{ $deleteUrl }}"
+           style="padding:10px 16px;font-size:14px;color:#393a3d;">
+            {{ __('Delete') }}
+        </a>
+    </li>
+    @endif
+
+    {{-- View activity — all types --}}
+    @if (!empty($activityUrl))
+    <li>
+        <a class="dropdown-item txn-activity-link" href="#"
+           data-url="{{ $activityUrl }}"
+           style="padding:10px 16px;font-size:14px;color:#393a3d;">
+            {{ __('View activity') }}
+        </a>
+    </li>
+    @endif
+
+</ul>
+    </div>
+</td>
                             </tr>
                         @empty
                             <tr>
@@ -1067,6 +1158,18 @@
             </div>
         </div>
     </div>
+{{-- Activity Side Panel --}}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="txnActivityOffcanvas"
+     style="width:420px;max-width:100%;box-shadow:-4px 0 16px rgba(0,0,0,.12);">
+    <div class="offcanvas-body p-0 overflow-auto" id="txnActivityContent">
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">{{ __('Loading...') }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('script-page')
@@ -1108,6 +1211,14 @@
                 $('#moneyBar').toggleClass('collapsed');
                 $(this).toggleClass('collapsed');
             });
+            // Fix dropup clipping caused by overflow-x:auto on table wrapper
+        $(document).on('show.bs.dropdown', '.txn-dropup-btn', function () {
+            $('.qbo-table-wrapper').css('overflow', 'visible');
+        });
+        $(document).on('hide.bs.dropdown', '.txn-dropup-btn', function () {
+            $('.qbo-table-wrapper').css('overflow-x', 'auto');
+        });
+
 
             // Select All checkbox
             $('#selectAll').on('change', function() {
@@ -1168,5 +1279,32 @@
                 }
             });
         });
+
+// ── Activity panel ──────────────────────────────────────
+        $(document).on('click', '.txn-activity-link', function (e) {
+            e.preventDefault();
+            var url = $(this).data('url');
+            var offcanvas = new bootstrap.Offcanvas(document.getElementById('txnActivityOffcanvas'));
+            $('#txnActivityContent').html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+            offcanvas.show();
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.text(); })
+                .then(function (html) { document.getElementById('txnActivityContent').innerHTML = html; })
+                .catch(function () { $('#txnActivityContent').html('<div class="text-center text-danger p-5">{{ __("Failed to load.") }}</div>'); });
+        });
+
+        // ── Delete ───────────────────────────────────────────────
+        $(document).on('click', '.txn-delete-link', function (e) {
+            e.preventDefault();
+            if (!confirm('{{ __("Are you sure you want to delete this transaction?") }}')) return;
+            var url = $(this).data('url');
+            var $form = $('<form method="POST"></form>').attr('action', url);
+            $form.append('<input type="hidden" name="_token" value="{{ csrf_token() }}">');
+            $form.append('<input type="hidden" name="_method" value="DELETE">');
+            $('body').append($form);
+            $form.submit();
+        });
+
+
     </script>
 @endpush

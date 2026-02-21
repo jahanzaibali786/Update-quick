@@ -86,9 +86,9 @@ class ProposalController extends Controller
             $customFields    = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
             $proposal_number = \Auth::user()->proposalNumberFormat($this->proposalNumber());
             $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers       = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers       = ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $category = ['' => 'Select Category'] + ['__add__' => '➕ Add new category'] + $category;
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();

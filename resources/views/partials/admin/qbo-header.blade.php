@@ -190,6 +190,7 @@
                             <li><a href="{{ route('users.index') }}">Manage users</a></li>
                             <li><a href="#">Custom form styles</a></li>
                             <li><a href="{{ route('chart-of-account.index') }}">Chart of accounts</a></li>
+                            <li><a href="{{ route('bank-account.index') }}">Bank accounts</a></li>
                             <li><a href="{{ route('payment-terms.index') }}">Terms</a></li>
                             <li><a href="#">Workers' comp</a></li>
                             <li><a href="#">Get the desktop app</a></li>

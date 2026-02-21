@@ -206,7 +206,7 @@
                                                             </a>
                                                         </div>
                                                     @endcan
-                                                    @can('delete chart of account')
+                                                    {{-- @can('delete chart of account')
                                                         <div class="action-btn bg-danger ms-2">
                                                             {!! Form::open([
                                                                 'method' => 'DELETE',
@@ -223,7 +223,7 @@
                                                             </a>
                                                             {!! Form::close() !!}
                                                         </div>
-                                                    @endcan
+                                                    @endcan --}}
                                                 </td>
                                             </tr>
                                         @endforeach

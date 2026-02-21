@@ -192,10 +192,12 @@
                                             @if (!empty($account->chartAccount))
                                                 {{ $account->chartAccount->name }}
                                             @else
+                                                @if($account->institution_id > 0)
                                                 <a href="{{ route('getBalance', ['id' => $account->institution_id]) }}"
                                                     class="btn btn-sm btn-primary">
                                                     {{ __('Accounts') }}
                                                 </a>
+                                                @endif
                                             @endif
                                         </td>
 
@@ -255,10 +257,12 @@
                                             @endif
                                         @else
                                             <td>
+                                                @if($account->institution_id > 0)
                                                 <a href="{{ route('updateBalance', ['id' => $account->institution_id]) }}"
                                                     class="btn btn-sm btn-primary">
                                                     {{ __('Update Balance') }}
                                                 </a>
+                                                @endif
                                             </td>
                                         @endif
                                     </tr>

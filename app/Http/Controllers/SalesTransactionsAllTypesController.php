@@ -150,9 +150,11 @@ class SalesTransactionsAllTypesController extends Controller
                     'view_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
                     'edit_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
                     'edit_payment_url' => route(
-                        'receive-payment.payment',
-                        ['invoice_id' => Crypt::encrypt($inv->id)]
+                        'receive-payment.create',
+                        ['invoice_id' => $inv->customer_id]
                     ),
+                    'delete_url' => route('invoice.destroy', $inv->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'invoice', 'id' => $inv->id]),
                 ]);
             }
         }
@@ -182,6 +184,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => $pay->amount,
                     'status' => __('Closed'),
                     'view_url' => route('receive-payment.show', $pay->id),
+                    'delete_url' => route('receive-payment.destroy', $pay->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'payment', 'id' => $pay->id]),
                 ]);
             }
         }
@@ -206,9 +210,12 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => $prop->total_amount ?? (method_exists($prop, 'getTotal') ? $prop->getTotal() : 0),
                     'status' => __($statusText),
                     'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
+                    'delete_url' => route('proposal.destroy', $prop->id),
+                    'convert_url' => route('estimate.to.invoice', $prop->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
-        }
+        }         
 
         // Sales Receipts
         if ($type === 'all' || $type === 'sales_receipt') {
@@ -230,6 +237,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => $sr->total_amount ?? 0,
                     'status' => __($statusText),
                     'view_url' => route('sales-receipt.edit', $sr->id),
+                    'delete_url' => route('sales-receipt.destroy', $sr->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'sales_receipt', 'id' => $sr->id]),
                 ]);
             }
         }
@@ -252,6 +261,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => -$cn->total_amount,
                     'status' => __('Paid'),
                     'view_url' => route('refund-receipt.edit', $cn->id),
+                    'delete_url' => route('refund-receipt.destroy', $cn->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'refund', 'id' => $cn->id]),
                 ]);
             }
         }
@@ -273,6 +284,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => -$cn->amount,
                     'status' => __('Unapplied'),
                     'view_url' => route('creditmemo.edit', $cn->id),
+                    'delete_url' => route('creditmemo.destroy', $cn->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'credit_memo', 'id' => $cn->id]),
                 ]);
             }
         }
@@ -293,6 +306,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => -$cn->total_amount,
                     'status' => __('Open'),
                     'view_url' => route('delayed-credit.edit', $cn->id),
+                    'delete_url' => route('delayed-credit.destroy', $cn->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'delayed_credit', 'id' => $cn->id]),
                 ]);
             }
         }
@@ -312,7 +327,9 @@ class SalesTransactionsAllTypesController extends Controller
                     'memo' => $cn->description ?? '',
                     'amount' => -$cn->total_amount,
                     'status' => __('Open'),
-                    'view_url' => route('delayed-charge.edit', $cn->id),
+                   'view_url' => route('delayed-charge.edit', $cn->id),
+                    'delete_url' => route('delayed-charge.destroy', $cn->id),
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'delayed_charge', 'id' => $cn->id]),
                 ]);
             }
         }
@@ -333,6 +350,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'amount' => $cn->total_amount,
                     'status' => __('Open'),
                     'view_url' => route('timeActivity.edit', $cn->id),
+                    'delete_url' => '',
+                    'activity_url' => route('sales.transaction.activity', ['type' => 'time_activity', 'id' => $cn->id]),
                 ]);
             }
         }
@@ -551,4 +570,247 @@ class SalesTransactionsAllTypesController extends Controller
                 return $query;
         }
     }
+
+public function viewActivity(Request $request, $type, $id)
+    {
+        if (!Auth::check()) {
+            abort(403);
+        }
+
+        try {
+
+        $user = Auth::user();
+        $companyId = $user->creatorId();
+
+        $title = $subtitle = $edit_url = '';
+        $total = 0;
+        $issue_date = $due_date = null;
+        $customer = null;
+        $products = collect();
+        $activities = [];
+
+        switch ($type) {
+            case 'invoice':
+                $invoice = Invoice::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$invoice) abort(404);
+                $customer = Customer::find($invoice->customer_id);
+                $latestPayment = \DB::table('invoice_payments')->where('invoice_id', $id)->orderByDesc('date')->first();
+                $products = \DB::table('invoice_products')
+                    ->leftJoin('product_services', 'invoice_products.product_id', '=', 'product_services.id')
+                    ->where('invoice_products.invoice_id', $id)
+                    ->select('product_services.name as product_name', 'invoice_products.quantity', 'invoice_products.price', 'invoice_products.amount', 'invoice_products.description')
+                    ->get();
+                $title    = __('Invoice') . ' ' . $user->invoiceNumberFormat($invoice->invoice_id);
+                $subtitle = $this->getInvoiceStatusText($invoice) . (!$invoice->send_date ? ' (' . __('Not sent') . ')' : '');
+                $total      = $invoice->total_amount;
+                $issue_date = $invoice->issue_date;
+                $due_date   = $invoice->due_date;
+                $edit_url   = route('invoice.edit', Crypt::encrypt($invoice->id));
+                $activities = [
+                    ['label' => __('Opened'), 'date' => $invoice->created_at->format('n/j/Y'), 'done' => true],
+                    ['label' => __('Sent'),   'date' => $invoice->send_date ? \Carbon\Carbon::parse($invoice->send_date)->format('n/j/Y') : null, 'done' => !empty($invoice->send_date)],
+                    ['label' => __('Viewed'), 'date' => null, 'done' => false],
+                    ['label' => __('Paid'),   'date' => ($latestPayment && $invoice->status == 4) ? \Carbon\Carbon::parse($latestPayment->date)->format('n/j/Y') : null, 'done' => $invoice->status == 4],
+                    ['label' => __('Deposited'), 'date' => null, 'done' => false],
+                ];
+                break;
+
+            case 'estimate':
+                $proposal = Proposal::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$proposal) abort(404);
+                $customer   = Customer::find($proposal->customer_id);
+                $statusMap  = Proposal::$statues ?? [];
+                $title      = __('Estimate') . ' #' . $proposal->proposal_id;
+                $subtitle   = $statusMap[$proposal->status] ?? '';
+                $total      = $proposal->total_amount;
+                $issue_date = $proposal->issue_date;
+                $edit_url   = route('proposal.edit', Crypt::encrypt($proposal->id));
+                $activities = [
+                    ['label' => __('Created'),   'date' => $proposal->created_at->format('n/j/Y'), 'done' => true],
+                    ['label' => __('Sent'),      'date' => $proposal->send_date ? \Carbon\Carbon::parse($proposal->send_date)->format('n/j/Y') : null, 'done' => !empty($proposal->send_date)],
+                    ['label' => __('Accepted'),  'date' => $proposal->accepted_date ? \Carbon\Carbon::parse($proposal->accepted_date)->format('n/j/Y') : null, 'done' => $proposal->status == 1],
+                    ['label' => __('Converted'), 'date' => null, 'done' => $proposal->is_convert == 1],
+                ];
+                break;
+
+            case 'payment':
+                $payment = \App\Models\InvoicePayment::find($id);
+                if (!$payment) abort(404);
+                $parentInvoice = Invoice::where('created_by', $companyId)->where('id', $payment->invoice_id)->first();
+                if (!$parentInvoice) abort(404);
+                $customer   = Customer::find($parentInvoice->customer_id);
+                $title      = __('Payment') . ' #' . $payment->id;
+                $subtitle   = __('Closed');
+                $total      = $payment->amount;
+                $issue_date = $payment->date;
+                $edit_url   = route('receive-payment.show', $payment->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $payment->created_at->format('n/j/Y'), 'done' => true],
+                    ['label' => __('Applied'), 'date' => $payment->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            case 'sales_receipt':
+                $sr = SalesReceipt::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$sr) abort(404);
+                $statusMap  = SalesReceipt::$statues ?? [];
+                $customer   = Customer::find($sr->customer_id);
+                $title      = __('Sales Receipt') . ' #' . $sr->ref_number;
+                $subtitle   = $statusMap[$sr->status] ?? '';
+                $total      = $sr->total_amount;
+                $issue_date = $sr->issue_date;
+                $edit_url   = route('sales-receipt.edit', $sr->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $sr->created_at->format('n/j/Y'), 'done' => true],
+                    ['label' => __('Sent'),    'date' => !empty($sr->send_date) ? \Carbon\Carbon::parse($sr->send_date)->format('n/j/Y') : null, 'done' => !empty($sr->send_date)],
+                ];
+                break;
+
+            case 'credit_memo':
+                $cm = CreditNote::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$cm) abort(404);
+                $customer   = Customer::find($cm->customer);
+                $title      = __('Credit Memo') . ' #' . ($cm->credit_note_id ?? $cm->id);
+                $subtitle   = __('Unapplied');
+                $total      = $cm->total_amount;
+                $issue_date = $cm->date;
+                $edit_url   = route('creditmemo.edit', $cm->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $cm->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            case 'refund':
+                $rr = RefundReceipt::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$rr) abort(404);
+                $customer   = Customer::find($rr->customer_id);
+                $title      = __('Refund Receipt') . ' #' . ($rr->ref_number ?? $rr->refund_receipt_id);
+                $subtitle   = __('Paid');
+                $total      = $rr->total_amount;
+                $issue_date = $rr->issue_date;
+                $edit_url   = route('refund-receipt.edit', $rr->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $rr->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            case 'delayed_credit':
+                $dc = DelayedCredits::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$dc) abort(404);
+                $customer   = Customer::find($dc->customer_id);
+                $title      = __('Delayed Credit') . ' #' . ($dc->credit_id ?? $dc->id);
+                $subtitle   = __('Open');
+                $total      = $dc->total_amount;
+                $issue_date = $dc->date;
+                $edit_url   = route('delayed-credit.edit', $dc->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $dc->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            case 'delayed_charge':
+                $dch = DelayedCharges::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$dch) abort(404);
+                $customer   = Customer::find($dch->customer_id);
+                $title      = __('Delayed Charge') . ' #' . ($dch->charge_id ?? $dch->id);
+                $subtitle   = __('Open');
+                $total      = $dch->total_amount;
+                $issue_date = $dch->date;
+                $edit_url   = route('delayed-charge.edit', $dch->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $dch->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            case 'time_activity':
+                $ta = TimeActivity::where('created_by', $companyId)->where('id', $id)->first();
+                if (!$ta) abort(404);
+                $customer   = Customer::find($ta->customer_id);
+                $title      = __('Time Activity') . ' #' . $ta->id;
+                $subtitle   = __('Open');
+                $total      = $ta->total_amount;
+                $issue_date = $ta->date;
+                $edit_url   = route('timeActivity.edit', $ta->id);
+                $activities = [
+                    ['label' => __('Created'), 'date' => $ta->created_at->format('n/j/Y'), 'done' => true],
+                ];
+                break;
+
+            default:
+                abort(404);
+        }
+
+       return view('SalesTransactionsAllTypes.partials.activity-panel', compact(
+            'title', 'subtitle', 'total', 'issue_date', 'due_date',
+            'customer', 'edit_url', 'products', 'activities'
+        ));
+
+        } catch (\Exception $e) {
+            \Log::error('viewActivity error: ' . $e->getMessage());
+            return response('<div style="padding:20px;color:red;">Error: ' . e($e->getMessage()) . '</div>', 500);
+        }
+    }
+
+
+/**
+ * Convert an Estimate (Proposal) to an Invoice - redirect to invoice create with pre-filled session data.
+ */
+public function convertEstimateToInvoice(Request $request, $id)
+{
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $user = Auth::user();
+    $companyId = $user->creatorId();
+
+    $proposal = Proposal::where('created_by', $companyId)->where('id', $id)->first();
+
+    if (!$proposal) {
+        return redirect()->back()->with('error', __('Estimate not found or access denied.'));
+    }
+
+    // Load proposal items/products
+    $proposalProducts = \DB::table('proposal_products')
+        ->where('proposal_id', $proposal->id)
+        ->get();
+
+    // Flash all estimate data to session for the invoice create page to read
+$flashData = [
+    'customer_id'   => $proposal->customer_id,
+    'issue_date'    => $proposal->issue_date,
+    'expiry_date' => $proposal->expire_date ?? $proposal->expiry_date ?? $proposal->due_date ?? null,
+    'ref_number'    => $proposal->proposal_id ?? '',
+    'bill_to'       => $proposal->bill_to ?? '',
+    'discount'      => $proposal->discount ?? 0,
+    'discount_type' => $proposal->discount_type ?? 0,
+    'tax_id'        => $proposal->tax_id ?? null,
+    'shipping'      => $proposal->shipping ?? 0,
+    'note'          => $proposal->note ?? '',
+    'total_amount'  => $proposal->total_amount ?? 0,
+    'from_estimate' => $proposal->id,
+    'products'      => $proposalProducts->map(function ($p) {
+        return [
+            'product_id'  => $p->product_id ?? null,
+            'description' => $p->description ?? '',
+            'quantity'    => $p->quantity ?? 1,
+            'price'       => $p->price ?? 0,
+            'tax'         => $p->tax ?? null,
+            'discount'    => $p->discount ?? 0,
+            'amount'      => $p->amount ?? 0,
+        ];
+    })->toArray(),
+];
+
+\Log::info('ESTIMATE_PREFILL_FLASH', $flashData);
+\Log::info('PROPOSAL_PRODUCTS_COUNT', ['count' => $proposalProducts->count()]);
+
+session()->flash('estimate_prefill', $flashData);
+
+\Log::info('SESSION_AFTER_FLASH', ['has_key' => session()->has('estimate_prefill')]);
+
+
+    return redirect()->route('invoice.create', 0);
+}
+
 }

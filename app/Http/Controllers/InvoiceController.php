@@ -1714,13 +1714,13 @@ class InvoiceController extends Controller
 
                     $isApproved = !is_null($voucher);
                     // dd($products);
-                    if ($isApproved) {
+                    // if ($isApproved) {
                         // SCENARIO 1: Invoice is approved - Update journal entries
                         $this->updateApprovedInvoice($invoice, $voucher, $products, $request);
-                    } else {
-                        // SCENARIO 2: Invoice is not approved yet - Just update invoice products
-                        $this->updateDraftInvoice($invoice, $products);
-                    }
+                    // } else {
+                    //     // SCENARIO 2: Invoice is not approved yet - Just update invoice products
+                    //     $this->updateDraftInvoice($invoice, $products);
+                    // }
 
                     // Log activity
                     Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Update Invoice', $invoice->description);
@@ -1976,7 +1976,6 @@ class InvoiceController extends Controller
 
                     $tax += floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
                     $reciveable += floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0) + floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
-dd($journalItem);
                     // Create transaction line for product
                     $dataline = [
                         'account_id' => $product->sale_chartaccount_id,
@@ -2172,12 +2171,14 @@ dd($journalItem);
                         $journalItem->type = 'Invoice';
                         $journalItem->name = $invoice->customer->name ?? null;
                         $journalItem->customer_id = $invoice->customer_id ?? null;
+                        $journalItem->debit = 0;
                         $journalItem->credit = floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0);
                         $journalItem->save();
 
                         // Update transaction line
                         $transaction_line = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_id', $invoice->id)->where('reference', 'Invoice Journal')->where('product_item_id', $invoiceProduct->id)->where('product_type', 'Invoice')->first();
                         if ($transaction_line) {
+                            $transaction_line->debit = $journalItem->debit;
                             $transaction_line->credit = $journalItem->credit;
                             $transaction_line->save();
                         }
@@ -2233,12 +2234,14 @@ dd($journalItem);
                             $journal_tax->type = 'Invoice';
                             $journal_tax->name = $invoice->customer->name ?? null;
                             $journal_tax->customer_id = $invoice->customer_id ?? null;
+                            $journal_tax->debit = 0;
                             $journal_tax->credit = $tax;
                             $journal_tax->save();
 
                             // Update tax transaction line
                             $transaction_tax = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_id', $invoice->id)->where('reference', 'Invoice Journal')->where('product_item_id', $invoiceProduct->id)->where('product_type', 'Invoice Tax')->first();
                             if ($transaction_tax) {
+                                $transaction_tax->debit = $journal_tax->debit;
                                 $transaction_tax->credit = $journal_tax->credit;
                                 $transaction_tax->save();
                             }
@@ -2359,6 +2362,7 @@ dd($journalItem);
                         $existingSalesTaxJournal->customer_id = $invoice->customer_id ?? null;
                         $existingSalesTaxJournal->account = $taxAccountId;
                         $existingSalesTaxJournal->description = 'Sales Tax (' . $tax->name . ' @ ' . $tax->rate . '%) on Invoice No: ' . $invoice->invoice_id;
+                        $existingSalesTaxJournal->debit = 0;
                         $existingSalesTaxJournal->credit = floatval($invoice->total_tax);
                         $existingSalesTaxJournal->save();
                         
@@ -2430,10 +2434,12 @@ dd($journalItem);
         }
 
         // Update Account Receivables journal item
-        $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
-        if ($types) {
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+        $account_rec = Utility::getAccountReceivable(@$invoice->created_by);
+        if ($account_rec) {
+            // $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
+            // $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+            // $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+            $account = ChartOfAccount::where('id',  $account_rec->id)->first();
 
             if ($account) {
                 $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
@@ -2638,7 +2644,7 @@ dd($journalItem);
                     JournalItem::where('journal', $invoice->voucher_id)->delete();
                 }
                 $invoice->delete();
-                return redirect()->route('invoice.index')->with('success', __('Invoice successfully deleted.'));
+                return redirect()->route('sales-transactions.index')->with('success', __('Invoice successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -2883,6 +2889,7 @@ dd($journalItem);
 
     public function newQboRecievePayment($invoice_id)
 {
+ 
     if (\Auth::user()->can('create payment invoice')) {
         // Fetch invoice with customer relationship
         $invoice = Invoice::with('customer')->where('id', $invoice_id)->first();
@@ -2946,6 +2953,7 @@ dd($journalItem);
 
     public function createPayment(Request $request, $invoice_id)
     {
+          
         $invoice = Invoice::find($invoice_id);
         if ($invoice->getDue() < $request->amount) {
             return redirect()->back()->with('error', __('Invoice payment amount should not greater than subtotal.'));

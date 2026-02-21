@@ -727,7 +727,7 @@ Route::group(['middleware' => ['verified']], function () {
     Route::get('receive-payment/create/{customerId?}', [ReceivePaymentController::class, 'create'])->name('receive-payment.create')->middleware(['auth', 'XSS']);
     Route::post('receive-payment/outstanding-invoices', [ReceivePaymentController::class, 'getOutstandingInvoices'])->name('receive-payment.outstanding-invoices')->middleware(['auth', 'XSS']);
     Route::post('receive-payment/payment/{invoice_id?}', [ReceivePaymentController::class, 'createPayment'])->name('receive-payment.payment')->middleware(['auth', 'XSS']);
-
+    // Route::match(['get','post'],'receive-payment/payment/{invoice_id?}', [ReceivePaymentController::class, 'createPayment'])->name('receive-payment.payment')->middleware(['auth', 'XSS']);
     // Receive Bill Payment routes (Pay vendor bills)
     Route::resource('receive-bill-payment', ReceiveBillPaymentController::class)->middleware(['auth', 'XSS']);
     Route::get('receive-bill-payment/create/{vendorId?}', [ReceiveBillPaymentController::class, 'create'])->name('receive-bill-payment.create')->middleware(['auth', 'XSS']);
@@ -923,17 +923,21 @@ Route::group(['middleware' => ['verified']], function () {
     Route::group([
         'middleware' => ['auth', 'XSS', 'revalidate'],
     ], function () {
-        Route::get('report/transaction', [TransactionController::class, 'index'])
-            ->name('transaction.index');
-        Route::get('report/transaction/bank-transactions', [TransactionController::class, 'bankTransactions'])
-            ->name('transaction.bankTransactions');
-        Route::get('report/transaction/reccuring-transactions', [TransactionController::class, 'reccuringtrans'])
-            ->name('transaction.reccuringtrans');
-        Route::get('/transactions/all-sales', [TransactionController::class, 'allSales'])
-            ->name('allSales');
-        Route::get('/sales/transactions', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'index'])
-            ->name('sales.transactions.index');
+    Route::get('report/transaction', [TransactionController::class, 'index'])
+        ->name('transaction.index');
+    Route::get('report/transaction/bank-transactions', [TransactionController::class, 'bankTransactions'])
+        ->name('transaction.bankTransactions');
+    Route::get('report/transaction/reccuring-transactions', [TransactionController::class, 'reccuringtrans'])
+        ->name('transaction.reccuringtrans');
+    Route::get('/transactions/all-sales', [TransactionController::class, 'allSales'])
+        ->name('allSales');
+    Route::get('/sales/transactions', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'index'])
+        ->name('sales.transactions.index');
+    Route::get('/sales/transaction-activity/{type}/{id}', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'viewActivity'])
+        ->name('sales.transaction.activity')
+        ->middleware(['auth', 'XSS']);
 
+    Route::get('estimate-to-invoice/{id}', [\App\Http\Controllers\SalesTransactionsAllTypesController::class, 'convertEstimateToInvoice'])->name('estimate.to.invoice');
         Route::prefix('report')->group(function () {
             Route::get('receipts/{invoice?}', [TransactionController::class, 'receipts'])
                 ->name('receipts.index');
