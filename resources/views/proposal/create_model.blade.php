@@ -1632,6 +1632,54 @@
                 isFirstItemUndeletable: true
             });
 
+                function recalcTotals() {
+                var grandSubtotal = 0; // all product rows
+                var taxableSubtotal = 0; // only rows with tax checkbox checked
+                var totalDiscount = 0; // (line discounts not used right now)
+
+                $('#sortable-table').children('tbody').each(function() {
+                    var $body = $(this);
+                    var $productRow = $body.find('tr.product-row');
+
+                    if (!$productRow.length) return;
+
+                    var amount = getRowAmount($productRow);
+                    grandSubtotal += amount;
+
+                    var isTaxable = $productRow
+                        .find('.form-check-input[type="checkbox"]')
+                        .prop('checked');
+
+                    if (isTaxable) {
+                        taxableSubtotal += amount;
+                    }
+                });
+
+                // sales tax rate select (value should be numeric percentage)
+                var taxRate = parseFloat($('select[name="tax_id"] option:selected').data('rate')) || 0;
+                var totalTax = taxableSubtotal * taxRate / 100;
+                var totalAmount = grandSubtotal - totalDiscount + totalTax;
+
+                // update bottom totals
+                $('.subTotal').text(grandSubtotal.toFixed(2));
+                $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
+                $('.totalDiscount').text(totalDiscount.toFixed(2));
+                $('.totalTax').text(totalTax.toFixed(2));
+                $('.totalAmount').text(totalAmount.toFixed(2));
+
+                // Update hidden inputs
+                $('.subtotal_hidden').val(grandSubtotal.toFixed(2));
+                $('.taxable_subtotal_hidden').val(taxableSubtotal.toFixed(2));
+                $('.total_discount_hidden').val(totalDiscount.toFixed(2));
+                $('.total_tax_hidden').val(totalTax.toFixed(2));
+                $('.sales_tax_amount_hidden').val(totalTax.toFixed(2));
+                $('.total_amount_hidden').val(totalAmount.toFixed(2));
+                $('.tax_rate_hidden').val(taxRate);
+
+                // update all subtotal rows inside table
+                recalcSubtotals();
+            }
+
             var value = $(selector + " .repeater").attr('data-value');
             if (typeof value != 'undefined' && value.length != 0) {
                 value = JSON.parse(value);
@@ -1889,7 +1937,7 @@
 
                                 {{-- Close button (existing) --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('invoice.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.transactions.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         color="currentColor" width="24px" height="24px" focusable="false"
                                         aria-hidden="true">

@@ -725,7 +725,7 @@
 
             <div class="modal-footer">
                 <input type="button" value="{{ __('Cancel') }}"
-                    onclick="location.href = '{{ route('proposal.index') }}';" class="btn btn-light">
+                    onclick="location.href = '{{ route('sales.transactions.index') }}';" class="btn btn-light">
                 <input type="submit" value="{{ __('Create') }}" class="btn  btn-primary">
             </div>
             {{ Form::close() }}
