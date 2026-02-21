@@ -31,7 +31,7 @@ class Proposal extends Model
         'Open',
         'Accepted',
         'Declined',
-        'Close',
+        'Converted',
     ];
 
 

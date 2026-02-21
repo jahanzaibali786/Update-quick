@@ -629,6 +629,10 @@ class InvoiceController extends Controller
                 // $invoice->ship_to = $request->ship_to;
                 $invoice->terms = $request->terms;
 
+                // Store convert_type and convert_id (e.g. from estimate conversion)
+                $invoice->convert_type = $request->convert_type;
+                $invoice->convert_id = $request->convert_id;
+
                 // Handle logo upload
                 if ($request->hasFile('company_logo')) {
                     $logoFile = $request->file('company_logo');
@@ -786,6 +790,15 @@ class InvoiceController extends Controller
 
                 // Update estimate status based on invoiced items
                 $this->updateEstimateStatusAfterInvoice($products);
+
+                // Update Estimation status when converting from estimate
+                if ($invoice->convert_type == 'estimate' && $invoice->convert_id) {
+                    $estimation = \App\Models\Proposal::find($invoice->convert_id);
+                    if ($estimation) {
+                        $estimation->status = 4; // Cancelled (converted to invoice)
+                        $estimation->save();
+                    }
+                }
 
                 // Notifications (Slack, Telegram, Twilio)
                 $setting = Utility::settings(\Auth::user()->creatorId());
@@ -2644,7 +2657,7 @@ class InvoiceController extends Controller
                     JournalItem::where('journal', $invoice->voucher_id)->delete();
                 }
                 $invoice->delete();
-                return redirect()->route('sales-transactions.index')->with('success', __('Invoice successfully deleted.'));
+                return redirect()->route('sale-transactions.index')->with('success', __('Invoice successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }

@@ -34,6 +34,7 @@ class RefundReceipt extends Model
         'attachments',
         'memo',
         'statement_memo',
+        'tax_id',
         'voucher_id',
     ];
 

@@ -11,6 +11,10 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -2059,7 +2063,7 @@
                 </div>
               </div>
             </div>
-        `);
+         `);
 
                     $('body').append($modal);
 
@@ -2403,6 +2407,124 @@
                 });
             });
         </script>
+        <script>
+        $(document).ready(function() {
+            var currentSelect = null;
+
+            function openAddNewModal($select) {
+                if ($select.val() !== '__add__') return;
+                $select.val(''); // reset dropdown
+                currentSelect = $select; // save reference
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
+
+                // prevent duplicate modal
+                if ($('#globalAddNewModal').length) {
+                    $('#globalAddNewModal').modal('show');
+                    return;
+                }
+
+                var $modal = $(`
+                        <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">Loading...</div>
+                            </div>
+                        </div>
+                        </div>
+                    `);
+
+                $('body').append($modal);
+
+                $.get(url, function(html) {
+                    $modal.find('.modal-body').html(html);
+
+                    // z-index stacking
+                    var zIndex = 1070 + ($('.modal:visible').length * 10);
+                    $modal.css('z-index', zIndex);
+                    setTimeout(function() {
+                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                            'modal-stack');
+                    }, 0);
+
+                    $modal.modal('show');
+                });
+
+                $modal.on('hidden.bs.modal', function() {
+                    $modal.remove();
+                });
+            }
+
+            // Detect "Add New" selection
+            $(document).on('change', 'select', function() {
+                var $select = $(this);
+                if ($select.val() === '__add__') {
+                    openAddNewModal($select);
+                }
+            });
+
+            // AJAX submit for dynamic modal
+            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+                e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $modal = $form.closest('#globalAddNewModal');
+
+                // Find the select that triggered this modal
+                var $select = currentSelect;
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: $form.attr('method') || 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            // 🔹 Insert new option before the "Add New" of the same select
+                            var $addNewOption = $select.find('option[value="__add__"]').first();
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
+                            });
+
+                            // Add data attributes if they exist in the response
+                            if (response.data.due_in_days !== undefined) {
+                                $newOption.attr('data-days', response.data.due_in_days);
+                            }
+
+                            if ($addNewOption.length) {
+                                $newOption.insertBefore($addNewOption);
+                            } else {
+                                $select.append($newOption);
+                            }
+
+                            $select.val(response.data.id).trigger('change');
+                            $modal.modal('hide');
+                        } else {
+                            alert(response.message || 'Something went wrong!');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            $form.find('.invalid-feedback').remove();
+                            $.each(errors, function(key, msgs) {
+                                $form.find('[name="' + key + '"]').after(
+                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                );
+                            });
+                        } else {
+                            alert('Server error!');
+                        }
+                    }
+                });
+            });
+
+        });
+    </script>
     @endpush
 
 @endpush
@@ -2477,7 +2599,6 @@
                                                 'class' => 'form-select',
                                                 'id' => 'customer_id',
                                                 'data-url' => route('invoice.customer'),
-                                                'placeholder' => 'Choose a customer',
                                                 'required' => 'required',
                                                 'data-create-url' => route('customer.create'),
                                                 'data-create-title' => __('Create New Customer'),
@@ -2539,7 +2660,6 @@
                                             {{ Form::select('payment_method', $paymentMethods ?? ['' => 'Choose payment method', 'Cash' => 'Cash', 'Check' => 'Check', 'Credit Card' => 'Credit Card', 'Debit Card' => 'Debit Card', 'Bank Transfer' => 'Bank Transfer', 'Other' => 'Other'], null, [
                                                 'class' => 'form-select',
                                                 'id' => 'payment_method',
-                                                'placeholder' => 'Choose payment method',
                                             ]) }}
                                         </div>
                                         <div class="col-md-3">
@@ -2547,7 +2667,6 @@
                                             {{ Form::select('refund_from', $bankAccounts ?? ['' => 'Choose an account'], null, [
                                                 'class' => 'form-select',
                                                 'id' => 'refund_from',
-                                                'placeholder' => 'Choose an account',
                                             ]) }}
                                         </div>
                                         <div class="col-md-6">

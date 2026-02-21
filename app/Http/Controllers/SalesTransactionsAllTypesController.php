@@ -128,7 +128,7 @@ class SalesTransactionsAllTypesController extends Controller
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
                 ->when($status !== 'all', fn($q) => $this->applyInvoiceStatusFilter($q, $status))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             \Log::info('Invoices after filters', [
@@ -170,7 +170,7 @@ class SalesTransactionsAllTypesController extends Controller
                         $iq->where('customer_id', $customerId);
                     });
                 })
-                ->with(['invoice.customer'])
+                ->with(['invoice.customer'])->orderBy('id', 'desc')
                 ->get();
 
             foreach ($payments as $pay) {
@@ -195,7 +195,7 @@ class SalesTransactionsAllTypesController extends Controller
             $proposals = Proposal::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($proposals as $prop) {
@@ -211,7 +211,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'status' => __($statusText),
                     'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
                     'delete_url' => route('proposal.destroy', $prop->id),
-                    'convert_url' => route('estimate.to.invoice', $prop->id),
+                    'convert_url' => $prop->status != 4 ? route('estimate.to.invoice', $prop->id) : '',
                     'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
@@ -222,7 +222,7 @@ class SalesTransactionsAllTypesController extends Controller
             $salesReceipts = SalesReceipt::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($salesReceipts as $sr) {
@@ -248,6 +248,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = RefundReceipt::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -293,6 +294,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = DelayedCredits::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -315,6 +317,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = DelayedCharges::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -337,6 +340,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = TimeActivity::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -798,6 +802,7 @@ $flashData = [
             'tax'         => $p->tax ?? null,
             'discount'    => $p->discount ?? 0,
             'amount'      => $p->amount ?? 0,
+            'taxable'     => $p->taxable ?? 0,
         ];
     })->toArray(),
 ];

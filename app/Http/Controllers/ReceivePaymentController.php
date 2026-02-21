@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\Transaction;
+use App\Models\JournalEntry;
+use App\Models\JournalItem;
 use App\Models\Utility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -763,7 +765,15 @@ class ReceivePaymentController extends Controller
                 $invoice->status = 3; // Partial or check if fully reversed
                 $invoice->save();
             }
-
+            // also delete voucher and its items also delete transaction
+            if($payment->voucher_id){
+                $voucher = JournalEntry::find($payment->voucher_id);
+                if($voucher){
+                    JournalItem::where('journal', $voucher->id)->delete();
+                    Transaction::where('product_id', $voucher->id)->delete();
+                    $voucher->delete();
+                }
+            }
             // Delete transaction
             Transaction::where('payment_id', $payment->id)
                 ->where('category', 'Invoice')
@@ -772,7 +782,7 @@ class ReceivePaymentController extends Controller
             $payment->delete();
 
             \DB::commit();
-            return redirect()->route('receive-payment.index')
+            return redirect()->route('sale.transactions.index')
                 ->with('success', __('Payment deleted successfully.'));
         } catch (\Exception $e) {
             \DB::rollBack();

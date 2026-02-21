@@ -37,9 +37,9 @@ class SalesReceipt extends Controller
                 ->get();
             $invoice_number = \Auth::user()->salesReceiptNumberFormat($this->salesReceiptNumber());
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers =  ['' => 'Select Customer'] +['__add__' => '➕ Add new customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $category =  ['' => 'Select Category'] +['__add__' => '➕ Add new category'] + $category;
             $product_services = ProductService::get()->pluck('name', 'id');
             $product_services->prepend('--', '');
              $bank_Account = BankAccount::select('*', \DB::raw("CONCAT(bank_name,' ',holder_name) AS name"))

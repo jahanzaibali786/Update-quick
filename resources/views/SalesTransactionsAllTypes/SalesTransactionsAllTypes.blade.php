@@ -1080,7 +1080,6 @@
         {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li> --}}
         {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li> --}}
         {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share estimate link') }}</a></li> --}}
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Update Status') }}</a></li>
         {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Copy to purchase order') }}</a></li> --}}
         @if (!empty($convertUrl))
         <li>
@@ -1093,16 +1092,16 @@
 
     {{-- ── CREDIT MEMO ── controller pushes __('Credit Memo') --}}
     @elseif (strtolower($type) === 'credit memo')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
         <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li> --}}
 
     {{-- ── SALES RECEIPT ── controller pushes __('Sales Receipt') --}}
     @elseif (strtolower($type) === 'sales receipt')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+        {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
         <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
         <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li> --}}
 
     {{-- All other types (Payment, Refund, Delayed Credit/Charge, Time Charge) — no extra items --}}
     @endif

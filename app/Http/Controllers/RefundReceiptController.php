@@ -39,9 +39,7 @@ class RefundReceiptController extends Controller
                 ->get();
             $refund_receipt_number = \Auth::user()->refundReceiptNumberFormat($this->refundReceiptNumber());
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
-            $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $customers =  ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             $product_services = ProductService::get()->pluck('name', 'id');
             $product_services->prepend('--', '');
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
@@ -67,7 +65,7 @@ class RefundReceiptController extends Controller
                 'Other' => 'Other',
             ];
 
-            return view('refundReceipt.create', compact('customers', 'refund_receipt_number', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'bankAccounts', 'paymentMethods'));
+            return view('refundReceipt.create', compact('customers', 'refund_receipt_number', 'product_services', 'customFields', 'customerId', 'taxes', 'bankAccounts', 'paymentMethods'));
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -163,6 +161,7 @@ class RefundReceiptController extends Controller
                 $refundReceipt->total_amount = $request->total_amount ?? 0;
                 $refundReceipt->total_amount_refunded = $request->total_amount ?? 0;
                 $refundReceipt->memo = $request->memo;
+                $refundReceipt->tax_id = $request->tax_id;
                 $refundReceipt->statement_memo = $request->statement_memo;
 
                 // Handle attachments
@@ -503,6 +502,7 @@ class RefundReceiptController extends Controller
                 $refundReceipt->total_amount = $request->total_amount ?? 0;
                 $refundReceipt->total_amount_refunded = $request->total_amount ?? 0;
                 $refundReceipt->memo = $request->memo;
+                $refundReceipt->tax_id = $request->tax_id;
                 $refundReceipt->statement_memo = $request->statement_memo;
 
                 // Handle logo upload

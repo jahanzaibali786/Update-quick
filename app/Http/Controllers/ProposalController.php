@@ -706,7 +706,7 @@ class ProposalController extends Controller
                 $proposal->delete();
                 ProposalProduct::where('proposal_id', '=', $proposal->id)->delete();
 
-                return redirect()->route('proposal.index')->with('success', __('Proposal successfully deleted.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Proposal successfully deleted.'));
             }
             else
             {
