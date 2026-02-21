@@ -725,7 +725,7 @@ class RefundReceiptController extends Controller
 
             $refundReceipt->delete();
 
-            return redirect()->route('refund-receipt.index')->with('success', __('Refund receipt successfully deleted.'));
+            return redirect()->route('sales.transactions.index')->with('success', __('Refund receipt successfully deleted.'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }

@@ -303,7 +303,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'date' => $cn->date,
                     'type' => __('Delayed Credit'),
                     'no' => '#' . ($cn->credit_id ?? $cn->id),
-                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'customer' => optional($cn->customer)->name ?? '-',
                     'memo' => $cn->description ?? '',
                     'amount' => -$cn->total_amount,
                     'status' => __('Open'),

@@ -1,4 +1,9 @@
 <style>
+    #globalAddNewModal .modal-dialog {
+        width: 800px !important;
+        max-width: 800px !important;
+    }
+
     /* QuickBooks Style for Delayed Credit Modal */
     .dc-modal-container {
         background: #ffffff;
@@ -373,17 +378,56 @@
     <div class="fixed-top-header">
         <div class="header-top-row">
             <div class="dc-label">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
-                    <path fill="currentColor" d="M13.007 7a1 1 0 0 0-1 1L12 12a1 1 0 0 0 1 1l3.556.006a1 1 0 0 0 0-2L14 11l.005-3a1 1 0 0 0-.998-1"></path>
-                    <path fill="currentColor" d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353"></path>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor"
+                    width="24px" height="24px">
+                    <path fill="currentColor"
+                        d="M13.007 7a1 1 0 0 0-1 1L12 12a1 1 0 0 0 1 1l3.556.006a1 1 0 0 0 0-2L14 11l.005-3a1 1 0 0 0-.998-1">
+                    </path>
+                    <path fill="currentColor"
+                        d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353">
+                    </path>
                 </svg>
                 {{ __('Delayed Credit') }} #{{ $delayedCredit->credit_id }}
             </div>
 
             <div class="header-right-controls">
-                <button type="button" class="close-button" onclick="$('#delayedCreditModal').modal('hide');" aria-label="Close">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
-                        <path fill="currentColor" d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z"></path>
+                {{-- Feedback --}}
+                <a href="#" class="close-button" title="Feedback"
+                    style="font-size: 13px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        fill="currentColor" color="#6b6c72">
+                        <path
+                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z">
+                        </path>
+                    </svg>
+                    <span style="color: #6b6c72;">{{ __('Feedback') }}</span>
+                </a>
+                {{-- Settings gear --}}
+                <a href="#" class="close-button" title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                        fill="currentColor" color="#6b6c72">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1112 8.4a3.6 3.6 0 010 7.2z">
+                        </path>
+                    </svg>
+                </a>
+                {{-- Help --}}
+                <a href="#" class="close-button" title="Help">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                        fill="currentColor" color="#6b6c72">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z">
+                        </path>
+                    </svg>
+                </a>
+                {{-- Close --}}
+                <button type="button" class="close-button" onclick="$('#delayedCreditModal').modal('hide');"
+                    aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor"
+                        width="24px" height="24px">
+                        <path fill="currentColor"
+                            d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z">
+                        </path>
                     </svg>
                 </button>
             </div>
@@ -399,14 +443,17 @@
                     {{ Form::select('customer_id', $customers, $delayedCredit->customer_id, [
                         'class' => 'dc-form-select',
                         'id' => 'customer_id',
-                        'placeholder' => 'Choose a customer',
                         'required' => 'required',
+                        'data-create-url' => route('customer.create'),
+                        'data-create-title' => 'Create New Customer',
                     ]) }}
                 </div>
-                <div class="col-md-5 text-end">
+                <div class="col-md-9 text-end">
                     <div style="margin-top: 20px;">
-                        <label style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
-                        <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">${{ number_format($delayedCredit->total_amount, 2) }}</div>
+                        <label
+                            style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
+                        <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">
+                            ${{ number_format($delayedCredit->total_amount, 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -458,39 +505,45 @@
                             </td>
                             <td><span class="line-number">{{ $rowIndex + 1 }}</span></td>
                             <td>
-                                {{ Form::select('items['.$rowIndex.'][item]', $product_services, $line->product_id, [
+                                {{ Form::select('items[' . $rowIndex . '][item]', $product_services, $line->product_id, [
                                     'class' => 'dc-form-select item-select',
                                     'placeholder' => 'Select a product/service',
                                 ]) }}
                             </td>
                             <td>
-                                {{ Form::textarea('items['.$rowIndex.'][description]', $line->description, [
+                                {{ Form::textarea('items[' . $rowIndex . '][description]', $line->description, [
                                     'class' => 'dc-form-control item-description',
                                     'rows' => '1',
                                 ]) }}
                             </td>
                             <td>
-                                {{ Form::text('items['.$rowIndex.'][quantity]', $line->quantity, [
+                                {{ Form::text('items[' . $rowIndex . '][quantity]', $line->quantity, [
                                     'class' => 'dc-form-control input-right item-quantity',
                                 ]) }}
                             </td>
                             <td>
-                                {{ Form::text('items['.$rowIndex.'][price]', $line->rate, [
+                                {{ Form::text('items[' . $rowIndex . '][price]', $line->rate, [
                                     'class' => 'dc-form-control input-right item-price',
                                 ]) }}
                             </td>
                             <td>
-                                <input type="text" name="items[{{ $rowIndex }}][amount]" class="dc-form-control input-right item-amount" value="{{ number_format($line->amount, 2) }}" readonly>
+                                <input type="text" name="items[{{ $rowIndex }}][amount]"
+                                    class="dc-form-control input-right item-amount"
+                                    value="{{ number_format($line->amount, 2) }}" readonly>
                             </td>
                             <td>
                                 <div class="form-check">
-                                    <input class="form-check-input item-tax" type="checkbox" name="items[{{ $rowIndex }}][tax]" value="1" {{ $line->tax ? 'checked' : '' }}>
+                                    <input class="form-check-input item-tax" type="checkbox"
+                                        name="items[{{ $rowIndex }}][tax]" value="1"
+                                        {{ $line->tax ? 'checked' : '' }}>
                                 </div>
                             </td>
                             <td>
                                 <span class="delete-icon delete-row" title="Delete line">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
+                                        <path
+                                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                                        </path>
                                     </svg>
                                 </span>
                             </td>
@@ -534,17 +587,21 @@
                                 ]) }}
                             </td>
                             <td>
-                                <input type="text" name="items[0][amount]" class="dc-form-control input-right item-amount" value="0.00" readonly>
+                                <input type="text" name="items[0][amount]"
+                                    class="dc-form-control input-right item-amount" value="0.00" readonly>
                             </td>
                             <td>
                                 <div class="form-check">
-                                    <input class="form-check-input item-tax" type="checkbox" name="items[0][tax]" value="1">
+                                    <input class="form-check-input item-tax" type="checkbox" name="items[0][tax]"
+                                        value="1">
                                 </div>
                             </td>
                             <td>
                                 <span class="delete-icon delete-row" title="Delete line">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
+                                        <path
+                                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                                        </path>
                                     </svg>
                                 </span>
                             </td>
@@ -574,12 +631,13 @@
 
                     <div class="info-field">
                         <label class="dc-form-label">{{ __('Attachments') }}</label>
-                        @if($delayedCredit->attachments && count($delayedCredit->attachments) > 0)
+                        @if ($delayedCredit->attachments && count($delayedCredit->attachments) > 0)
                             <div class="mb-2">
                                 <strong>{{ __('Existing:') }}</strong>
-                                @foreach($delayedCredit->attachments as $attachment)
+                                @foreach ($delayedCredit->attachments as $attachment)
                                     <span class="existing-attachment">
-                                        <a href="{{ asset('storage/uploads/delayed_credit_attachments/' . $attachment) }}" target="_blank">{{ $attachment }}</a>
+                                        <a href="{{ asset('storage/uploads/delayed_credit_attachments/' . $attachment) }}"
+                                            target="_blank">{{ $attachment }}</a>
                                     </span>
                                 @endforeach
                             </div>
@@ -590,6 +648,10 @@
                         </div>
                         <input type="file" name="attachments[]" id="attachments" multiple style="display: none;">
                         <div id="attachment-list" class="mt-2"></div>
+                        <div class="mt-2 text-center">
+                            <a href="#" class="attachment-link"
+                                style="font-size: 13px;">{{ __('Show existing') }}</a>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -604,10 +666,16 @@
         </div>
     </div>
 
+    {{-- Privacy --}}
+    <div class="text-center" style="padding: 12px 0;">
+        <a href="#" style="color: #0077c5; font-size: 13px; text-decoration: none;">{{ __('Privacy') }}</a>
+    </div>
+
     {{-- Footer --}}
     <div class="dc-footer">
         <div class="footer-left">
-            <button type="button" class="dc-btn dc-btn-secondary" onclick="$('#delayedCreditModal').modal('hide');">{{ __('Cancel') }}</button>
+            <button type="button" class="dc-btn dc-btn-secondary"
+                onclick="$('#delayedCreditModal').modal('hide');">{{ __('Cancel') }}</button>
         </div>
         <div class="footer-center">
             <a href="#" class="text-primary">{{ __('Make recurring') }}</a>
@@ -615,12 +683,15 @@
         <div class="footer-actions">
             <div class="dc-btn-group dropup">
                 <button type="submit" class="dc-btn dc-btn-primary">{{ __('Save and close') }}</button>
-                <button type="button" class="dc-btn dc-btn-primary dropdown-toggle-split" onclick="document.getElementById('saveMenu').classList.toggle('show')">
+                <button type="button" class="dc-btn dc-btn-primary dropdown-toggle-split"
+                    onclick="document.getElementById('saveMenu').classList.toggle('show')">
                     <span>▼</span>
                 </button>
                 <ul class="dc-dropdown-menu" id="saveMenu">
-                    <li><button type="submit" class="dc-dropdown-item" name="save_action" value="save_close">{{ __('Save and close') }}</button></li>
-                    <li><button type="submit" class="dc-dropdown-item" name="save_action" value="save_new">{{ __('Save and new') }}</button></li>
+                    <li><button type="submit" class="dc-dropdown-item" name="save_action"
+                            value="save_close">{{ __('Save and close') }}</button></li>
+                    <li><button type="submit" class="dc-dropdown-item" name="save_action"
+                            value="save_new">{{ __('Save and new') }}</button></li>
                 </ul>
             </div>
         </div>
@@ -679,7 +750,7 @@
                     <td>
                         <select name="items[${rowIndex}][item]" class="dc-form-select item-select">
                             <option value="">Select a product/service</option>
-                            @foreach($product_services as $id => $name)
+                            @foreach ($product_services as $id => $name)
                                 <option value="{{ $id }}">{{ $name }}</option>
                             @endforeach
                         </select>
@@ -717,7 +788,7 @@
 
         // Clear all lines
         $('#clear-lines').on('click', function() {
-            if (confirm('{{ __("Clear all lines?") }}')) {
+            if (confirm('{{ __('Clear all lines?') }}')) {
                 $('#items-body .item-row').slice(1).remove();
                 var $first = $('#items-body .item-row:first');
                 $first.find('.item-select').val('');
@@ -752,7 +823,7 @@
             var productId = $(this).val();
             if (productId) {
                 $.ajax({
-                    url: '{{ route("invoice.product") }}',
+                    url: '{{ route('invoice.product') }}',
                     type: 'POST',
                     dataType: 'json', // 🔥 THIS LINE
                     data: {
@@ -761,7 +832,8 @@
                     },
                     success: function(response) {
                         if (response.product) {
-                            $row.find('.item-description').val(response.product.description || '');
+                            $row.find('.item-description').val(response.product
+                                .description || '');
                             $row.find('.item-quantity').val(1);
                             $row.find('.item-price').val(response.product.sale_price || 0);
                             recalcRow($row);
@@ -787,5 +859,123 @@
                 $('#saveMenu').removeClass('show');
             }
         });
+    });
+</script>
+<script>
+    $(document).ready(function() {
+        var currentSelect = null;
+
+        function openAddNewModal($select) {
+            if ($select.val() !== '__add__') return;
+            $select.val(''); // reset dropdown
+            currentSelect = $select; // save reference
+            var url = $select.data('create-url');
+            var title = $select.data('create-title') || 'Create New';
+
+            // prevent duplicate modal
+            if ($('#globalAddNewModal').length) {
+                $('#globalAddNewModal').modal('show');
+                return;
+            }
+
+            var $modal = $(`
+                        <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">Loading...</div>
+                            </div>
+                        </div>
+                        </div>
+                    `);
+
+            $('body').append($modal);
+
+            $.get(url, function(html) {
+                $modal.find('.modal-body').html(html);
+
+                // z-index stacking
+                var zIndex = 1070 + ($('.modal:visible').length * 10);
+                $modal.css('z-index', zIndex);
+                setTimeout(function() {
+                    $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                        'modal-stack');
+                }, 0);
+
+                $modal.modal('show');
+            });
+
+            $modal.on('hidden.bs.modal', function() {
+                $modal.remove();
+            });
+        }
+
+        // Detect "Add New" selection
+        $(document).on('change', 'select', function() {
+            var $select = $(this);
+            if ($select.val() === '__add__') {
+                openAddNewModal($select);
+            }
+        });
+
+        // AJAX submit for dynamic modal
+        $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+            e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $modal = $form.closest('#globalAddNewModal');
+
+            // Find the select that triggered this modal
+            var $select = currentSelect;
+
+            $.ajax({
+                url: $form.attr('action'),
+                method: $form.attr('method') || 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        // 🔹 Insert new option before the "Add New" of the same select
+                        var $addNewOption = $select.find('option[value="__add__"]').first();
+                        var $newOption = $('<option>', {
+                            value: response.data.id,
+                            text: response.data.name
+                        });
+
+                        // Add data attributes if they exist in the response
+                        if (response.data.due_in_days !== undefined) {
+                            $newOption.attr('data-days', response.data.due_in_days);
+                        }
+
+                        if ($addNewOption.length) {
+                            $newOption.insertBefore($addNewOption);
+                        } else {
+                            $select.append($newOption);
+                        }
+
+                        $select.val(response.data.id).trigger('change');
+                        $modal.modal('hide');
+                    } else {
+                        alert(response.message || 'Something went wrong!');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        var errors = xhr.responseJSON.errors;
+                        $form.find('.invalid-feedback').remove();
+                        $.each(errors, function(key, msgs) {
+                            $form.find('[name="' + key + '"]').after(
+                                `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                            );
+                        });
+                    } else {
+                        alert('Server error!');
+                    }
+                }
+            });
+        });
+
     });
 </script>
