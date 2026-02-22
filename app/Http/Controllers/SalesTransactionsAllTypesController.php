@@ -328,7 +328,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'no' => '#' . ($cn->credit_id ?? $cn->id),
                     'customer' => optional($cn->customer_detail)->name ?? '-',
                     'memo' => $cn->description ?? '',
-                    'amount' => -$cn->total_amount,
+                    'amount' => $cn->total_amount,
                     'status' => __('Open'),
                    'view_url' => route('delayed-charge.edit', $cn->id),
                     'delete_url' => route('delayed-charge.destroy', $cn->id),

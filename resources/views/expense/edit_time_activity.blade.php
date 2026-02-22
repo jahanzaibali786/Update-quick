@@ -131,14 +131,14 @@
                                                     <label class="form-check-label qbo-checkbox-label"
                                                         for="billable">{{ __('Billable (per hour)') }}</label>
                                                 </div>
-                                                <div class="form-check form-check-inline qbo-checkbox-item" id="rate_div"
+                                                <div class="form-check form-check-inline qbo-checkbox-item rate_div"
                                                     style="{{ $timeActivity->billable ? '' : 'display: none;' }}">
                                                     <input class="form-control qbo-input-inline" type="number"
                                                         id="rate" name="rate" placeholder="0.00"
                                                         value="{{ $timeActivity->rate }}"
                                                         style="width: 100px; display: inline-block;">
                                                 </div>
-                                                <div class="form-check form-check-inline qbo-checkbox-item">
+                                                <div class="form-check form-check-inline qbo-checkbox-item rate_div">
                                                     <input class="form-check-input qbo-checkbox" type="checkbox"
                                                         id="taxable" name="taxable" value="1"
                                                         {{ $timeActivity->taxable ? 'checked' : '' }}>
@@ -967,9 +967,9 @@
 
             $('#billable').change(function() {
                 if ($(this).is(':checked')) {
-                    $('#rate_div').show();
+                    $('.rate_div').show();
                 } else {
-                    $('#rate_div').hide();
+                    $('.rate_div').hide();
                 }
                 calculateTotal();
             });

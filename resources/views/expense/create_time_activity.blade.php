@@ -79,9 +79,10 @@
 
                         </div>
                         <div class="TrowserHeader">
-                            <a href="{{route('sales.transactions.index')}}" class="text-dark me-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" color="currentColor" width="24px" height="24px" focusable="false"
-                                    aria-hidden="true" class="">
+                            <a href="{{ route('sales.transactions.index') }}" class="text-dark me-2"><svg
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    color="currentColor" width="24px" height="24px" focusable="false" aria-hidden="true"
+                                    class="">
                                     <path fill="currentColor"
                                         d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z">
                                     </path>
@@ -111,7 +112,38 @@
                                         <div class="col-md-6 qbo-left-column">
                                             <div class="form-group qbo-form-group" id="customer-box">
                                                 {{ Form::label('user_id', __('Name'), ['class' => 'form-label qbo-label']) }}
-                                                {{ Form::select('user_id', $venders, null, ['class' => 'form-control select2 qbo-select', 'id' => 'user_id', 'placeholder' => 'Select name']) }}
+                                                <select id="user_id" name="payee" class="form-control select"
+                                                    required>
+                                                    <option value="">Who did you pay?</option>
+
+                                                    {{-- Employees --}}
+                                                    <optgroup label="employee">
+                                                        <option value="__add_employee" data-create-type="employee"
+                                                            data-create-url="{{ route('user.create') }}"
+                                                            data-create-title="Add New Employee">
+                                                            ➕ Add New Employee
+                                                        </option>
+                                                        @foreach ($employees as $id => $name)
+                                                            <option value="employee_{{ $id }}">
+                                                                {{ $name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+
+                                                    {{-- Vendors --}}
+                                                    <optgroup label="vendor">
+                                                        <option value="__add_vendor" data-create-type="vendor"
+                                                            data-create-url="{{ route('vender.create') }}"
+                                                            data-create-title="Add New Vendor">
+                                                            ➕ Add New vendor
+                                                        </option>
+                                                        @foreach ($venders as $id => $name)
+                                                            <option value="vendor_{{ $id }}">
+                                                                {{ $name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                </select>
                                             </div>
                                             <div class="form-group qbo-form-group">
                                                 {{ Form::label('customer_id', __('Customers'), ['class' => 'form-label qbo-label']) }}
@@ -128,13 +160,12 @@
                                                     <label class="form-check-label qbo-checkbox-label"
                                                         for="billable">{{ __('Billable (per hour)') }}</label>
                                                 </div>
-                                                <div class="form-check form-check-inline qbo-checkbox-item"
-                                                    id="rate_div">
+                                                <div class="form-check form-check-inline qbo-checkbox-item rate_div">
                                                     <input class="form-control qbo-input-inline" type="number"
                                                         id="rate" name="rate" placeholder="0.00"
                                                         style="width: 100px; display: inline-block;">
                                                 </div>
-                                                <div class="form-check form-check-inline qbo-checkbox-item">
+                                                <div class="form-check form-check-inline qbo-checkbox-item rate_div">
                                                     <input class="form-check-input qbo-checkbox" type="checkbox"
                                                         id="taxable" name="taxable" value="1">
                                                     <label class="form-check-label qbo-checkbox-label"
@@ -280,6 +311,11 @@
                                 </div>
 
                                 <style>
+                                    #globalAddNewModal .modal-dialog {
+                                        width: 800px !important;
+                                        max-width: 800px !important;
+                                    }
+
                                     .header-action-btn {
                                         padding: 6px 12px;
                                         font-weight: 700;
@@ -1065,9 +1101,9 @@
 
             $('#billable').change(function() {
                 if ($(this).is(':checked')) {
-                    $('#rate_div').show();
+                    $('.rate_div').show();
                 } else {
-                    $('#rate_div').hide();
+                    $('.rate_div').hide();
                 }
             });
 
@@ -1153,6 +1189,193 @@
 
             // Initial calculation on page load
             calculateTotal();
+
+            // Auto-fill rate when service is selected/changed
+            var serviceRates = @json($serviceRates ?? []);
+            $('#service_id').on('change', function() {
+                var serviceId = $(this).val();
+                if (serviceId && serviceRates[serviceId] !== undefined) {
+                    $('#rate').val(parseFloat(serviceRates[serviceId]).toFixed(2));
+                } else {
+                    $('#rate').val('');
+                }
+                calculateTotal();
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            var currentSelect = null;
+            var currentType = null;
+
+            function openAddNewModal($select) {
+
+                let v = $select.val();
+
+                if (!(v === '__add__' || v.startsWith('__add_'))) {
+                    return;
+                }
+                $select.val(''); // reset dropdown
+                currentSelect = $select; // save reference
+                if (v.startsWith('__add_')) {
+                    var url = $select.attr("data-create-url");
+                    var title = $select.attr("data-create-title");
+                    currentType = $select.attr("data-create-type");
+                } else {
+                    var url = $select.data('create-url');
+                    var title = $select.data('create-title') || 'Create New';
+
+                }
+                console.log(url, title, currentType, 'ad');
+
+                // prevent duplicate modal
+                if ($('#globalAddNewModal').length) {
+                    $('#globalAddNewModal').modal('show');
+                    return;
+                }
+                var $modal = $(`
+                <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">Loading...</div>
+                    </div>
+                </div>
+                </div>
+            `);
+
+                $('body').append($modal);
+
+                $.get(url, function(html) {
+                    $modal.find('.modal-body').html(html);
+
+                    // z-index stacking
+                    var zIndex = 1070 + ($('.modal:visible').length * 10);
+                    $modal.css('z-index', zIndex);
+                    setTimeout(function() {
+                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                            'modal-stack');
+                    }, 0);
+
+                    $modal.modal('show');
+                });
+
+                $modal.on('hidden.bs.modal', function() {
+                    $modal.remove();
+                });
+            }
+
+            // Detect "Add New" selection
+            $(document).on('change', 'select', function() {
+                var $select = $(this);
+                if ($select.val() === '__add__') {
+                    openAddNewModal($select);
+                } else if ($select.val().startsWith("__add_")) {
+                    let selected = $select.find(":selected");
+
+                    // Move attributes to SELECT so your global function remains SAME
+                    $select.attr("data-create-url", selected.data("create-url"));
+                    $select.attr("data-create-title", selected.data("create-title"));
+                    $select.attr("data-create-type", selected.data("create-type"));
+                    openAddNewModal($select);
+                }
+            });
+            // $(document).on('change', '#payee_all', function () {
+            //     let $select = $(this);
+            //     let value = $select.val();
+
+            //     // detect any add option
+            //     if (value === "__add__" || value.startsWith("__add_")) {
+            //         // Force modal to use THIS option's data attributes
+            //         let selected = $select.find(":selected");
+
+            //         // Move attributes to SELECT so your global function remains SAME
+            //         $select.attr("data-create-url", selected.data("create-url"));
+            //         $select.attr("data-create-title", selected.data("create-title"));
+            //         // Call your existing global modal function
+            //         openAddNewModal($select);
+
+            //     }
+            // });
+
+            // AJAX submit for dynamic modal
+            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+                e) {
+                e.preventDefault();
+                var $form = $(this);
+                var $modal = $form.closest('#globalAddNewModal');
+
+                // Find the select that triggered this modal
+                var $select = currentSelect;
+
+                $.ajax({
+                    url: $form.attr('action'),
+                    method: $form.attr('method') || 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            if (currentType != null) {
+                                console.log(currentType);
+                                let $targetGroup = $('optgroup[label="' + currentType + '"]',
+                                    $select);
+
+                                let $newOption = $('<option>', {
+                                    value: currentType + '_' + response.data
+                                    .id, // group prefix
+                                    text: response.data.name
+                                });
+
+                                // Insert after __add_type
+                                $targetGroup.find('option[value="__add_' + currentType + '"]')
+                                    .after($newOption);
+
+                                // Select new value
+                                $select.val(currentType + '_' + response.data.id).trigger(
+                                    'change');
+
+                            } else {
+
+
+                                // 🔹 Insert new option before the "Add New" of the same select
+                                var $addNewOption = $select.find('option[value="__add__"]')
+                                    .first();
+                                var $newOption = $('<option>', {
+                                    value: response.data.id,
+                                    text: response.data.name
+                                });
+
+                                if ($addNewOption.length) {
+                                    $select.append($newOption);
+                                    // $newOption.insertBefore($addNewOption);
+                                } else {
+                                    $select.append($newOption);
+                                }
+                                $select.val(response.data.id).trigger('change');
+                            }
+                            $modal.modal('hide');
+                        } else {
+                            alert(response.message || 'Something went wrong!');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.errors;
+                            $form.find('.invalid-feedback').remove();
+                            $.each(errors, function(key, msgs) {
+                                $form.find('[name="' + key + '"]').after(
+                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                );
+                            });
+                        } else {
+                            alert('Server error!');
+                        }
+                    }
+                });
+            });
+
         });
     </script>
 @endpush

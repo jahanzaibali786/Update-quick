@@ -13,8 +13,8 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <style>
         /* =========================================
-                   QBO Expense Transactions - Exact Design
-                   ========================================= */
+                       QBO Expense Transactions - Exact Design
+                       ========================================= */
 
         /* Page container */
         .qbo-expense-container {
@@ -254,8 +254,8 @@
         }
 
         /* =========================================
-                   Table - QBO Style
-                   ========================================= */
+                       Table - QBO Style
+                       ========================================= */
         .qbo-table-wrapper {
             background: #fff;
             overflow-x: auto;
@@ -362,8 +362,8 @@
         }
 
         /* =========================================
-                   Footer/Pagination
-                   ========================================= */
+                       Footer/Pagination
+                       ========================================= */
         .qbo-table-footer {
             display: flex;
             justify-content: flex-end;
@@ -706,7 +706,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($transactions ?? [] as $txn)
+                    @foreach ($transactions ?? [] as $txn)
                         <tr>
                             <td><input type="checkbox" class="form-check-input row-checkbox" value="{{ $txn['id'] }}"
                                     data-type="{{ $txn['type_key'] }}"></td>
@@ -750,11 +750,7 @@
                                 <a href="{{ $txn['view_url'] }}" class="qbo-action-btn">{{ __('View/Edit') }}</a>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="17" class="text-center">{{ __('No transactions found.') }}</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
                 <tfoot>
                     <tr class="qbo-total-row">

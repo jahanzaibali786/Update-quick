@@ -2186,9 +2186,11 @@ class ExpenseController extends Controller
             $customers = Customer::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('name', 'id');
             $projects = Project::where('created_by', '=', \Auth::user()->creatorId())->get()->pluck('project_name', 'id');
 
-            $services = ProductService::where('created_by', \Auth::user()->creatorId())->where('type', 'service')->get()->pluck('name', 'id');
+            $serviceModels = ProductService::where('created_by', \Auth::user()->creatorId())->where('type', 'service')->get();
+            $services = $serviceModels->pluck('name', 'id');
+            $serviceRates = $serviceModels->pluck('sale_price', 'id');
 
-            return view('expense.create_time_activity', compact('employees', 'venders', 'customers', 'projects', 'services'));
+            return view('expense.create_time_activity', compact('employees', 'venders', 'customers', 'projects', 'services', 'serviceRates'));
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));
         }
@@ -2223,17 +2225,31 @@ class ExpenseController extends Controller
                 $request->all(),
                 [
                     'date' => 'required',
-                    'user_id' => 'required',
+                    'payee' => 'required',
                 ]
             );
             if ($validator->fails()) {
                 $messages = $validator->getMessageBag();
                 return redirect()->back()->with('error', $messages->first());
             }
+            // Parse payee field (format: "type_id", e.g., "customer_1", "vendor_2", "employee_3")
+                $payeeParts = explode('_', $request->payee);
+                if (count($payeeParts) !== 2) {
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => __('Invalid payee format.')
+                        ], 422);
+                    }
+                    return redirect()->back()->with('error', __('Invalid payee format.'));
+                }
+                
+                $payeeType = $payeeParts[0]; // 'customer', 'vendor', or 'employee'
+                $payeeId = $payeeParts[1]; 
 
             $timeActivity = new \App\Models\TimeActivity();
-            $timeActivity->user_type = $request->user_type;
-            $timeActivity->user_id = $request->user_id;
+            $timeActivity->user_type = $payeeType;
+            $timeActivity->user_id = $payeeId;
             $timeActivity->customer_id = $request->customer_id;
             $timeActivity->service_id = $request->service_id;
             $timeActivity->date = $request->date;
