@@ -95,11 +95,12 @@
                     style="padding-top: 70px; padding-bottom: 80px; background-color: #ffffff;">
                     <div class="row qbo-form-container">
                         @php
-                            $times = [];
+                            $times = ['AM' => [], 'PM' => []];
                             for ($i = 0; $i < 24; $i++) {
                                 foreach (['00', '15', '30', '45'] as $min) {
                                     $time = sprintf('%02d:%s', $i, $min);
-                                    $times[$time] = date('h:i A', strtotime("2020-01-01 $time"));
+                                    $period = $i < 12 ? 'AM' : 'PM';
+                                    $times[$period][$time] = date('h:i A', strtotime("2020-01-01 $time"));
                                 }
                             }
                         @endphp
@@ -1324,7 +1325,7 @@
 
                                 let $newOption = $('<option>', {
                                     value: currentType + '_' + response.data
-                                    .id, // group prefix
+                                        .id, // group prefix
                                     text: response.data.name
                                 });
 

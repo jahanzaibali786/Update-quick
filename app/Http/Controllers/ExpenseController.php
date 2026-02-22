@@ -2218,6 +2218,23 @@ class ExpenseController extends Controller
         }
     }
 
+    public function deleteTimeActivity($id)
+    {
+  
+        if (\Auth::user()->can('delete bill')) {
+            $timeActivity = \App\Models\TimeActivity::find($id);
+            if (!$timeActivity || $timeActivity->created_by != \Auth::user()->creatorId()) {
+                return redirect()->back()->with('error', __('Time Activity not found or permission denied.'));
+            }
+
+            $timeActivity->delete();
+
+            return redirect()->route('sales.transactions.index')->with('success', __('Time Activity successfully deleted.'));
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
+        }
+    }
+
     public function storeTimeActivity(Request $request)
     {
         if (\Auth::user()->can('create bill')) {

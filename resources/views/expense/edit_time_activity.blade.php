@@ -96,11 +96,12 @@
                     style="padding-top: 70px; padding-bottom: 80px; background-color: #ffffff;">
                     <div class="row qbo-form-container">
                         @php
-                            $times = [];
+                            $times = ['AM' => [], 'PM' => []];
                             for ($i = 0; $i < 24; $i++) {
                                 foreach (['00', '15', '30', '45'] as $min) {
                                     $time = sprintf('%02d:%s', $i, $min);
-                                    $times[$time] = date('h:i A', strtotime("2020-01-01 $time"));
+                                    $period = $i < 12 ? 'AM' : 'PM';
+                                    $times[$period][$time] = date('h:i A', strtotime("2020-01-01 $time"));
                                 }
                             }
                         @endphp
@@ -188,13 +189,13 @@
                                                     <div class="col-md-6">
                                                         <div class="form-group qbo-form-group">
                                                             {{ Form::label('start_time', __('Start time'), ['class' => 'form-label qbo-label']) }}
-                                                            {{ Form::select('start_time', $times, $timeActivity->start_time, ['class' => 'form-control select2 qbo-select', 'id' => 'start_time', 'placeholder' => 'Select Start Time']) }}
+                                                            {{ Form::select('start_time', $times, substr($timeActivity->start_time, 0, 5), ['class' => 'form-control select2 qbo-select', 'id' => 'start_time', 'placeholder' => 'Select Start Time']) }}
                                                         </div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <div class="form-group qbo-form-group">
                                                             {{ Form::label('end_time', __('End time'), ['class' => 'form-label qbo-label']) }}
-                                                            {{ Form::select('end_time', $times, $timeActivity->end_time, ['class' => 'form-control select2 qbo-select', 'id' => 'end_time', 'placeholder' => 'Select End Time']) }}
+                                                            {{ Form::select('end_time', $times, substr($timeActivity->end_time, 0, 5), ['class' => 'form-control select2 qbo-select', 'id' => 'end_time', 'placeholder' => 'Select End Time']) }}
                                                         </div>
                                                     </div>
                                                     <div class="col-md-12">
@@ -259,6 +260,24 @@
                                     ">Cancel</a>
                                     </div>
 
+                                    <!-- Center section: delete action -->
+                                    <div class="footer-center d-flex align-items-center ">
+                                        <a href="#"
+                                            onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this time activity?')) { document.getElementById('delete-time-activity-form').submit(); }"
+                                            style="
+                                                background: #fff;
+                                                border: none;
+                                                font-weight: 700;
+                                                color: #00892E !important;               
+                                                padding: 6px 12px !important;
+                                                border-radius: 4px;
+                                                cursor: pointer;
+                                                font-size: 14px;
+                                                white-space: nowrap;
+                                                text-decoration: none;
+                                            ">Delete</a>
+                                    </div>
+
                                     <!-- Right section: primary actions -->
                                     <div class="footer-right d-flex align-items-center gap-2">
                                         <button type="submit" class="btn btn-light btn-sm-qbo"
@@ -285,6 +304,7 @@
                                         </div>
                                     </div>
                                 </div>
+
 
                                 <style>
                                     .header-action-btn {
@@ -461,6 +481,12 @@
                             </div>
                         </div>
                         {{ Form::close() }}
+
+                        <!-- Hidden delete form (must be outside the main form) -->
+                        <form id="delete-time-activity-form" action="{{ route('timeActivity.delete', $timeActivity->id) }}" method="POST" style="display: none;">
+                            @csrf
+                            @method('DELETE')
+                        </form>
                     </div>
                 </div>
             </div>

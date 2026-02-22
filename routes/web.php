@@ -220,6 +220,7 @@ Route::get('/timeActivity', [ExpenseController::class, 'timeActivityCreate'])->n
 Route::get('/timeActivity/{id}/edit', [ExpenseController::class, 'editTimeActivity'])->name('timeActivity.edit');
 Route::post('/timeActivity/store', [ExpenseController::class, 'storeTimeActivity'])->name('timeActivity.store');
 Route::put('/timeActivity/update/{id}', [ExpenseController::class, 'updateTimeActivity'])->name('timeActivity.update');
+Route::delete('/timeActivity/delete/{id}', [ExpenseController::class, 'deleteTimeActivity'])->name('timeActivity.delete');
 
 // for checks(cheque)
 Route::get('/check', [ExpenseController::class, 'checksCreate'])->name('checks.create');
