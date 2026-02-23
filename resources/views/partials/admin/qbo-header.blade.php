@@ -206,6 +206,7 @@
                             <li><a href="#">Recurring transactions</a></li>
                             <li><a href="#">Attachments</a></li>
                             <li><a href="#">Custom fields</a></li>
+                            <li><a href="{{ route('users.index') }}">Add User</a></li>
                             <li><a href="#">Rules</a></li>
                             <li><a href="{{ route('taxes.index') }}">Taxes</a></li>
                             <li><a href="{{ route('product-unit.index') }}">Units</a></li>

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('bills', function (Blueprint $table) {
             // Name fields
             if (!Schema::hasColumn('bills', 'payment_method')) {
-                $table->integer('payment_method')->nullable()->after('category_id');
+                $table->string('payment_method',50)->nullable()->after('category_id');
             }
           
         });

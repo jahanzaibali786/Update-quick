@@ -4,7 +4,7 @@
 @endsection
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('bill.index') }}">{{ __('Bill') }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('expense.index') }}">{{ __('Bill') }}</a></li>
     <li class="breadcrumb-item">{{ __('Bill Create') }}</li>
 @endsection
 
@@ -625,37 +625,37 @@
         })
     </script>
     {{-- end for user select --}}
-    <script>
-        $(document).ready(function() {
-            var currentSelect = null;
-            var currentType = null;
+<script>
+    $(document).ready(function() {
+        var currentSelect = null;
+        var currentType = null;
 
-            function openAddNewModal($select) {
+        function openAddNewModal($select) {  
+    
+            let v = $select.val();
 
-                let v = $select.val();
+            if (!(v === '__add__' || v.startsWith('__add_'))) {
+                return;
+            }
+            $select.val(''); // reset dropdown
+            currentSelect = $select; // save reference
+            if(v.startsWith('__add_')) {
+                var url = $select.attr("data-create-url");
+                var title = $select.attr("data-create-title");
+                 currentType = $select.attr("data-create-type");
+            }else{
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
 
-                if (!(v === '__add__' || v.startsWith('__add_'))) {
-                    return;
-                }
-                $select.val(''); // reset dropdown
-                currentSelect = $select; // save reference
-                if (v.startsWith('__add_')) {
-                    var url = $select.attr("data-create-url");
-                    var title = $select.attr("data-create-title");
-                    currentType = $select.attr("data-create-type");
-                } else {
-                    var url = $select.data('create-url');
-                    var title = $select.data('create-title') || 'Create New';
-
-                }
-                console.log(url, title, currentType, 'ad');
-
-                // prevent duplicate modal
-                if ($('#globalAddNewModal').length) {
-                    $('#globalAddNewModal').modal('show');
-                    return;
-                }
-                var $modal = $(`
+            }
+            console.log(url,title,currentType,'ad');
+            
+            // prevent duplicate modal
+            if ($('#globalAddNewModal').length) {
+                $('#globalAddNewModal').modal('show');
+                return;
+            }
+            var $modal = $(`
                 <div class="modal fade" id="globalAddNewModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -669,77 +669,76 @@
                 </div>
             `);
 
-                $('body').append($modal);
+            $('body').append($modal);
+                        
+            $.get(url, function(html) {
+                $modal.find('.modal-body').html(html);
 
-                $.get(url, function(html) {
-                    $modal.find('.modal-body').html(html);
+                // z-index stacking
+                var zIndex = 1070 + ($('.modal:visible').length * 10);
+                $modal.css('z-index', zIndex);
+                setTimeout(function() {
+                    $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                        'modal-stack');
+                }, 0);
 
-                    // z-index stacking
-                    var zIndex = 1070 + ($('.modal:visible').length * 10);
-                    $modal.css('z-index', zIndex);
-                    setTimeout(function() {
-                        $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
-                            'modal-stack');
-                    }, 0);
-
-                    $modal.modal('show');
-                });
-
-                $modal.on('hidden.bs.modal', function() {
-                    $modal.remove();
-                });
-            }
-
-            // Detect "Add New" selection
-            $(document).on('change', 'select', function() {
-                var $select = $(this);
-                if ($select.val() === '__add__') {
-                    openAddNewModal($select);
-                } else if ($select.val().startsWith("__add_")) {
-                    let selected = $select.find(":selected");
-
-                    // Move attributes to SELECT so your global function remains SAME
-                    $select.attr("data-create-url", selected.data("create-url"));
-                    $select.attr("data-create-title", selected.data("create-title"));
-                    $select.attr("data-create-type", selected.data("create-type"));
-
-                    openAddNewModal($select);
-                }
+                $modal.modal('show');
             });
-            // $(document).on('change', '#payee_all', function () {
-            //     let $select = $(this);
-            //     let value = $select.val();
 
-            //     // detect any add option
-            //     if (value === "__add__" || value.startsWith("__add_")) {
-            //         // Force modal to use THIS option's data attributes
-            //         let selected = $select.find(":selected");
+            $modal.on('hidden.bs.modal', function() {
+                $modal.remove();
+            });
+        }
 
-            //         // Move attributes to SELECT so your global function remains SAME
-            //         $select.attr("data-create-url", selected.data("create-url"));
-            //         $select.attr("data-create-title", selected.data("create-title"));
-            //         // Call your existing global modal function
-            //         openAddNewModal($select);
+        // Detect "Add New" selection
+        $(document).on('change', 'select', function() {
+            var $select = $(this);
+            if ($select.val() === '__add__') {
+                openAddNewModal($select);
+            }else if ($select.val().startsWith("__add_")) {
+                let selected = $select.find(":selected");
 
-            //     }
-            // });
+                // Move attributes to SELECT so your global function remains SAME
+                $select.attr("data-create-url", selected.data("create-url"));
+                $select.attr("data-create-title", selected.data("create-title"));
+                $select.attr("data-create-type", selected.data("create-type"));
+                openAddNewModal($select);
+            }
+        });
+        // $(document).on('change', '#payee_all', function () {
+        //     let $select = $(this);
+        //     let value = $select.val();
 
-            // AJAX submit for dynamic modal
-            $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
-                e) {
-                e.preventDefault();
-                var $form = $(this);
-                var $modal = $form.closest('#globalAddNewModal');
+        //     // detect any add option
+        //     if (value === "__add__" || value.startsWith("__add_")) {
+        //         // Force modal to use THIS option's data attributes
+        //         let selected = $select.find(":selected");
 
-                // Find the select that triggered this modal
-                var $select = currentSelect;
+        //         // Move attributes to SELECT so your global function remains SAME
+        //         $select.attr("data-create-url", selected.data("create-url"));
+        //         $select.attr("data-create-title", selected.data("create-title"));
+        //         // Call your existing global modal function
+        //         openAddNewModal($select);
+                
+        //     }
+        // });
 
-                $.ajax({
-                    url: $form.attr('action'),
-                    method: $form.attr('method') || 'POST',
-                    data: $form.serialize(),
-                    success: function(response) {
-                        if (response.success) {
+        // AJAX submit for dynamic modal
+        $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+            e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $modal = $form.closest('#globalAddNewModal');
+
+            // Find the select that triggered this modal
+            var $select = currentSelect;
+
+            $.ajax({
+                url: $form.attr('action'),
+                method: $form.attr('method') || 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
                         if(currentType != null){
                             console.log(currentType);
                              let $targetGroup = $('optgroup[label="' + currentType + '"]', $select);
@@ -773,29 +772,29 @@
                         }
                         $select.val(response.data.id).trigger('change');
                     }
-                            $modal.modal('hide');
-                        } else {
-                            alert(response.message || 'Something went wrong!');
-                        }
-                    },
-                    error: function(xhr) {
-                        if (xhr.status === 422) {
-                            var errors = xhr.responseJSON.errors;
-                            $form.find('.invalid-feedback').remove();
-                            $.each(errors, function(key, msgs) {
-                                $form.find('[name="' + key + '"]').after(
-                                    `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
-                                );
-                            });
-                        } else {
-                            alert('Server error!');
-                        }
+                        $modal.modal('hide');
+                    } else {
+                        alert(response.message || 'Something went wrong!');
                     }
-                });
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        var errors = xhr.responseJSON.errors;
+                        $form.find('.invalid-feedback').remove();
+                        $.each(errors, function(key, msgs) {
+                            $form.find('[name="' + key + '"]').after(
+                                `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                            );
+                        });
+                    } else {
+                        alert('Server error!');
+                    }
+                }
             });
-
         });
-    </script>
+
+    });
+</script>
 
     <script>
         $(document).ready(function() {
@@ -1239,7 +1238,7 @@
 
                             </div>
                             <div class="TrowserHeader">
-                                <a href="{{ route('bill.index') }}" class="text-dark me-2"><svg
+                                <a href="{{ route('expense.index') }}" class="text-dark me-2"><svg
                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         color="currentColor" width="24px" height="24px" focusable="false"
                                         aria-hidden="true" class="">
@@ -1390,11 +1389,11 @@
                                         <div class="bill-vendor-col">
                                             <div class="bill-field-group">
                                                 <label>{{ __('Vendor') }}</label>
-                                                <select name="vender_id" id="vender" class="form-control select2"
+                                                <select name="vender_id" id="vender" class="form-control select"
                                                     required data-create-url="{{ route('vender.create') }}"
                                                     data-create-title="Add New Vendor">
                                                     <option value="">{{ __('Choose a vendor') }}</option>
-                                                    <option value="__add_" data-create-type="vendor">
+                                                    <option value="__add__">
                                                         ➕ {{ __('Add New Vendor') }}
                                                     </option>
                                                     @foreach ($vendorOptions as $id => $opt)
@@ -1404,6 +1403,7 @@
                                                         @endif
                                                     @endforeach
                                                 </select>
+
                                             </div>
                                         </div>
                                         <div class="bill-balance-col">

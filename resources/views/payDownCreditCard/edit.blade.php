@@ -205,6 +205,176 @@
             });
         });
     </script>
+    <script>
+    $(document).ready(function() {
+        var currentSelect = null;
+        var currentType = null;
+
+        function openAddNewModal($select) {  
+    
+            let v = $select.val();
+
+            if (!(v === '__add__' || v.startsWith('__add_'))) {
+                return;
+            }
+            $select.val(''); // reset dropdown
+            currentSelect = $select; // save reference
+            if(v.startsWith('__add_')) {
+                var url = $select.attr("data-create-url");
+                var title = $select.attr("data-create-title");
+                 currentType = $select.attr("data-create-type");
+            }else{
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
+
+            }
+            console.log(url,title,currentType,'ad');
+            
+            // prevent duplicate modal
+            if ($('#globalAddNewModal').length) {
+                $('#globalAddNewModal').modal('show');
+                return;
+            }
+            var $modal = $(`
+                <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">Loading...</div>
+                    </div>
+                </div>
+                </div>
+            `);
+
+            $('body').append($modal);
+                        
+            $.get(url, function(html) {
+                $modal.find('.modal-body').html(html);
+
+                // z-index stacking
+                var zIndex = 1070 + ($('.modal:visible').length * 10);
+                $modal.css('z-index', zIndex);
+                setTimeout(function() {
+                    $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                        'modal-stack');
+                }, 0);
+
+                $modal.modal('show');
+            });
+
+            $modal.on('hidden.bs.modal', function() {
+                $modal.remove();
+            });
+        }
+
+        // Detect "Add New" selection
+        $(document).on('change', 'select', function() {
+            var $select = $(this);
+            if ($select.val() === '__add__') {
+                openAddNewModal($select);
+            }else if ($select.val().startsWith("__add_")) {
+                let selected = $select.find(":selected");
+
+                // Move attributes to SELECT so your global function remains SAME
+                $select.attr("data-create-url", selected.data("create-url"));
+                $select.attr("data-create-title", selected.data("create-title"));
+                $select.attr("data-create-type", selected.data("create-type"));
+                openAddNewModal($select);
+            }
+        });
+        // $(document).on('change', '#payee_all', function () {
+        //     let $select = $(this);
+        //     let value = $select.val();
+
+        //     // detect any add option
+        //     if (value === "__add__" || value.startsWith("__add_")) {
+        //         // Force modal to use THIS option's data attributes
+        //         let selected = $select.find(":selected");
+
+        //         // Move attributes to SELECT so your global function remains SAME
+        //         $select.attr("data-create-url", selected.data("create-url"));
+        //         $select.attr("data-create-title", selected.data("create-title"));
+        //         // Call your existing global modal function
+        //         openAddNewModal($select);
+                
+        //     }
+        // });
+
+        // AJAX submit for dynamic modal
+        $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+            e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $modal = $form.closest('#globalAddNewModal');
+
+            // Find the select that triggered this modal
+            var $select = currentSelect;
+
+            $.ajax({
+                url: $form.attr('action'),
+                method: $form.attr('method') || 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        if(currentType != null){
+                            console.log(currentType);
+                             let $targetGroup = $('optgroup[label="' + currentType + '"]', $select);
+
+                                let $newOption = $('<option>', {
+                                    value: currentType + '_' + response.data.id,  // group prefix
+                                    text: response.data.name
+                                });
+
+                                // Insert after __add_type
+                                $targetGroup.find('option[value="__add_' + currentType + '"]').after($newOption);
+
+                                // Select new value
+                                $select.val(currentType + '_' + response.data.id).trigger('change');
+
+                        }else{
+                            
+                        
+                        // 🔹 Insert new option before the "Add New" of the same select
+                        var $addNewOption = $select.find('option[value="__add__"]').first();
+                        var $newOption = $('<option>', {
+                            value: response.data.id,
+                            text: response.data.name
+                        });
+
+                        if ($addNewOption.length) {
+                            $select.append($newOption);
+                            // $newOption.insertBefore($addNewOption);
+                        } else {
+                            $select.append($newOption);
+                        }
+                        $select.val(response.data.id).trigger('change');
+                    }
+                        $modal.modal('hide');
+                    } else {
+                        alert(response.message || 'Something went wrong!');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        var errors = xhr.responseJSON.errors;
+                        $form.find('.invalid-feedback').remove();
+                        $.each(errors, function(key, msgs) {
+                            $form.find('[name="' + key + '"]').after(
+                                `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                            );
+                        });
+                    } else {
+                        alert('Server error!');
+                    }
+                }
+            });
+        });
+
+    });
+</script>
 
     <!-- Attachments CSS from Bill Create -->
     <style>
@@ -376,6 +546,10 @@
         .existing-attachment a:hover {
             text-decoration: underline;
         }
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
     </style>
 
     <div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true"
@@ -484,7 +658,6 @@
                                                         style="font-size: 12px; color: #6b7280;">{{ __('Which credit card did you pay?') }}</label>
                                                     <select name="credit_card_account_id" id="credit_card_account_id"
                                                         class="form-control select" required>
-                                                        <option value="">{{ __('Select credit card') }}</option>
                                                         @foreach ($creditCardAccounts as $id => $name)
                                                             <option value="{{ $id }}"
                                                                 {{ $payment->credit_card_account_id == $id ? 'selected' : '' }}>
@@ -499,8 +672,9 @@
                                                 <div class="col-6">
                                                     <label class="form-label"
                                                         style="font-size: 12px; color: #6b7280;">{{ __('Payee (optional)') }}</label>
-                                                    <select name="payee_id" id="payee_id" class="form-control select">
+                                                    <select name="payee_id" id="payee_id" class="form-control select" required data-url="{{ route('bill.vender') }}" data-create-url="{{ route('vender.create') }}" data-create-title="{{ __('Add New Vendor') }}">
                                                         <option value="">{{ __('Choose a payee') }}</option>
+                                                        <option value="__add__">➕ {{ __('Add New Vendor') }}</option>
                                                         @foreach ($vendors as $id => $name)
                                                             <option value="{{ $id }}"
                                                                 {{ $payment->payee_id == $id ? 'selected' : '' }}>

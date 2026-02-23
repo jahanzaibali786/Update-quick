@@ -1639,6 +1639,8 @@ class CreditCreditCardController extends Controller
     public function destroy($id)
     {
         if (\Auth::user()->can('delete bill')) {
+            try {
+            
             $expense = Bill::find($id);
             if ($expense->created_by == \Auth::user()->creatorId()) {
                 
@@ -1725,6 +1727,9 @@ class CreditCreditCardController extends Controller
                 return redirect()->route('expense.index')->with('success', __('Expense successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
+            }
+            } catch (\Exception $e) {
+                return redirect()->back()->with('error', $e->getMessage());
             }
         } else {
             return redirect()->back()->with('error', __('Permission denied.'));

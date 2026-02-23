@@ -778,7 +778,7 @@ public function index(Request $request)
                                 'bill_id' => $bill->id
                             ], 200);
                         }
-                        return redirect()->route('bill.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
+                        return redirect()->route('expense.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
                     } else {
                         \DB::commit();
                         if ($request->ajax() || $request->wantsJson()) {
@@ -800,7 +800,7 @@ public function index(Request $request)
                         'bill_id' => $bill->id
                     ], 200);
                 }
-                return redirect()->route('bill.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
+                return redirect()->route('expense.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
             } else {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
@@ -956,7 +956,7 @@ public function index(Request $request)
 
 
             \DB::commit();
-            return redirect()->route('bill.index')->with('success', __('Bill approved successfully and JV posted.'));
+            return redirect()->route('expense.index')->with('success', __('Bill approved successfully and JV posted.'));
         } catch (\Exception $e) {
             \DB::rollBack();
             // dd($e);
@@ -983,7 +983,7 @@ public function index(Request $request)
 
             Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Reject Bill', 'Bill rejected: ' . $request->rejection_reason);
             \DB::commit();
-            return redirect()->route('bill.index')->with('success', __('Bill rejected successfully.'));
+            return redirect()->route('expense.index')->with('success', __('Bill rejected successfully.'));
         } catch (\Exception $e) {
             \DB::rollBack();
             // dd($e);
@@ -2431,7 +2431,7 @@ public function index(Request $request)
                 TransactionLines::where('reference_id', $bill->id)->where('reference', 'Bill Account')->delete();
                 TransactionLines::where('reference_id', $bill->id)->where('reference', 'Bill Payment')->delete();
 
-                return redirect()->route('bill.index')->with('success', __('Bill successfully deleted.'));
+                return redirect()->route('expense.index')->with('success', __('Bill successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }

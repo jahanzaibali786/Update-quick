@@ -6,6 +6,8 @@ use App\Models\BankAccount;
 use App\Models\ChartOfAccount;
 use App\Models\CreditCardPayment;
 use App\Models\JournalEntry;
+use App\Models\JournalItem;
+use App\Models\TransactionLines;
 use App\Models\Utility;
 use App\Models\Vender;
 use App\Services\JournalService;
@@ -60,7 +62,6 @@ class PayDownCreditCardController extends Controller
         // Get bank accounts for payment
         $bankAccountsQuery = BankAccount::where('created_by', $companyId)->get();
         $bankAccounts = [];
-        $bankAccounts[''] = __('Select bank account');
         foreach ($bankAccountsQuery as $account) {
             $bankAccounts[$account->id] = $account->bank_name . ' ' . $account->holder_name;
         }
@@ -70,7 +71,7 @@ class PayDownCreditCardController extends Controller
             ->get()
             ->pluck('name', 'id')
             ->toArray();
-        $vendors = ['' => __('Choose a payee')] + $vendors;
+        $vendors =$vendors;
 
         return view('payDownCreditCard.create', compact('creditCardAccounts', 'bankAccounts', 'vendors'));
     }
@@ -357,6 +358,22 @@ class PayDownCreditCardController extends Controller
                     Storage::disk('public')->delete($attachment);
                 }
             }
+            $journalEntry = JournalEntry::where('reference_id', $payment->id)
+                    ->whereIn('module', ['pay_down_credit_card'])
+                    ->first();
+                    
+                if ($journalEntry) {
+                    // jourlanal item and transaction lines
+                        JournalItem::where('journal', $journalEntry->id)->delete();
+                
+                    // Delete transaction lines related to this journal
+                    TransactionLines::where('reference_id', $journalEntry->id)
+                        ->where('reference', 'Pay Down Credit Card Journal')
+                        ->delete();
+                    
+                    // Delete the journal entry itself
+                    $journalEntry->delete();
+                }
 
             $payment->delete();
 

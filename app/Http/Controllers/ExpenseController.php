@@ -1358,6 +1358,123 @@ class ExpenseController extends Controller
         return $journalEntry;
     }
 
+    
+
+    private function updateCheckJournalEntry($expense, $journalEntry)
+    {
+        // Build journal items from expense categories and products
+        $journalItems = [];
+
+        $vendor = null;
+        if ($expense->user_type == 'vendor') {
+            $vendor = Vender::find($expense->vender_id);
+        } elseif ($expense->user_type == 'employee') {
+            $vendor = Employee::find($expense->vender_id);
+        } elseif ($expense->user_type == 'customer') {
+            $vendor = Customer::find($expense->vender_id);
+        }
+        
+        $vendorName = $vendor ? $vendor->name : 'Unknown';
+
+        // Add category-based expenses (BillAccount with type='Check' for checks)
+        $expenseAccounts = BillAccount::where('ref_id', $expense->id)->where('type', 'Check')->get();
+        foreach ($expenseAccounts as $expenseAccount) {
+            $journalItems[] = [
+                'account_id' => $expenseAccount->chart_account_id,
+                'debit' => $expenseAccount->price,
+                'credit' => 0,
+                'description' => $expenseAccount->description ?: 'Check Account Expense',
+                'type' => 'Check',
+                'sub_type' => 'check account',
+                'name' => $vendorName,
+                'ref_number' => $expense->ref_number,
+                'user_type' => $expense->user_type,
+                'vendor_id' => $expense->vender_id,
+                'customer_id' => null,
+                'created_user' => \Auth::user()->id,
+                'created_by' => \Auth::user()->creatorId(),
+                'company_id' => \Auth::user()->ownedId(),
+            ];
+        }
+
+        // Add product/service items (BillProduct)
+        $expenseProducts = BillProduct::where('bill_id', $expense->id)->get();
+        foreach ($expenseProducts as $expenseProduct) {
+            $product = $expenseProduct->product;
+            
+            // Determine account ID based on product type
+            $accountId = null;
+            if ($product) {
+                $accountId = $expenseProduct->account_id ?: $product->expense_chartaccount_id;
+            }
+            
+            $journalItems[] = [
+                'account_id' => $accountId,
+                'debit' => $expenseProduct->line_total ?: ($expenseProduct->quantity * $expenseProduct->price),
+                'credit' => 0,
+                'description' => $expenseProduct->description ?: ($product ? $product->name : 'Check Product Expense'),
+                'product_id' => $expenseProduct->product_id,
+                'type' => 'Check',
+                'sub_type' => 'check item',
+                'name' => $vendorName,
+                'ref_number' => $expense->ref_number,
+                'user_type' => $expense->user_type,
+                'vendor_id' => $expense->vender_id,
+                'customer_id' => null,
+                'created_user' => \Auth::user()->id,
+                'created_by' => \Auth::user()->creatorId(),
+                'company_id' => \Auth::user()->ownedId(),
+            ];
+        }
+
+        $billPayment = BillPayment::where('bill_id', $expense->id)->first();
+        $bank = BankAccount::find($billPayment->account_id);
+        if($bank){
+            $accountPayable = ChartOfAccount::where('id', $bank->chart_account_id)->first();
+        }else{
+            $accountPayable = Utility::getAccountPayableAccount($expense->created_by);
+        }
+
+        // Calculate total amount
+        $totalAmount = 0;
+        foreach ($journalItems as $item) {
+            $totalAmount += $item['debit'];
+        }
+
+        // Update journal entry using JournalService
+        $updatedJournalEntry = JournalService::updateJournalEntry($journalEntry->id, [
+            'date' => $expense->bill_date,
+            'backdate' => true,
+            'reference' => \Auth::user()->checkNumberFormat($expense->bill_id),
+            'description' => 'Check from ' . $vendorName,
+            'voucher_type' => 'JV',
+            'category' => 'Check',
+            'module' => 'check',
+            'source' => 'check_update',
+            'created_user' => \Auth::user()->id,
+            'created_by' => \Auth::user()->creatorId(),
+            'owned_by' => \Auth::user()->ownedId(),
+            'ref_number' => $expense->ref_number,
+            'user_type' => $expense->user_type,
+            'vendor_id' => $expense->vender_id,
+            'company_id' => \Auth::user()->ownedId(),
+            'bill_id' => $expense->id,
+            'items' => $journalItems,
+            'ap_name' => $vendorName,
+            'ap_account_id' => $accountPayable->id,
+            'ap_amount' => $totalAmount,
+            'ap_sub_type' => 'check payment',
+            'ap_description' => 'Check Payment - ' . \Auth::user()->checkNumberFormat($expense->bill_id),
+        ]);
+
+        \Log::info('Journal entry updated for check', [
+            'expense_id' => $expense->id,
+            'journal_entry_id' => $updatedJournalEntry->id,
+        ]);
+        
+        return $updatedJournalEntry;
+    }
+
     public function approveExpense($id)
     {
         \DB::beginTransaction();
@@ -3009,8 +3126,8 @@ class ExpenseController extends Controller
                     if (!$billAccount) {
                         // Create new
                         $billAccount = new BillAccount();
-                        $billAccount->ref_id = $expense->id;
-                        $billAccount->type = 'Expense';
+                                            $billAccount->ref_id = $expense->id;
+                        $billAccount->type = 'Check';
                     }
 
 
@@ -3030,7 +3147,7 @@ class ExpenseController extends Controller
             
             // Delete removed categories (but check billable status first)
             $categoriesToDelete = BillAccount::where('ref_id', $expense->id)
-                ->where('type', 'Expense')
+                ->where('type', 'Check')
                 ->whereNotIn('id', $existingCategoryIds)
                 ->get();
 
@@ -3137,30 +3254,90 @@ class ExpenseController extends Controller
             $expensePayment->description = $request->payment_description ?? '';
             $expensePayment->save();
 
-            // ===================================
+                        // ===================================
             // UPDATE JOURNAL ENTRY using JournalService
             // ===================================
             $journalEntry = JournalEntry::where('reference_id', $expense->id)
-                ->where('module', 'expense')
+                ->where('module', 'check')
                 ->first();
             if ($journalEntry) {
                 // Update existing journal entry
-                $this->updateExpenseJournalEntry($expense, $journalEntry);
+                $this->updateCheckJournalEntry($expense, $journalEntry);
             } else {
                 // Create new journal entry if doesn't exist
-                $this->createExpenseJournalEntry($expense);
+                $this->createCheckJournalEntry($expense);
             }
 
             // Activity Log
-            Utility::makeActivityLog(\Auth::user()->id, 'Expense', $expense->id, 'Update Expense', 'Expense Updated');
+            Utility::makeActivityLog(\Auth::user()->id, 'Check', $expense->id, 'Update Check', 'Check Updated');
 
             \DB::commit();
-            return response()->json(['success' => __('Expense successfully updated.')]);
+            return response()->json(['success' => __('Check successfully updated.')]);
             
         } catch (\Exception $e) {
             \DB::rollback();
-            \Log::error('Expense Update Error: ' . $e->getMessage());
-            return response()->json(['error' => __('Error updating expense: ') . $e->getMessage()], 500);
+            \Log::error('Check Update Error: ' . $e->getMessage());
+            return response()->json(['error' => __('Error updating check: ') . $e->getMessage()], 500);
+        }
+    }
+    public function checksDestroy($id)
+    {
+        if (\Auth::user()->can('delete bill')) {
+            \DB::beginTransaction();
+            try {
+                $expense = Bill::find($id);
+                if ($expense && $expense->created_by == \Auth::user()->creatorId()) {
+                    
+                    // Check if any items are billable and linked to invoice
+                    $billableItems = BillProduct::where('bill_id', $expense->id)->where('billable', 1)->where('status', 1)->exists();
+                    $billableAccounts = BillAccount::where('ref_id', $expense->id)->where('billable', 1)->where('status', 1)->exists();
+                    
+                    if ($billableItems || $billableAccounts) {
+                        return redirect()->back()->with('error', __('Cannot delete check with items linked to an invoice.'));
+                    }
+
+                    // Delete Journal Service entry
+                    $journalEntry = JournalEntry::where('reference_id', $expense->id)
+                        ->whereIn('module', ['check', 'expense'])
+                        ->first();
+                        
+                    if ($journalEntry) {
+                        // jourlanal item and transaction lines
+                         JournalItem::where('journal', $journalEntry->id)->delete();
+                    
+                        // Delete transaction lines related to this journal
+                        TransactionLines::where('reference_id', $journalEntry->id)
+                            ->where('reference', 'Check Journal')
+                            ->delete();
+                        
+                        // Delete the journal entry itself
+                        $journalEntry->delete();
+                    }
+
+                    // Delete linked records
+                    BillProduct::where('bill_id', $expense->id)->delete();
+                    BillAccount::where('ref_id', $expense->id)->delete();
+                    BillPayment::where('bill_id', $expense->id)->delete();
+                    
+                    // Delete custom fields data
+                    // CustomField::deleteData($expense);
+                    
+                    // Delete the check itself
+                    $expense->delete();
+
+                    Utility::makeActivityLog(\Auth::user()->id, 'Check', $id, 'Delete Check', 'Check Deleted');
+                    
+                    \DB::commit();
+                    return redirect()->back()->with('success', __('Check successfully deleted.'));
+                } else {
+                    return redirect()->back()->with('error', __('Permission denied.'));
+                }
+            } catch (\Exception $e) {
+                \DB::rollback();
+                return redirect()->back()->with('error', $e->getMessage());
+            }
+        } else {
+            return redirect()->back()->with('error', __('Permission denied.'));
         }
     }
 }

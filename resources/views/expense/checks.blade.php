@@ -1511,12 +1511,12 @@
 
                                             {{-- Customers --}}
                                             <optgroup label="Customers">
-                                                @foreach ($customers as $id => $name)
                                                 <option value="__add_customer" data-create-type="customer"
                                                     data-create-url="{{ route('customer.create') }}"
                                                     data-create-title="Add New Customer">
                                                     ➕ Add New Customer
                                                 </option>
+                                                @foreach ($customers as $id => $name)
                                                     <option value="customer_{{ $id }}">Customer -
                                                         {{ $name }}
                                                     </option>

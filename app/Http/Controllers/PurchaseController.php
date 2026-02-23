@@ -74,13 +74,13 @@ class PurchaseController extends Controller
             $chartAccounts = ChartOfAccount::select(\DB::raw('CONCAT(code, " - ", name) AS code_name, id'))
                 ->where('created_by', \Auth::user()->creatorId())->get()
                 ->pluck('code_name', 'id');
-            $chartAccounts->prepend('Select Account', '');
+            // $chartAccounts->prepend('Select Account', '');
 
             // Get taxes for the form
             $taxes = Tax::where('created_by', $ownerId)->get()->pluck('name', 'id');
 
             // Get customers for billable items
-            $customers = Customer::where($column, $ownerId)->orderBy('name')->get();
+            $customers = Customer::where($column, $ownerId)->orderBy('name')->get()->pluck('name', 'id')->toArray();
 
             return view('purchase.create', compact('vendors', 'po_number', 'product_services', 'vendorId', 'chartAccounts', 'taxes', 'customers'));
         } else {
@@ -301,7 +301,7 @@ class PurchaseController extends Controller
             $column = ($user->type == 'company') ? 'created_by' : 'owned_by';
 
             $vendors = Vender::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $vendors = ['__add__' => '➕ Add new vendor'] + ['' => 'Select Vendor'] + $vendors;
+            $vendors = ['' => 'Select Vendor'] + $vendors;
 
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('Select Item', '');

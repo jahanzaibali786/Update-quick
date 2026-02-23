@@ -225,6 +225,9 @@ Route::delete('/timeActivity/delete/{id}', [ExpenseController::class, 'deleteTim
 // for checks(cheque)
 Route::get('/check', [ExpenseController::class, 'checksCreate'])->name('checks.create');
 Route::post('/check/store', [ExpenseController::class, 'checkstore'])->name('checks.store');
+Route::get('/check/{id}/edit', [ExpenseController::class, 'checkedit'])->name('checks.edit');
+Route::post('/check/{id}/update', [ExpenseController::class, 'checkupdate'])->name('checks.update');
+Route::delete('/check/{id}/delete', [ExpenseController::class, 'checksDestroy'])->name('checks.destroy');
 
 // page and api endpoints
 Route::get('/quickbooks/sync', [QuickBooksApiController::class, 'index'])->name('quickbooks.sync');

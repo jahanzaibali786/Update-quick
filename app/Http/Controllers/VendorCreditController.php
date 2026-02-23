@@ -9,6 +9,8 @@ use App\Models\Vender;
 use App\Models\Customer;
 use App\Models\ChartOfAccount;
 use App\Models\JournalEntry;
+use App\Models\JournalItem;
+use App\Models\TransactionLines;
 use App\Models\ProductService;
 use App\Models\Utility;
 use App\Services\JournalService;
@@ -403,16 +405,37 @@ class VendorCreditController extends Controller
      */
     public function destroy(VendorCredit $vendorCredit)
     {
-        // Delete related records first
-        VendorCreditAccount::where('vendor_credit_id', $vendorCredit->id)->delete();
-        VendorCreditProduct::where('vendor_credit_id', $vendorCredit->id)->delete();
+        // add try catch and also delete journal entry,item and transaction
+        try {
+            // Delete related records first also delete journal entry,item and transaction
+            VendorCreditAccount::where('vendor_credit_id', $vendorCredit->id)->delete();
+            VendorCreditProduct::where('vendor_credit_id', $vendorCredit->id)->delete();
+                
+            $journalEntry = JournalEntry::where('reference_id', $vendorCredit->id)->whereIn('module', ['vendor_credit'])->first();
+                        
+            if ($journalEntry) {
+                // jourlanal item and transaction lines
+                    JournalItem::where('journal', $journalEntry->id)->delete();
+            
+                // Delete transaction lines related to this journal
+                TransactionLines::where('reference_id', $journalEntry->id)
+                    ->where('reference', 'Vendor Credit Journal')
+                    ->delete();
+                
+                // Delete the journal entry itself
+                $journalEntry->delete();
+            }
+            
+            $vendorCredit->delete();
+        } catch (\Exception $e) {
+            \Log::error('Error deleting vendor credit: ' . $e->getMessage(), [
+                'vendor_credit_id' => $vendorCredit->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', __('Error deleting Vendor Credit: ') . $e->getMessage());
+        }
         
-        $vendorCredit->delete();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => __('Vendor Credit deleted successfully'),
-        ]);
+        return redirect()->back()->with('success', __('Vendor Credit successfully deleted.'));
     }
 
     private function createvendorCreditJournalEntry($expense)
