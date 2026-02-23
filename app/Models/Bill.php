@@ -35,6 +35,7 @@ class Bill extends Model
         'paid_amount',
         'balance_due',
         'notes',
+        'payment_method',
     ];
 
     public static $statues = [

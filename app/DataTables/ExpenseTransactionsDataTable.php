@@ -78,6 +78,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('expense.edit', Crypt::encrypt($exp->id)),
                     'edit_url' => route('expense.edit', Crypt::encrypt($exp->id)),
+                    'delete_url' => route('expense.destroy', $exp->id),
                 ]);
             }
         }
@@ -230,7 +231,7 @@ class ExpenseTransactionsDataTable
                     'balance' => 0,
                     'total' => $check->getTotal(),
                     'attachments' => '',
-                    'view_url' => route('expense.show', Crypt::encrypt($check->id)),
+                    'view_url' => route('expense.edit', Crypt::encrypt($check->id)),
                     'edit_url' => route('expense.edit', Crypt::encrypt($check->id)),
                 ]);
             }

@@ -1360,11 +1360,28 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     {{ Form::label('category_id', __('Payment Method'), ['class' => 'form-label']) }}
-                                    {{ Form::select('category_id', $category, null, [
+                                    {{-- {{ Form::select('category_id', $category, null, [
                                         'class' => 'form-control select',
                                         'data-create-url' => route('product-category.create'),
                                         'data-create-title' => __('Create New Category'),
-                                    ]) }}
+                                    ]) }} --}}
+                                       {{ Form::select(
+                                                'payment_method',
+                                                $paymentMethods ?? [
+                                                    '' => 'Choose payment method',
+                                                    'Cash' => 'Cash',
+                                                    'Check' => 'Check',
+                                                    'Credit Card' => 'Credit Card',
+                                                    'Debit Card' => 'Debit Card',
+                                                    'Bank Transfer' => 'Bank Transfer',
+                                                    'Other' => 'Other',
+                                                ],
+                                                null,
+                                                [
+                                                    'class' => 'form-select',
+                                                    'id' => 'payment_method',
+                                                ],
+                                            ) }}
                                 </div>
                             </div>
 
