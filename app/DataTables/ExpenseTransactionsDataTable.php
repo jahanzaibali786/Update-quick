@@ -158,6 +158,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('bill.edit', Crypt::encrypt($bill->id)),
                     'edit_url' => route('bill.edit', Crypt::encrypt($bill->id)),
+                    'delete_url' => route('bill.destroy', $bill->id),
                 ]);
             }
         }

@@ -1136,7 +1136,7 @@ public function index(Request $request)
 
                 $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
                 $termsData = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
-
+               
                 return view('bill.edit', compact(
                     'venders',
                     'product_services',

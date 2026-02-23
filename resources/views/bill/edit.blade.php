@@ -1249,7 +1249,7 @@
 
                             </div>
                             <div class="TrowserHeader">
-                                <a href="{{ route('bill.index') }}" class="text-dark me-2"><svg
+                                <a href="{{ route('expense.index') }}" class="text-dark me-2"><svg
                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         color="currentColor" width="24px" height="24px" focusable="false"
                                         aria-hidden="true" class="">
@@ -1286,7 +1286,7 @@
                                     }
 
                                     .bill-vendor-col {
-                                        width: 200px;
+                                        width: 300px;
                                     }
 
                                     .bill-balance-col {
@@ -1396,7 +1396,8 @@
                                             <div class="bill-field-group">
                                                 <label>{{ __('Vendor') }}</label>
                                                 <select name="vender_id" id="vender" class="form-control select2"
-                                                    required data-url="{{ route('bill.vender') }}">
+                                                    required   data-create-url="{{ route('vender.create') }}"
+                                                        data-create-title="Add New Vendor">
                                                     <option value="">{{ __('Choose a vendor') }}</option>
                                                     <option value="__add_vendor" data-create-type="vendor"
                                                         data-create-url="{{ route('vender.create') }}"

@@ -1268,6 +1268,19 @@
                                         <select id="payee_all" name="payee" class="form-control select" required>
 
                                             <option value="">Who did you pay?</option>
+                                            {{-- Vendors --}}
+                                            <optgroup label="vendor">
+                                                <option value="__add_vendor" data-create-type="vendor"
+                                                            data-create-url="{{ route('vender.create') }}"
+                                                            data-create-title="Add New Vendor">
+                                                        ➕ Add New vendor
+                                                    </option>
+                                                @foreach ($venders as $id => $name)
+                                                    <option value="vendor_{{ $id }}">
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
 
                                             {{-- Employees --}}
                                             <optgroup label="employee">
@@ -1297,20 +1310,7 @@
                                                 @endforeach
                                             </optgroup>
 
-                                            {{-- Vendors --}}
-                                            <optgroup label="vendor">
-                                                <option value="__add_vendor" data-create-type="vendor"
-                                                            data-create-url="{{ route('vender.create') }}"
-                                                            data-create-title="Add New Vendor">
-                                                        ➕ Add New vendor
-                                                    </option>
-                                                @foreach ($venders as $id => $name)
-                                                    <option value="vendor_{{ $id }}">
-                                                        {{ $name }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-
+                                            
                                         </select>
                                     </div>
                                     <div class="col-3">
@@ -2479,6 +2479,11 @@
         /* Optional: adjust dropdown menu for split button */
         .fixed-footer .btn-group .dropdown-menu {
             min-width: auto;
+        }
+
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
         }
     </style>
 
