@@ -998,11 +998,13 @@
                                 $statusVal = is_array($txn) ? $txn['status'] ?? '' : $txn->status ?? '';
                                 $viewUrl = is_array($txn) ? $txn['view_url'] ?? '' : $txn->view_url ?? '';
                                $editPaymentUrl = is_array($txn)
+
                                     ? $txn['edit_payment_url'] ?? ''
                                     : $txn->edit_payment_url ?? '';
                                 $deleteUrl   = is_array($txn) ? $txn['delete_url']   ?? '' : $txn->delete_url   ?? '';
                                 $activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url ?? '';
                                 $convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? '';
+
                             @endphp
                             <tr>
                                 <td><input type="checkbox" class="form-check-input row-checkbox"
@@ -1051,6 +1053,7 @@
                 aria-expanded="false"
                 title="{{ __('More actions') }}"
                 style="color:#0077c5;font-size:9px;vertical-align:middle;line-height:1;">&#9650;</button>
+
         <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:200px;border-radius:8px;padding:4px 0;border:1px solid #e0e3e5;z-index:99999;">
 
         {{-- View/Edit — all types --}}
@@ -1059,9 +1062,11 @@
             <a class="dropdown-item" href="{{ $viewUrl }}"
             style="padding:10px 16px;font-size:14px;color:#393a3d;">
                 {{ __('View/Edit') }}
+
             </a>
         </li>
         @endif
+
 
         {{-- ── INVOICE ── controller pushes __('Invoice') --}}
         @if (strtolower($type) === 'invoice')
@@ -1129,6 +1134,7 @@
         @endif
 
     </ul>
+
     </div>
 </td>
                             </tr>

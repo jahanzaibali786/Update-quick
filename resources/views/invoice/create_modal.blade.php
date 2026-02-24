@@ -3918,6 +3918,7 @@
                 </div>
             </div>
         </div>
+
         @if (session('estimate_prefill'))
             <script>
                 var __estimatePrefill__ = @json(session('estimate_prefill'));
@@ -4093,6 +4094,7 @@
                 }
             </script>
         @endif
+
     </div>
     <script>
         $(function() {

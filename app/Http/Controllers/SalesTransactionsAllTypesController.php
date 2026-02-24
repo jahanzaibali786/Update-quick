@@ -211,7 +211,9 @@ class SalesTransactionsAllTypesController extends Controller
                     'status' => __($statusText),
                     'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
                     'delete_url' => route('proposal.destroy', $prop->id),
+
                     'convert_url' => $prop->status != 4 ? route('estimate.to.invoice', $prop->id) : '',
+
                     'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
@@ -802,7 +804,9 @@ $flashData = [
             'tax'         => $p->tax ?? null,
             'discount'    => $p->discount ?? 0,
             'amount'      => $p->amount ?? 0,
+
             'taxable'     => $p->taxable ?? 0,
+
         ];
     })->toArray(),
 ];
@@ -816,6 +820,9 @@ session()->flash('estimate_prefill', $flashData);
 
 
     return redirect()->route('invoice.create', 0);
+
+}
+
 }
 
 }
