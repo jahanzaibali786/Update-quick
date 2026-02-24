@@ -179,6 +179,21 @@ class DashboardController extends Controller
                     $data['widgets'] = $widgets;
                     $data['widgetDefs'] = config('dashboard.widgets');
 
+                    // Calculate Feed Card Metrics
+                    $overdueInvoices = Invoice::where('created_by', \Auth::user()->creatorId())
+                        ->where('status', '!=', 4) // Not Paid
+                        ->where('due_date', '<', date('Y-m-d'))
+                        ->get();
+                    
+                    $data['overdueInvoicesTotal'] = 0;
+                    foreach ($overdueInvoices as $inv) {
+                        $data['overdueInvoicesTotal'] += $inv->getDue();
+                    }
+                    $data['overdueInvoicesCount'] = $overdueInvoices->count();
+
+                    $data['netProfitThisMonth'] = \Auth::user()->incomeCurrentMonth() - \Auth::user()->expenseCurrentMonth();
+                    $data['paymentsThisWeek'] = $data['weeklyInvoice']['invoicePaid'];
+
                     return view('dashboard.qbo-dashboard', $data);
                 } else {
 
