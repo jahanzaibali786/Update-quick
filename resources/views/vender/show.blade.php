@@ -717,6 +717,10 @@
             margin-bottom: 8px;
             display: block;
         }
+
+        .body{
+            height: 100vh !important;
+        }
     </style>
 
     <!-- Fixed Header -->

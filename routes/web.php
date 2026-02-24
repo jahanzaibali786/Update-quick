@@ -869,7 +869,8 @@ Route::group(['middleware' => ['verified']], function () {
             Route::get('bill/{id}/payment', [BillController::class, 'payment'])->name('bill.payment');
             Route::post('bill/{id}/payment', [BillController::class, 'createPayment'])->name('bill.payment');
             Route::post('bill/bulk-payment', [BillController::class, 'bulkPayment'])->name('bill.bulk.payment');
-            Route::post('bill/{id}/payment/{pid}/destroy', [BillController::class, 'paymentDestroy'])->name('bill.payment.destroy');
+            Route::match(['POST', 'DELETE'], 'bill/{id}/payment/{pid}/destroy', [BillController::class, 'paymentDestroy'])->name('bill.payment.destroy');
+            Route::delete('bill/{id}/payment/{pid}/destroy', [BillController::class, 'paymentDestroy'])->name('bill.payment.destroy');
             Route::get('bill/items', [BillController::class, 'items'])->name('bill.items');
             Route::resource('bill', BillController::class);
             Route::get('bill/create/{cid}', [BillController::class, 'create'])->name('bill.create');

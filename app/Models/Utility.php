@@ -6560,6 +6560,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6611,6 +6614,9 @@ class Utility extends Model
                             $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
                             $journalItem->debit = $tax;
                             $journalItem->credit = 0;
+                            $journalItem->type = $data['type'] ?? null;
+                            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                             $journalItem->save();
                             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6644,6 +6650,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6675,6 +6684,9 @@ class Utility extends Model
             $journalItem->product_ids = $data['prod_id'];
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6710,6 +6722,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6744,6 +6759,9 @@ class Utility extends Model
                 $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
                 $journalItem->credit = 0;
                 $journalItem->debit = $data['amount'];
+                $journalItem->type = $data['type'] ?? null;
+                $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                 $journalItem->save();
                 $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6808,6 +6826,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6859,6 +6880,9 @@ class Utility extends Model
                             $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
                             $journalItem->debit = $tax;
                             $journalItem->credit = 0;
+                            $journalItem->type = $data['type'] ?? null;
+                            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                             $journalItem->save();
                             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6892,6 +6916,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6924,6 +6951,9 @@ class Utility extends Model
             $journalItem->product_ids = @$data['prod_id'];
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6960,6 +6990,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6994,6 +7027,9 @@ class Utility extends Model
                 $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
                 $journalItem->credit = 0;
                 $journalItem->debit = $data['amount'];
+                $journalItem->type = $data['type'] ?? null;
+                $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                 $journalItem->save();
                 $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');

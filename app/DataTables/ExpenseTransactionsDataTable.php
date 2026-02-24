@@ -196,8 +196,11 @@ class ExpenseTransactionsDataTable
                     'balance' => 0,
                     'total' => -$payment->amount, // Negative for payments
                     'attachments' => '',
-                    'view_url' => route('bill.payment', $payment->bill_id),
+                    'view_url' => '',
                     'edit_url' => '',
+                    // delete_url of payment delete
+                    'delete_url' => route('bill.payment.destroy', [$payment->bill_id, $payment->id]),
+
                 ]);
             }
         }

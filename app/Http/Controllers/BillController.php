@@ -2628,7 +2628,7 @@ public function index(Request $request)
     public function resent($id)
     {
         //        if(\Auth::user()->can('send bill'))
-//        {
+    //        {
 
         // Send Email
         $setings = Utility::settings();
@@ -2802,6 +2802,9 @@ public function index(Request $request)
                 $data['prod_id'] = $billPayment->id;
                 // $data['result'] = $result;
                 $data['category'] = 'Bill';
+                $data['type'] = 'Bill Payment';
+                $data['vendor_id'] = $bill->vender_id;
+                $data['vendor_name'] = $vender->name;
                 $data['owned_by'] = $billPayment->owned_by;
                 $data['created_by'] = \Auth::user()->creatorId();
                 $data['created_at'] = date('Y-m-d', strtotime($billPayment->date)) . ' ' . date('h:i:s');
