@@ -69,6 +69,18 @@ class PaymentTermController extends Controller
             'created_by' => Auth::user()->creatorId(),
         ]);
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('Payment term created successfully.'),
+                'data' => [
+                    'id' => $paymentTerm->id,
+                    'name' => $paymentTerm->name,
+                    'due_in_days' => $paymentTerm->due_in_days,
+                ]
+            ]);
+        }
+
         return redirect()->route('payment-terms.index')->with('success', __('Payment term created successfully.'));
     }
 

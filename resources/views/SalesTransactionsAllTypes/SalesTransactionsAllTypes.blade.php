@@ -998,11 +998,13 @@
                                 $statusVal = is_array($txn) ? $txn['status'] ?? '' : $txn->status ?? '';
                                 $viewUrl = is_array($txn) ? $txn['view_url'] ?? '' : $txn->view_url ?? '';
                                $editPaymentUrl = is_array($txn)
-    ? $txn['edit_payment_url'] ?? ''
-    : $txn->edit_payment_url ?? '';
-$deleteUrl   = is_array($txn) ? $txn['delete_url']   ?? '' : $txn->delete_url   ?? '';
-$activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url ?? '';
-$convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? '';
+
+                                    ? $txn['edit_payment_url'] ?? ''
+                                    : $txn->edit_payment_url ?? '';
+                                $deleteUrl   = is_array($txn) ? $txn['delete_url']   ?? '' : $txn->delete_url   ?? '';
+                                $activityUrl = is_array($txn) ? $txn['activity_url'] ?? '' : $txn->activity_url ?? '';
+                                $convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? '';
+
                             @endphp
                             <tr>
                                 <td><input type="checkbox" class="form-check-input row-checkbox"
@@ -1051,85 +1053,88 @@ $convertUrl = is_array($txn) ? $txn['convert_url'] ?? '' : $txn->convert_url ?? 
                 aria-expanded="false"
                 title="{{ __('More actions') }}"
                 style="color:#0077c5;font-size:9px;vertical-align:middle;line-height:1;">&#9650;</button>
-<ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:200px;border-radius:8px;padding:4px 0;border:1px solid #e0e3e5;z-index:99999;">
 
-    {{-- View/Edit — all types --}}
-    @if (!empty($viewUrl))
-    <li>
-        <a class="dropdown-item" href="{{ $viewUrl }}"
-           style="padding:10px 16px;font-size:14px;color:#393a3d;">
-            {{ __('View/Edit') }}
-        </a>
-    </li>
-    @endif
+        <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:200px;border-radius:8px;padding:4px 0;border:1px solid #e0e3e5;z-index:99999;">
 
-    {{-- ── INVOICE ── controller pushes __('Invoice') --}}
-    @if (strtolower($type) === 'invoice')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send reminder') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Create task') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share invoice link') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Make recurring payment') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
-
-    {{-- ── ESTIMATE ── controller pushes __('Estimate') --}}
-    @elseif (strtolower($type) === 'estimate')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share estimate link') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Update Status') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Copy to purchase order') }}</a></li>
-        @if (!empty($convertUrl))
+        {{-- View/Edit — all types --}}
+        @if (!empty($viewUrl))
         <li>
-            <a class="dropdown-item" href="{{ $convertUrl }}"
-               style="padding:10px 16px;font-size:14px;color:#393a3d;">
-                {{ __('Estimate to Invoice') }}
+            <a class="dropdown-item" href="{{ $viewUrl }}"
+            style="padding:10px 16px;font-size:14px;color:#393a3d;">
+                {{ __('View/Edit') }}
+
             </a>
         </li>
         @endif
 
-    {{-- ── CREDIT MEMO ── controller pushes __('Credit Memo') --}}
-    @elseif (strtolower($type) === 'credit memo')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
 
-    {{-- ── SALES RECEIPT ── controller pushes __('Sales Receipt') --}}
-    @elseif (strtolower($type) === 'sales receipt')
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li>
-        <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
+        {{-- ── INVOICE ── controller pushes __('Invoice') --}}
+        @if (strtolower($type) === 'invoice')
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send reminder') }}</a></li> --}}
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Create task') }}</a></li>
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share invoice link') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Make recurring payment') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li> --}}
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li>
 
-    {{-- All other types (Payment, Refund, Delayed Credit/Charge, Time Charge) — no extra items --}}
-    @endif
+        {{-- ── ESTIMATE ── controller pushes __('Estimate') --}}
+        @elseif (strtolower($type) === 'estimate')
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Share estimate link') }}</a></li> --}}
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Copy to purchase order') }}</a></li> --}}
+            @if (!empty($convertUrl))
+            <li>
+                <a class="dropdown-item" href="{{ $convertUrl }}"
+                style="padding:10px 16px;font-size:14px;color:#393a3d;">
+                    {{ __('Estimate to Invoice') }}
+                </a>
+            </li>
+            @endif
 
-    {{-- Delete — all types --}}
-    @if (!empty($deleteUrl))
-    <li>
-        <a class="dropdown-item txn-delete-link" href="#"
-           data-url="{{ $deleteUrl }}"
-           style="padding:10px 16px;font-size:14px;color:#393a3d;">
-            {{ __('Delete') }}
-        </a>
-    </li>
-    @endif
+        {{-- ── CREDIT MEMO ── controller pushes __('Credit Memo') --}}
+        @elseif (strtolower($type) === 'credit memo')
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li> --}}
 
-    {{-- View activity — all types --}}
-    @if (!empty($activityUrl))
-    <li>
-        <a class="dropdown-item txn-activity-link" href="#"
-           data-url="{{ $activityUrl }}"
-           style="padding:10px 16px;font-size:14px;color:#393a3d;">
-            {{ __('View activity') }}
-        </a>
-    </li>
-    @endif
+        {{-- ── SALES RECEIPT ── controller pushes __('Sales Receipt') --}}
+        @elseif (strtolower($type) === 'sales receipt')
+            {{-- <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Duplicate') }}</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Send') }}</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Print packing slip') }}</a></li>
+            <li><a class="dropdown-item" href="#" onclick="showComingSoon();return false;" style="padding:10px 16px;font-size:14px;color:#393a3d;">{{ __('Void') }}</a></li> --}}
 
-</ul>
+        {{-- All other types (Payment, Refund, Delayed Credit/Charge, Time Charge) — no extra items --}}
+        @endif
+
+        {{-- Delete — all types --}}
+        @if (!empty($deleteUrl))
+        <li>
+            <a class="dropdown-item txn-delete-link" href="#"
+            data-url="{{ $deleteUrl }}"
+            style="padding:10px 16px;font-size:14px;color:#393a3d;">
+                {{ __('Delete') }}
+            </a>
+        </li>
+        @endif
+
+        {{-- View activity — all types --}}
+        @if (!empty($activityUrl))
+        <li>
+            <a class="dropdown-item txn-activity-link" href="#"
+            data-url="{{ $activityUrl }}"
+            style="padding:10px 16px;font-size:14px;color:#393a3d;">
+                {{ __('View activity') }}
+            </a>
+        </li>
+        @endif
+
+    </ul>
+
     </div>
 </td>
                             </tr>

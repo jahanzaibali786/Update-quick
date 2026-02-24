@@ -68,6 +68,13 @@
                 recalcTotals();
             }
         });
+
+        // Handle Sales Tax Rate Change
+        $(document).on('change', 'select[name="sales_tax_rate"]', function() {
+            if (typeof recalcTotals === 'function') {
+                recalcTotals();
+            }
+        });
         $(function() {
             if (window.formScriptsInitialized) return;
             window.formScriptsInitialized = true;
@@ -108,8 +115,8 @@
                 var quantity = parseFloat($row.find('.quantity').val()) || 0;
                 var price = parseFloat($row.find('.price').val()) || 0;
                 // var discount = parseFloat($row.find('.discount').val()) || 0; // Discount column removed in UI
-                var discount = 0; 
-                
+                var discount = 0;
+
                 var amount = (quantity * price) - discount;
                 $row.find('.amount').val(amount.toFixed(2));
 
@@ -119,63 +126,62 @@
                 $row.find('.itemTaxPrice').val(taxPrice.toFixed(2));
             };
 
-window.recalcTotals = function() {
-    var subTotal        = 0;
-    var taxableSubtotal = 0;   // 🔹 NEW
-    var totalTax        = 0;
-    var totalDiscount   = 0;
-    var sectionSubtotal = 0;   // For inline subtotal rows
+            window.recalcTotals = function() {
+                var subTotal = 0;
+                var taxableSubtotal = 0;
+                var totalDiscount = 0;
+                var sectionSubtotal = 0; // For inline subtotal rows
 
-    // Iterate through ALL rows in the table (products, subtotals, text)
-    $('#sortable-table tbody tr').each(function() {
-        var $row = $(this);
+                // Iterate through ALL rows in the table (products, subtotals, text)
+                $('#sortable-table tbody tr').each(function() {
+                    var $row = $(this);
 
-        if ($row.hasClass('product-row')) {
-            var quantity = parseFloat($row.find('.quantity').val()) || 0;
-            var price    = parseFloat($row.find('.price').val()) || 0;
-            var amount   = quantity * price;
+                    if ($row.hasClass('product-row')) {
+                        var quantity = parseFloat($row.find('.quantity').val()) || 0;
+                        var price = parseFloat($row.find('.price').val()) || 0;
+                        var amount = quantity * price;
 
-            subTotal       += amount;
-            sectionSubtotal += amount; // For section subtotals
+                        subTotal += amount;
+                        sectionSubtotal += amount; // For section subtotals
 
-            // ⬇️ tax logic is now controlled by the checkbox
-            var isTaxable = $row.find('.form-check-input[type="checkbox"]').prop('checked');
-            var rowTax    = 0;
+                        // tax logic is controlled by the checkbox
+                        var isTaxable = $row.find('.form-check-input[type="checkbox"]').prop('checked');
 
-            if (isTaxable) {
-                // use per-row tax amount if present
-                rowTax = parseFloat($row.find('.itemTaxPrice').val()) || 0;
-                taxableSubtotal += amount;     // 🔹 add to taxable subtotal ONLY if checked
-            } else {
-                // make sure DB doesn’t keep stale tax for non-taxable row
-                $row.find('.itemTaxPrice').val('0.00');
-            }
+                        if (isTaxable) {
+                            taxableSubtotal += amount; // add to taxable subtotal ONLY if checked
+                        } else {
+                            // make sure DB doesn't keep stale tax for non-taxable row
+                            $row.find('.itemTaxPrice').val('0.00');
+                        }
 
-            totalTax += rowTax;
+                    } else if ($row.hasClass('subtotal-row')) {
+                        // Update the subtotal row with the section total
+                        $row.find('.subtotal-amount').text(sectionSubtotal.toFixed(2));
+                        // reset for next section
+                        sectionSubtotal = 0;
+                    }
+                });
 
-        } else if ($row.hasClass('subtotal-row')) {
-            // Update the subtotal row with the section total
-            $row.find('.subtotal-amount').text(sectionSubtotal.toFixed(2));
-            // reset for next section
-            sectionSubtotal = 0;
-        }
-    });
+                // Calculate tax from global sales tax rate dropdown
+                var $selectedTax = $('select[name="sales_tax_rate"]').find(':selected');
+                var taxRate = parseFloat($selectedTax.data('rate')) || 0;
+                var totalTax = taxableSubtotal * taxRate / 100;
 
-    // Update UI labels
-    $('.subTotal').text(subTotal.toFixed(2));
-    $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));   // 🔹 NEW
-    $('.totalTax').text(totalTax.toFixed(2));
-    $('.totalDiscount').text(totalDiscount.toFixed(2));
+                // Update UI labels
+                $('.subTotal').text(subTotal.toFixed(2));
+                $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
+                $('.totalTax').text(totalTax.toFixed(2));
+                $('.totalDiscount').text(totalDiscount.toFixed(2));
 
-    var grandTotal = subTotal - totalDiscount + totalTax;
-    $('.totalAmount').text(grandTotal.toFixed(2));
+                var grandTotal = subTotal - totalDiscount + totalTax;
+                $('.totalAmount').text(grandTotal.toFixed(2));
 
-    // Update hidden inputs used on submit
-    $('input[name="subtotal"]').val(subTotal.toFixed(2));
-    $('input[name="taxable_subtotal"]').val(taxableSubtotal.toFixed(2)); // 🔹 NEW
-    $('input[name="total_tax"]').val(totalTax.toFixed(2));
-    $('input[name="total_amount"]').val(grandTotal.toFixed(2));
-};
+                // Update hidden inputs used on submit
+                $('input[name="subtotal"]').val(subTotal.toFixed(2));
+                $('input[name="taxable_subtotal"]').val(taxableSubtotal.toFixed(2));
+                $('input[name="total_tax"]').val(totalTax.toFixed(2));
+                $('input[name="total_amount"]').val(grandTotal.toFixed(2));
+            };
 
 
 
@@ -354,140 +360,189 @@ window.recalcTotals = function() {
             window.autoPopulationInitialized = true;
             try {
 
-            @if(isset($proposalData))
-            var proposalData = @json($proposalData);
-            console.log('Edit Mode - Proposal Data:', proposalData);
+                @if (isset($proposalData))
+                    var proposalData = @json($proposalData);
+                    console.log('Edit Mode - Proposal Data:', proposalData);
 
-            // 1. POPULATE CUSTOMER
-            if (proposalData.customer_id) {
-                $('#customer').val(proposalData.customer_id).trigger('change');
+                    // 1. POPULATE CUSTOMER
+                    if (proposalData.customer_id) {
+                        $('#customer').val(proposalData.customer_id).trigger('change');
 
-                // Show and populate bill-to after AJAX completes
-                if (proposalData.bill_to) {
-                    setTimeout(function() {
-                        $('textarea[name="bill_to"]').val(proposalData.bill_to);
-                        $('#bill-to-section').show();
-                    }, 600);
-                }
-            }
-
-            // 2. POPULATE DATES AND TEXT FIELDS
-            if (proposalData.issue_date) $('input[name="issue_date"]').val(proposalData.issue_date);
-            if (proposalData.send_date) $('input[name="send_date"]').val(proposalData.send_date);
-            if (proposalData.accepted_by) $('input[name="accepted_by"]').val(proposalData.accepted_by);
-            if (proposalData.terms) $('textarea[name="terms"]').val(proposalData.terms);
-            if (proposalData.memo) $('textarea[name="memo"]').val(proposalData.memo);
-            if (proposalData.note) $('textarea[name="note"]').val(proposalData.note);
-
-            // 3. POPULATE LOGO
-            if (proposalData.logo) {
-                var $logoPreview = $('.logo-preview');
-                var $addText = $('.add-logo-text');
-                var $sizeText = $('.logo-size-limit');
-                var $removeBtn = $('#company_logo_remove');
-                var $logoButton = $('#company_logo_button');
-
-                $logoPreview.attr('src', proposalData.logo).removeClass('d-none');
-                $addText.addClass('d-none');
-                $sizeText.addClass('d-none');
-                $removeBtn.removeClass('d-none');
-                $logoButton.addClass('has-logo');
-            }
-
-            // 4. POPULATE ATTACHMENTS
-            if (proposalData.attachments && proposalData.attachments.length > 0) {
-                var $list = $('#attachments-list');
-                var $header = $('#attachments-header');
-                var attachLabel = @json(__('Attach to email'));
-
-                proposalData.attachments.forEach(function(attachment, index) {
-                    var sizeKB = Math.round(attachment.size / 1024);
-                    var rowId = 'existing_att_' + index;
-
-                    var $row = $(
-                        '<div class="attachment-row" data-row-id="' + rowId + '">' +
-                        '<div class="form-check">' +
-                        '<input class="form-check-input attachment-email" type="checkbox" ' +
-                        'name="attachments_email[' + rowId + ']" ' + (attachment.attach_to_email ? 'checked' : '') + '>' +
-                        '<label class="form-check-label">' + attachLabel + '</label>' +
-                        '</div>' +
-                        '<span class="attachment-name">' + attachment.name + '</span>' +
-                        '<span class="attachment-size">' + sizeKB + ' KB</span>' +
-                        '<button type="button" class="attachment-remove" data-row-id="' + rowId + '">×</button>' +
-                        '<input type="hidden" name="existing_attachments[]" value="' + attachment.name + '" data-row-id="' + rowId + '">' +
-                        '</div>'
-                    );
-                    $list.append($row);
-                });
-
-                $header.removeClass('d-none');
-                var $boxes = $list.find('.attachment-email');
-                var $checked = $boxes.filter(':checked');
-                $('#attachment_select_all').prop('checked', $boxes.length > 0 && $boxes.length === $checked.length);
-            }
-
-            // 5. POPULATE LINE ITEMS
-            if (proposalData.items && proposalData.items.length > 0) {
-                // Clear default empty row
-                $('#sortable-table tbody[data-repeater-item]').remove();
-
-                var delay = 0;
-                proposalData.items.forEach(function(item, index) {
-                    delay += 150;
-
-                    if (item.type === 'product') {
-                        setTimeout(function() {
-                            $('[data-repeater-create]').first().trigger('click');
-
+                        // Show and populate bill-to after AJAX completes
+                        if (proposalData.bill_to) {
                             setTimeout(function() {
-                                var $lastBody = $('#sortable-table tbody[data-repeater-item]').last();
-                                var $row = $lastBody.find('.product-row');
-
-                                $row.find('select.item').val(item.item || '');
-                                $row.find('.pro_description').val(item.description || '');
-                                $row.find('.quantity').val(item.quantity || '');
-                                $row.find('.price').val(item.price || '');
-                                $row.find('.discount').val(item.discount || '');
-                                $row.find('.amount').val(item.amount || '');
-                                $row.find('.tax').val(item.tax || '');
-                                $row.find('.itemTaxPrice').val(item.itemTaxPrice || '');
-                                $row.find('.itemTaxRate').val(item.itemTaxRate || '');
-
-                                if (item.taxable == 1) {
-                                    $row.find('.form-check-input[type="checkbox"]').prop('checked', true);
-                                }
-                            }, 50);
-                        }, delay);
-
-                    } else if (item.type === 'subtotal') {
-                        setTimeout(function() {
-                            $('#add-subtotal-line').trigger('click');
-                            setTimeout(function() {
-                                var $lastBody = $('#sortable-table tbody').last();
-                                var $subtotalRow = $lastBody.find('.subtotal-row');
-                                $subtotalRow.find('.subtotal-amount').text(item.amount || '0.00');
-                            }, 50);
-                        }, delay);
-
-                    } else if (item.type === 'text') {
-                        setTimeout(function() {
-                            $('#add-text-line').trigger('click');
-                            setTimeout(function() {
-                                var $lastBody = $('#sortable-table tbody').last();
-                                var $textRow = $lastBody.find('.text-row');
-                                $textRow.find('input[type="text"]').val(item.description || item.text || '');
-                            }, 50);
-                        }, delay);
+                                $('textarea[name="bill_to"]').val(proposalData.bill_to);
+                                $('#bill-to-section').show();
+                            }, 600);
+                        }
                     }
-                });
 
-                // Recalculate after all loaded
-                setTimeout(function() {
-                    if (typeof renumberProposalLines === 'function') renumberProposalLines();
-                    if (typeof recalcTotals === 'function') recalcTotals();
-                }, delay + 300);
-            }
-            @endif
+                    // 2. POPULATE DATES AND TEXT FIELDS
+                    if (proposalData.issue_date) $('input[name="issue_date"]').val(proposalData.issue_date);
+                    if (proposalData.send_date) $('input[name="send_date"]').val(proposalData.send_date);
+                    if (proposalData.accepted_by) $('input[name="accepted_by"]').val(proposalData.accepted_by);
+                    if (proposalData.terms) $('textarea[name="terms"]').val(proposalData.terms);
+                    if (proposalData.memo) $('textarea[name="memo"]').val(proposalData.memo);
+                    if (proposalData.note) $('textarea[name="note"]').val(proposalData.note);
+
+                    // 3. POPULATE LOGO
+                    if (proposalData.logo) {
+                        var $logoPreview = $('.logo-preview');
+                        var $addText = $('.add-logo-text');
+                        var $sizeText = $('.logo-size-limit');
+                        var $removeBtn = $('#company_logo_remove');
+                        var $logoButton = $('#company_logo_button');
+
+                        $logoPreview.attr('src', proposalData.logo).removeClass('d-none');
+                        $addText.addClass('d-none');
+                        $sizeText.addClass('d-none');
+                        $removeBtn.removeClass('d-none');
+                        $logoButton.addClass('has-logo');
+                    }
+
+                    // 4. POPULATE ATTACHMENTS
+                    if (proposalData.attachments && proposalData.attachments.length > 0) {
+                        var $list = $('#attachments-list');
+                        var $header = $('#attachments-header');
+                        var attachLabel = @json(__('Attach to email'));
+
+                        proposalData.attachments.forEach(function(attachment, index) {
+                            var sizeKB = Math.round(attachment.size / 1024);
+                            var rowId = 'existing_att_' + index;
+
+                            var $row = $(
+                                '<div class="attachment-row" data-row-id="' + rowId + '">' +
+                                '<div class="form-check">' +
+                                '<input class="form-check-input attachment-email" type="checkbox" ' +
+                                'name="attachments_email[' + rowId + ']" ' + (attachment
+                                    .attach_to_email ? 'checked' : '') + '>' +
+                                '<label class="form-check-label">' + attachLabel + '</label>' +
+                                '</div>' +
+                                '<span class="attachment-name">' + attachment.name + '</span>' +
+                                '<span class="attachment-size">' + sizeKB + ' KB</span>' +
+                                '<button type="button" class="attachment-remove" data-row-id="' +
+                                rowId + '">×</button>' +
+                                '<input type="hidden" name="existing_attachments[]" value="' +
+                                attachment.name + '" data-row-id="' + rowId + '">' +
+                                '</div>'
+                            );
+                            $list.append($row);
+                        });
+
+                        $header.removeClass('d-none');
+                        var $boxes = $list.find('.attachment-email');
+                        var $checked = $boxes.filter(':checked');
+                        $('#attachment_select_all').prop('checked', $boxes.length > 0 && $boxes.length === $checked
+                            .length);
+                    }
+
+                    // 5. POPULATE SALES TAX RATE
+                    if (proposalData.tax_id) {
+                        $('select[name="sales_tax_rate"]').val(proposalData.tax_id);
+                    }
+
+                    // 6. POPULATE LINE ITEMS
+                    if (proposalData.items && proposalData.items.length > 0) {
+                        var delay = 0;
+                        var firstProductDone = false;
+
+                        proposalData.items.forEach(function(item, index) {
+
+                            if (item.type === 'product') {
+                                if (!firstProductDone) {
+                                    // Populate the FIRST existing default row (don't create a new one)
+                                    firstProductDone = true;
+                                    setTimeout(function() {
+                                        var $firstBody = $(
+                                            '#sortable-table tbody[data-repeater-item]').first();
+                                        var $row = $firstBody.find('.product-row');
+
+                                        $row.find('select.item').val(item.item || '');
+                                        $row.find('.pro_description').val(item.description || '');
+                                        $row.find('.quantity').val(item.quantity || '');
+                                        $row.find('.price').val(item.price || '');
+                                        $row.find('.discount').val(item.discount || '');
+                                        $row.find('.amount').val(item.amount || '');
+                                        $row.find('.tax').val(item.tax || '');
+                                        $row.find('.itemTaxPrice').val(item.itemTaxPrice || '');
+                                        $row.find('.itemTaxRate').val(item.itemTaxRate || '');
+
+                                        if (item.taxable == 1) {
+                                            $row.find('.form-check-input[type="checkbox"]')
+                                                .prop('checked', true);
+                                        }
+                                    }, 50);
+                                } else {
+                                    // For subsequent products, create new rows
+                                    delay += 150;
+                                    setTimeout(function() {
+                                        $('[data-repeater-create]').first().trigger('click');
+
+                                        setTimeout(function() {
+                                            var $lastBody = $(
+                                                    '#sortable-table tbody[data-repeater-item]'
+                                                    )
+                                                .last();
+                                            var $row = $lastBody.find('.product-row');
+
+                                            $row.find('select.item').val(item.item || '');
+                                            $row.find('.pro_description').val(item
+                                                .description || '');
+                                            $row.find('.quantity').val(item.quantity || '');
+                                            $row.find('.price').val(item.price || '');
+                                            $row.find('.discount').val(item.discount || '');
+                                            $row.find('.amount').val(item.amount || '');
+                                            $row.find('.tax').val(item.tax || '');
+                                            $row.find('.itemTaxPrice').val(item
+                                                .itemTaxPrice ||
+                                                '');
+                                            $row.find('.itemTaxRate').val(item
+                                                .itemTaxRate ||
+                                                '');
+
+                                            if (item.taxable == 1) {
+                                                $row.find(
+                                                        '.form-check-input[type="checkbox"]'
+                                                        )
+                                                    .prop('checked', true);
+                                            }
+                                        }, 50);
+                                    }, delay);
+                                }
+
+                            } else if (item.type === 'subtotal') {
+                                delay += 150;
+                                setTimeout(function() {
+                                    $('#add-subtotal-line').trigger('click');
+                                    setTimeout(function() {
+                                        var $lastBody = $('#sortable-table tbody').last();
+                                        var $subtotalRow = $lastBody.find('.subtotal-row');
+                                        $subtotalRow.find('.subtotal-amount').text(item
+                                            .amount || '0.00');
+                                    }, 50);
+                                }, delay);
+
+                            } else if (item.type === 'text') {
+                                delay += 150;
+                                setTimeout(function() {
+                                    $('#add-text-line').trigger('click');
+                                    setTimeout(function() {
+                                        var $lastBody = $('#sortable-table tbody').last();
+                                        var $textRow = $lastBody.find('.text-row');
+                                        $textRow.find('input[type="text"]').val(item
+                                            .description || item.text || '');
+                                    }, 50);
+                                }, delay);
+                            }
+                        });
+
+                        // Recalculate after all loaded
+                        setTimeout(function() {
+                            if (typeof renumberProposalLines === 'function') renumberProposalLines();
+                            if (typeof recalcTotals === 'function') recalcTotals();
+                        }, delay + 300);
+                    }
+                @endif
             } catch (e) {
                 console.error('Error in auto-population:', e);
             }

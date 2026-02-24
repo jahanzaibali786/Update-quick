@@ -630,8 +630,8 @@
         var currentSelect = null;
         var currentType = null;
 
-        function openAddNewModal($select) {
-
+        function openAddNewModal($select) {  
+    
             let v = $select.val();
 
             if (!(v === '__add__' || v.startsWith('__add_'))) {
@@ -639,17 +639,17 @@
             }
             $select.val(''); // reset dropdown
             currentSelect = $select; // save reference
-            if (v.startsWith('__add_')) {
+            if(v.startsWith('__add_')) {
                 var url = $select.attr("data-create-url");
                 var title = $select.attr("data-create-title");
-                currentType = $select.attr("data-create-type");
-            } else {
+                 currentType = $select.attr("data-create-type");
+            }else{
                 var url = $select.data('create-url');
                 var title = $select.data('create-title') || 'Create New';
 
             }
-            console.log(url, title, currentType, 'ad');
-
+            console.log(url,title,currentType,'ad');
+            
             // prevent duplicate modal
             if ($('#globalAddNewModal').length) {
                 $('#globalAddNewModal').modal('show');
@@ -670,7 +670,7 @@
             `);
 
             $('body').append($modal);
-
+                        
             $.get(url, function(html) {
                 $modal.find('.modal-body').html(html);
 
@@ -695,7 +695,7 @@
             var $select = $(this);
             if ($select.val() === '__add__') {
                 openAddNewModal($select);
-            } else if ($select.val().startsWith("__add_")) {
+            }else if ($select.val().startsWith("__add_")) {
                 let selected = $select.find(":selected");
 
                 // Move attributes to SELECT so your global function remains SAME
@@ -719,7 +719,7 @@
         //         $select.attr("data-create-title", selected.data("create-title"));
         //         // Call your existing global modal function
         //         openAddNewModal($select);
-
+                
         //     }
         // });
 
@@ -739,44 +739,39 @@
                 data: $form.serialize(),
                 success: function(response) {
                     if (response.success) {
-                        if (currentType != null) {
+                        if(currentType != null){
                             console.log(currentType);
-                            let $targetGroup = $('optgroup[label="' + currentType + '"]',
-                                $select);
+                             let $targetGroup = $('optgroup[label="' + currentType + '"]', $select);
 
-                            let $newOption = $('<option>', {
-                                value: currentType + '_' + response.data
-                                    .id, // group prefix
-                                text: response.data.name
-                            });
+                                let $newOption = $('<option>', {
+                                    value: currentType + '_' + response.data.id,  // group prefix
+                                    text: response.data.name
+                                });
 
-                            // Insert after __add_type
-                            $targetGroup.find('option[value="__add_' + currentType + '"]')
-                                .after($newOption);
+                                // Insert after __add_type
+                                $targetGroup.find('option[value="__add_' + currentType + '"]').after($newOption);
 
-                            // Select new value
-                            $select.val(currentType + '_' + response.data.id).trigger(
-                                'change');
+                                // Select new value
+                                $select.val(currentType + '_' + response.data.id).trigger('change');
 
+                        }else{
+                            
+                        
+                        // 🔹 Insert new option before the "Add New" of the same select
+                        var $addNewOption = $select.find('option[value="__add__"]').first();
+                        var $newOption = $('<option>', {
+                            value: response.data.id,
+                            text: response.data.name
+                        });
+
+                        if ($addNewOption.length) {
+                            $select.append($newOption);
+                            // $newOption.insertBefore($addNewOption);
                         } else {
-
-
-                            // 🔹 Insert new option before the "Add New" of the same select
-                            var $addNewOption = $select.find('option[value="__add__"]')
-                                .first();
-                            var $newOption = $('<option>', {
-                                value: response.data.id,
-                                text: response.data.name
-                            });
-
-                            if ($addNewOption.length) {
-                                $select.append($newOption);
-                                // $newOption.insertBefore($addNewOption);
-                            } else {
-                                $select.append($newOption);
-                            }
-                            $select.val(response.data.id).trigger('change');
+                            $select.append($newOption);
                         }
+                        $select.val(response.data.id).trigger('change');
+                    }
                         $modal.modal('hide');
                     } else {
                         alert(response.message || 'Something went wrong!');
@@ -1375,11 +1370,28 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     {{ Form::label('category_id', __('Payment Method'), ['class' => 'form-label']) }}
-                                    {{ Form::select('category_id', $category, $expense->category_id, [
+                                    {{-- {{ Form::select('category_id', $category, $expense->category_id, [
                                         'class' => 'form-control select',
                                         'data-create-url' => route('product-category.create'),
                                         'data-create-title' => __('Create New Category'),
-                                    ]) }}
+                                    ]) }} --}}
+                                       {{ Form::select(
+                                                'payment_method',
+                                                $paymentMethods ?? [
+                                                    '' => 'Choose payment method',
+                                                    'Cash' => 'Cash',
+                                                    'Check' => 'Check',
+                                                    'Credit Card' => 'Credit Card',
+                                                    'Debit Card' => 'Debit Card',
+                                                    'Bank Transfer' => 'Bank Transfer',
+                                                    'Other' => 'Other',
+                                                ],
+                                                $expense->payment_method ?? null,
+                                                [
+                                                    'class' => 'form-select',
+                                                    'id' => 'payment_method',
+                                                ],
+                                            ) }}
                                 </div>
                             </div>
 

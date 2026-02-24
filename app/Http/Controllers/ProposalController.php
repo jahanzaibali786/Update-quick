@@ -86,9 +86,9 @@ class ProposalController extends Controller
             $customFields    = CustomField::where('created_by', '=', \Auth::user()->creatorId())->where('module', '=', 'proposal')->get();
             $proposal_number = \Auth::user()->proposalNumberFormat($this->proposalNumber());
             $customers       = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers       = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers       = ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $category = ['' => 'Select Category'] + ['__add__' => '➕ Add new category'] + $category;
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
@@ -129,7 +129,7 @@ class ProposalController extends Controller
 
     public function store(Request $request)
     {
-        // dd($request->all());
+       
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create proposal')) {
@@ -185,6 +185,7 @@ class ProposalController extends Controller
                 $proposal->total_amount = $request->total_amount ?? 0;
                 $proposal->bill_to = $request->bill_to;
                 $proposal->memo = $request->memo;
+                $proposal->tax_id = $request->sales_tax_rate;
                 $proposal->note = $request->note;
                 $proposal->terms = $request->terms;
                 $proposal->accepted_by = $request->accepted_by;
@@ -407,6 +408,7 @@ class ProposalController extends Controller
                 'note' => $proposal->note,
                 'accepted_by' => $proposal->accepted_by,
                 'accepted_date' => $proposal->accepted_date ? \Carbon\Carbon::parse($proposal->accepted_date)->format('Y-m-d') : null,
+                'tax_id' => $proposal->tax_id,
                 'items' => $proposal->items
                     ->map(function ($item) {
                         $type = 'product';
@@ -504,6 +506,7 @@ class ProposalController extends Controller
                     $proposal->note = $request->note;
                     $proposal->bill_to = $request->bill_to;
                     $proposal->terms = $request->terms;
+                    $proposal->tax_id = $request->sales_tax_rate;
                     $proposal->accepted_by = $request->accepted_by;
                     $proposal->accepted_date = $request->accepted_date ? \Carbon\Carbon::parse($request->accepted_date)->format('Y-m-d') : null;
 
@@ -703,7 +706,7 @@ class ProposalController extends Controller
                 $proposal->delete();
                 ProposalProduct::where('proposal_id', '=', $proposal->id)->delete();
 
-                return redirect()->route('proposal.index')->with('success', __('Proposal successfully deleted.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Proposal successfully deleted.'));
             }
             else
             {

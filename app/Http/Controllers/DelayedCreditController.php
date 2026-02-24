@@ -365,7 +365,7 @@ class DelayedCreditController extends Controller
                 // Delete the delayed credit
                 $delayedCredit->delete();
 
-                return redirect()->route('delayed-credit.index')->with('success', __('Delayed Credit deleted successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Credit deleted successfully.'));
             } catch (\Exception $e) {
                 return redirect()->back()->with('error', $e->getMessage());
             }

@@ -52,6 +52,8 @@ class Invoice extends Model
         'owned_by',
         'total_tax',
         'voucher_id',
+        'convert_type',
+        'convert_id',
     ];
 
     

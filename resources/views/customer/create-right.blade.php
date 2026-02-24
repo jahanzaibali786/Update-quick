@@ -708,7 +708,7 @@
 .customer-drawer-body {
     overflow-y: auto;
     min-height: 0;
-    padding-bottom: 100vh;
+    padding-bottom: 10vh;
 }
 
 /* pin footer to bottom of the drawer viewport */

@@ -45,7 +45,7 @@ class DelayedChargeController extends Controller
             $delayed_charge_number = 'DCH-' . str_pad($this->delayedChargeNumber(), 5, '0', STR_PAD_LEFT);
             
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers =  ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             
             $product_services = ProductService::get()->pluck('name', 'id');
             $product_services->prepend('--', '');
@@ -365,7 +365,7 @@ class DelayedChargeController extends Controller
                 // Delete the delayed charge
                 $delayedCharge->delete();
 
-                return redirect()->route('delayed-charge.index')->with('success', __('Delayed Charge deleted successfully.'));
+                return redirect()->route('sales.transactions.index')->with('success', __('Delayed Charge deleted successfully.'));
             } catch (\Exception $e) {
                 return redirect()->back()->with('error', $e->getMessage());
             }

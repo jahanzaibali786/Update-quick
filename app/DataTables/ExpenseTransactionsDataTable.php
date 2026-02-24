@@ -78,6 +78,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('expense.edit', Crypt::encrypt($exp->id)),
                     'edit_url' => route('expense.edit', Crypt::encrypt($exp->id)),
+                    'delete_url' => route('expense.destroy', $exp->id),
                 ]);
             }
         }
@@ -113,6 +114,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('creditcreditcard.edit', Crypt::encrypt($exp->id)),
                     'edit_url' => route('creditcreditcard.edit', Crypt::encrypt($exp->id)),
+                    'delete_url' => route('creditcreditcard.destroy', $exp->id),
                 ]);
             }
         }
@@ -158,6 +160,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('bill.edit', Crypt::encrypt($bill->id)),
                     'edit_url' => route('bill.edit', Crypt::encrypt($bill->id)),
+                    'delete_url' => route('bill.destroy', $bill->id),
                 ]);
             }
         }
@@ -193,8 +196,11 @@ class ExpenseTransactionsDataTable
                     'balance' => 0,
                     'total' => -$payment->amount, // Negative for payments
                     'attachments' => '',
-                    'view_url' => route('bill.payment', $payment->bill_id),
+                    'view_url' => '',
                     'edit_url' => '',
+                    // delete_url of payment delete
+                    'delete_url' => route('bill.payment.destroy', [$payment->bill_id, $payment->id]),
+
                 ]);
             }
         }
@@ -229,8 +235,9 @@ class ExpenseTransactionsDataTable
                     'balance' => 0,
                     'total' => $check->getTotal(),
                     'attachments' => '',
-                    'view_url' => route('expense.show', Crypt::encrypt($check->id)),
-                    'edit_url' => route('expense.edit', Crypt::encrypt($check->id)),
+                    'view_url' => route('checks.edit', Crypt::encrypt($check->id)),
+                    'edit_url' => route('checks.edit', Crypt::encrypt($check->id)),
+                    'delete_url' => route('checks.destroy', $check->id),
                 ]);
             }
         }
@@ -299,6 +306,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('vendor-credit.edit', $vc->id),
                     'edit_url' => route('vendor-credit.edit', $vc->id),
+                    'delete_url' => route('vendor-credit.destroy', $vc->id),
                 ]);
             }
         }
@@ -336,6 +344,7 @@ class ExpenseTransactionsDataTable
                     'attachments' => '',
                     'view_url' => route('paydowncreditcard.edit', $vc->id),
                     'edit_url' => route('paydowncreditcard.edit', $vc->id),
+                    'delete_url' => route('paydowncreditcard.destroy', $vc->id),
                 ]);
             }
         }

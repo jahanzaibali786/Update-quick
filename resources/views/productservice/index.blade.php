@@ -22,8 +22,7 @@
 
          <a href="#" data-size="lg" data-url="{{ route('productservice.create') }}" data-ajax-popup="true"
              data-bs-toggle="tooltip" data-title="{{ __('Create New Product & Service') }}" class="btn btn-sm btn-primary">
-             {{ __('Create Product & Service') }}
-             <i class="ti ti-plus"></i>
+             {{ __('New Product/Service') }}
          </a>
 
      </div>
@@ -31,7 +30,7 @@
 
  @section('content')
      {{-- Include Sales Tabs --}}
-     @include('transaction.sales-tabs')
+     {{-- @include('transaction.sales-tabs') --}}
 <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
 
     {{-- Filters Dropdown --}}
@@ -107,11 +106,11 @@
                                      <th>{{ __('Sku') }}</th>
                                      <th>{{ __('Sale Price') }}</th>
                                      <th>{{ __('Purchase Price') }}</th>
-                                     <th>{{ __('Tax') }}</th>
+                                     {{-- <th>{{ __('Tax') }}</th> --}}
                                      <th>{{ __('Category') }}</th>
                                      <th>{{ __('Unit') }}</th>
                                      <th>{{ __('Quantity') }}</th>
-                                     <th>{{ __('Balance') }}</th>
+                                     {{-- <th>{{ __('Balance') }}</th> --}}
                                      <th>{{ __('Type') }}</th>
                                      <th>{{ __('Action') }}</th>
                                  </tr>
@@ -123,7 +122,7 @@
                                          <td>{{ $productService->sku }}</td>
                                          <td>{{ \Auth::user()->priceFormat($productService->sale_price) }}</td>
                                          <td>{{ \Auth::user()->priceFormat($productService->purchase_price) }}</td>
-                                         <td>
+                                         {{-- <td>
                                              @if (!empty($productService->tax_id))
                                                  @php
                                                      $itemTaxes = [];
@@ -143,7 +142,7 @@
                                              @else
                                                  -
                                              @endif
-                                         </td>
+                                         </td> --}}
                                          <td>{{ !empty($productService->category) ? $productService->category->name : '' }}
                                          </td>
                                          <td>{{ !empty($productService->unit) ? $productService->unit->name : '' }}</td>
@@ -152,12 +151,12 @@
                                          @else
                                              <td>-</td>
                                          @endif
-                                         <td>{{ $productService->qb_balance }}</td>
+                                         {{-- <td>{{ $productService->qb_balance }}</td> --}}
                                          <td>{{ ucwords($productService->type) }}</td>
 
                                          @if (Gate::check('edit product & service') || Gate::check('delete product & service'))
                                              <td class="Action">
-                                                 <div class="action-btn bg-warning ms-2">
+                                                 {{-- <div class="action-btn bg-warning ms-2">
                                                      <a href="#" class="mx-3 btn btn-sm align-items-center"
                                                          data-url="{{ route('productservice.detail', $productService->id) }}"
                                                          data-ajax-popup="true" data-bs-toggle="tooltip"
@@ -165,7 +164,7 @@
                                                          data-title="{{ __('Warehouse Details') }}">
                                                          <i class="ti ti-eye text-white"></i>
                                                      </a>
-                                                 </div>
+                                                 </div> --}}
 
                                                  @can('edit product & service')
                                                      <div class="action-btn bg-info ms-2">
@@ -178,7 +177,7 @@
                                                          </a>
                                                      </div>
                                                  @endcan
-                                                 @can('delete product & service')
+                                                 {{-- @can('delete product & service')
                                                      <div class="action-btn bg-danger ms-2">
                                                          {!! Form::open([
                                                              'method' => 'DELETE',
@@ -191,7 +190,7 @@
                                                                  class="ti ti-trash text-white"></i></a>
                                                          {!! Form::close() !!}
                                                      </div>
-                                                 @endcan
+                                                 @endcan --}}
                                              </td>
                                          @endif
                                      </tr>

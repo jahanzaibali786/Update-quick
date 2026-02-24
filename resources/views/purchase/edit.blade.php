@@ -276,6 +276,7 @@
 @endpush
 
 @section('content')
+
     <div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true"
         style="background: #ffffff;">
         <div class="modal-dialog modal-fullscreen">
@@ -330,7 +331,7 @@
                                             <div class="col-md-4">
                                                 <div class="form-group mb-3">
                                                     <label class="form-label">{{ __('Vendor') }}</label>
-                                                    <select name="vendor_id" class="form-control select2"
+                                                    <select name="vendor_id" class="form-control select"
                                                         id="vendor_selector" required>
                                                         <option value="">{{ __('Choose a vendor') }}</option>
                                                         @foreach ($vendors as $id => $vendor)
@@ -419,7 +420,7 @@
                                     </div>
 
                                     <!-- RIGHT: AMOUNT Display -->
-                                    <div class="col-2 text-end" style="margin-top: -34px;">
+                                    <div class="col-2 text-end" style="margin-top: -3px;">
                                         <div class="d-flex flex-column align-items-end">
                                             <label class="form-label mb-0" style="color:#6b6c72;">AMOUNT</label>
                                             <p class="h3 mb-0 grand-total-display"

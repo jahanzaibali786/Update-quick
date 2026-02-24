@@ -17,6 +17,7 @@ use App\Models\InvoiceProduct;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
 use App\Models\Notification;
+use App\Models\PaymentTerm;
 use App\Models\WorkFlow;
 use App\Models\WorkFlowAction;
 use App\Models\Plan;
@@ -240,15 +241,16 @@ class InvoiceController extends Controller
                 ->get();
             $invoice_number = \Auth::user()->invoiceNumberFormat($this->invoiceNumber());
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
+            $customers = ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
             $category = ProductServiceCategory::where($column, $ownerId)->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $category = ['' => 'Select Category'] + ['__add__' => '➕ Add new category'] + $category;
             $product_services = ProductService::get()->pluck('name', 'id');
             $product_services->prepend('--', '');
+            $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
 
             // Always return modal view
-            return view('invoice.create_modal', compact('customers', 'invoice_number', 'product_services', 'category', 'customFields', 'customerId', 'taxes'));
+            return view('invoice.create_modal', compact('customers', 'invoice_number', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'paymentTerms'));
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -627,6 +629,10 @@ class InvoiceController extends Controller
                 // $invoice->ship_to = $request->ship_to;
                 $invoice->terms = $request->terms;
 
+                // Store convert_type and convert_id (e.g. from estimate conversion)
+                $invoice->convert_type = $request->convert_type;
+                $invoice->convert_id = $request->convert_id;
+
                 // Handle logo upload
                 if ($request->hasFile('company_logo')) {
                     $logoFile = $request->file('company_logo');
@@ -784,6 +790,15 @@ class InvoiceController extends Controller
 
                 // Update estimate status based on invoiced items
                 $this->updateEstimateStatusAfterInvoice($products);
+
+                // Update Estimation status when converting from estimate
+                if ($invoice->convert_type == 'estimate' && $invoice->convert_id) {
+                    $estimation = \App\Models\Proposal::find($invoice->convert_id);
+                    if ($estimation) {
+                        $estimation->status = 4; // Cancelled (converted to invoice)
+                        $estimation->save();
+                    }
+                }
 
                 // Notifications (Slack, Telegram, Twilio)
                 $setting = Utility::settings(\Auth::user()->creatorId());
@@ -1188,6 +1203,7 @@ class InvoiceController extends Controller
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
             $taxes = Tax::where('created_by', \Auth::user()->creatorId())->get();
+            $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
 
             // Always return modal view for AJAX requests
             $customFields = CustomField::where('created_by', '=', \Auth::user()->creatorId())
@@ -1247,6 +1263,7 @@ class InvoiceController extends Controller
                 'bill_to' => $invoice->bill_to,
                 'ship_to' => $invoice->ship_to,
                 'terms' => $invoice->terms,
+                'paymentTerms' => $invoice->payment_term,
                 'logo' => $logoUrl,
                 'attachments' => $attachmentsData,
                 'subtotal' => $invoice->subtotal,
@@ -1289,7 +1306,7 @@ class InvoiceController extends Controller
                     ->toArray(),
             ];
             // dd($invoiceData);
-            return view('invoice.edit_modal', compact('customers', 'invoice', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'billTo', 'shipTo', 'invoiceData'))->with('mode', 'edit');
+            return view('invoice.edit_modal', compact('customers', 'invoice', 'product_services', 'category', 'customFields', 'customerId', 'taxes', 'billTo', 'shipTo', 'invoiceData', 'paymentTerms'))->with('mode', 'edit');
         } else {
             return response()->json(['error' => __('Permission denied.')], 401);
         }
@@ -1710,13 +1727,13 @@ class InvoiceController extends Controller
 
                     $isApproved = !is_null($voucher);
                     // dd($products);
-                    if ($isApproved) {
+                    // if ($isApproved) {
                         // SCENARIO 1: Invoice is approved - Update journal entries
                         $this->updateApprovedInvoice($invoice, $voucher, $products, $request);
-                    } else {
-                        // SCENARIO 2: Invoice is not approved yet - Just update invoice products
-                        $this->updateDraftInvoice($invoice, $products);
-                    }
+                    // } else {
+                    //     // SCENARIO 2: Invoice is not approved yet - Just update invoice products
+                    //     $this->updateDraftInvoice($invoice, $products);
+                    // }
 
                     // Log activity
                     Utility::makeActivityLog(\Auth::user()->id, 'Invoice', $invoice->id, 'Update Invoice', $invoice->description);
@@ -1727,7 +1744,7 @@ class InvoiceController extends Controller
                     if ($returnUrl) {
                         return redirect($returnUrl)->with('success', __('Invoice successfully updated.'));
                     }
-                    return redirect()->route('invoice.index')->with('success', __('Invoice successfully updated.'));
+                    return redirect()->route('sales.transactions.index')->with('success', __('Invoice successfully updated.'));
                 } else {
                     return redirect()->back()->with('error', __('Permission denied.'));
                 }
@@ -1972,7 +1989,6 @@ class InvoiceController extends Controller
 
                     $tax += floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
                     $reciveable += floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0) + floatval($prod['itemTaxPrice'] ?? ($prod['item_tax_price'] ?? 0));
-
                     // Create transaction line for product
                     $dataline = [
                         'account_id' => $product->sale_chartaccount_id,
@@ -2168,12 +2184,14 @@ class InvoiceController extends Controller
                         $journalItem->type = 'Invoice';
                         $journalItem->name = $invoice->customer->name ?? null;
                         $journalItem->customer_id = $invoice->customer_id ?? null;
+                        $journalItem->debit = 0;
                         $journalItem->credit = floatval($prod['quantity'] ?? 0) * floatval($prod['price'] ?? 0) - floatval($prod['discount'] ?? 0);
                         $journalItem->save();
 
                         // Update transaction line
                         $transaction_line = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_id', $invoice->id)->where('reference', 'Invoice Journal')->where('product_item_id', $invoiceProduct->id)->where('product_type', 'Invoice')->first();
                         if ($transaction_line) {
+                            $transaction_line->debit = $journalItem->debit;
                             $transaction_line->credit = $journalItem->credit;
                             $transaction_line->save();
                         }
@@ -2229,12 +2247,14 @@ class InvoiceController extends Controller
                             $journal_tax->type = 'Invoice';
                             $journal_tax->name = $invoice->customer->name ?? null;
                             $journal_tax->customer_id = $invoice->customer_id ?? null;
+                            $journal_tax->debit = 0;
                             $journal_tax->credit = $tax;
                             $journal_tax->save();
 
                             // Update tax transaction line
                             $transaction_tax = TransactionLines::where('reference_id', $invoice->voucher_id)->where('product_id', $invoice->id)->where('reference', 'Invoice Journal')->where('product_item_id', $invoiceProduct->id)->where('product_type', 'Invoice Tax')->first();
                             if ($transaction_tax) {
+                                $transaction_tax->debit = $journal_tax->debit;
                                 $transaction_tax->credit = $journal_tax->credit;
                                 $transaction_tax->save();
                             }
@@ -2355,6 +2375,7 @@ class InvoiceController extends Controller
                         $existingSalesTaxJournal->customer_id = $invoice->customer_id ?? null;
                         $existingSalesTaxJournal->account = $taxAccountId;
                         $existingSalesTaxJournal->description = 'Sales Tax (' . $tax->name . ' @ ' . $tax->rate . '%) on Invoice No: ' . $invoice->invoice_id;
+                        $existingSalesTaxJournal->debit = 0;
                         $existingSalesTaxJournal->credit = floatval($invoice->total_tax);
                         $existingSalesTaxJournal->save();
                         
@@ -2426,10 +2447,12 @@ class InvoiceController extends Controller
         }
 
         // Update Account Receivables journal item
-        $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
-        if ($types) {
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-            $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+        $account_rec = Utility::getAccountReceivable(@$invoice->created_by);
+        if ($account_rec) {
+            // $types = ChartOfAccountType::where('created_by', '=', $invoice->created_by)->where('name', 'Assets')->first();
+            // $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
+            // $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
+            $account = ChartOfAccount::where('id',  $account_rec->id)->first();
 
             if ($account) {
                 $item_last = JournalItem::where('journal', $voucher->id)->where('account', $account->id)->first();
@@ -2634,7 +2657,7 @@ class InvoiceController extends Controller
                     JournalItem::where('journal', $invoice->voucher_id)->delete();
                 }
                 $invoice->delete();
-                return redirect()->route('invoice.index')->with('success', __('Invoice successfully deleted.'));
+                return redirect()->route('sale-transactions.index')->with('success', __('Invoice successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -2879,6 +2902,7 @@ class InvoiceController extends Controller
 
     public function newQboRecievePayment($invoice_id)
 {
+ 
     if (\Auth::user()->can('create payment invoice')) {
         // Fetch invoice with customer relationship
         $invoice = Invoice::with('customer')->where('id', $invoice_id)->first();
@@ -2942,6 +2966,7 @@ class InvoiceController extends Controller
 
     public function createPayment(Request $request, $invoice_id)
     {
+          
         $invoice = Invoice::find($invoice_id);
         if ($invoice->getDue() < $request->amount) {
             return redirect()->back()->with('error', __('Invoice payment amount should not greater than subtotal.'));

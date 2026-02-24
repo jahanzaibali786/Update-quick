@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* QuickBooks Style for Delayed Credit */
         .dc-container {
             background: #ffffff;
@@ -385,280 +390,355 @@
 @endpush
 
 @section('content')
-<div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true" style="background: #ffffff;">
-    <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content">
-    <div class="dc-container">
-        {{ Form::model($delayedCredit, ['route' => ['delayed-credit.update', $delayedCredit->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
+    <div class="modal fade" id="expense-modal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true"
+        style="background: #ffffff;">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="dc-container">
+                    {{ Form::model($delayedCredit, ['route' => ['delayed-credit.update', $delayedCredit->id], 'method' => 'PUT', 'id' => 'delayed-credit-form', 'files' => true]) }}
 
-        {{-- Fixed Top Header --}}
-        <div class="fixed-top-header">
-            <div class="header-top-row">
-                <div class="dc-label">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
-                        <path fill="currentColor" d="M13.007 7a1 1 0 0 0-1 1L12 12a1 1 0 0 0 1 1l3.556.006a1 1 0 0 0 0-2L14 11l.005-3a1 1 0 0 0-.998-1"></path>
-                        <path fill="currentColor" d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353"></path>
-                    </svg>
-                    {{ __('Delayed Credit') }}
-                </div>
+                    {{-- Fixed Top Header --}}
+                    <div class="fixed-top-header">
+                        <div class="header-top-row">
+                            <div class="dc-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    color="currentColor" width="24px" height="24px">
+                                    <path fill="currentColor"
+                                        d="M13.007 7a1 1 0 0 0-1 1L12 12a1 1 0 0 0 1 1l3.556.006a1 1 0 0 0 0-2L14 11l.005-3a1 1 0 0 0-.998-1">
+                                    </path>
+                                    <path fill="currentColor"
+                                        d="M19.374 5.647A8.94 8.94 0 0 0 13.014 3H13a8.98 8.98 0 0 0-8.98 8.593l-.312-.312a1 1 0 0 0-1.416 1.412l2 2a1 1 0 0 0 1.414 0l2-2a1 1 0 0 0-1.412-1.416l-.272.272A6.984 6.984 0 0 1 13 5h.012A7 7 0 0 1 13 19h-.012a7 7 0 0 1-4.643-1.775 1 1 0 1 0-1.33 1.494A9 9 0 0 0 12.986 21H13a9 9 0 0 0 6.374-15.353">
+                                    </path>
+                                </svg>
+                                {{ __('Delayed Credit') }} #{{ $delayedCredit->credit_id ?? $delayedCredit->id }}
+                            </div>
 
-                <div class="header-right-controls">
-                    <a href="{{ route('delayed-credit.index') }}" class="close-button" aria-label="Close">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" color="currentColor" width="24px" height="24px">
-                            <path fill="currentColor" d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="dc-card">
-            {{-- Header Section --}}
-            <div class="dc-header">
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <label for="customer_id" class="form-label">{{ __('Customer') }}</label>
-                        {{ Form::select('customer_id', $customers, $delayedCredit->customer_id, [
-                            'class' => 'form-select',
-                            'id' => 'customer_id',
-                            'placeholder' => 'Choose a customer',
-                            'required' => 'required',
-                        ]) }}
-                    </div>
-                    <div class="col-md-5 text-end">
-                        <div style="margin-top: 20px;">
-                            <label style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
-                            <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">${{ number_format($delayedCredit->total_amount, 2) }}</div>
+                            <div class="header-right-controls">
+                                {{-- Feedback --}}
+                                <a href="#" class="close-button" title="Feedback"
+                                    style="font-size: 13px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                        viewBox="0 0 24 24" fill="currentColor" color="#6b6c72">
+                                        <path
+                                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z">
+                                        </path>
+                                    </svg>
+                                    <span style="color: #6b6c72;">{{ __('Feedback') }}</span>
+                                </a>
+                                {{-- Settings gear --}}
+                                <a href="#" class="close-button" title="Settings">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="currentColor" color="#6b6c72">
+                                        <path
+                                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1112 8.4a3.6 3.6 0 010 7.2z">
+                                        </path>
+                                    </svg>
+                                </a>
+                                {{-- Help --}}
+                                <a href="#" class="close-button" title="Help">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="currentColor" color="#6b6c72">
+                                        <path
+                                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z">
+                                        </path>
+                                    </svg>
+                                </a>
+                                {{-- Close --}}
+                                <a href="{{ route('sales.transactions.index') }}" class="close-button" aria-label="Close">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        color="currentColor" width="24px" height="24px">
+                                        <path fill="currentColor"
+                                            d="m13.432 11.984 5.3-5.285a1 1 0 1 0-1.412-1.416l-5.3 5.285-5.285-5.3A1 1 0 1 0 5.319 6.68l5.285 5.3L5.3 17.265a1 1 0 1 0 1.412 1.416l5.3-5.285L17.3 18.7a1 1 0 1 0 1.416-1.412z">
+                                        </path>
+                                    </svg>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <label for="date" class="form-label">{{ __('Delayed Credit Date') }}</label>
-                        {{ Form::date('date', $delayedCredit->date ? $delayedCredit->date->format('Y-m-d') : date('Y-m-d'), [
-                            'class' => 'form-control',
-                            'id' => 'date',
-                            'required' => 'required',
-                            'style' => 'width: 185px;',
-                        ]) }}
-                    </div>
-                </div>
-            </div>
-
-            {{-- Product Section --}}
-            <div class="product-section">
-                <table class="product-table" id="items-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 30px;"></th>
-                            <th style="width: 30px;">#</th>
-                            <th style="width: 250px;">{{ __('PRODUCT/SERVICE') }}</th>
-                            <th>{{ __('DESCRIPTION') }}</th>
-                            <th style="width: 80px;">{{ __('QTY') }}</th>
-                            <th style="width: 100px;">{{ __('RATE') }}</th>
-                            <th style="width: 100px;">{{ __('AMOUNT') }}</th>
-                            <th style="width: 50px;">{{ __('TAX') }}</th>
-                            <th style="width: 40px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="items-body">
-                        @php $rowIndex = 0; @endphp
-                        @forelse($delayedCredit->lines as $line)
-                            <tr class="item-row">
-                                <td>
-                                    <div class="drag-handle">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                            <circle cx="8" cy="6" r="2"></circle>
-                                            <circle cx="16" cy="6" r="2"></circle>
-                                            <circle cx="8" cy="12" r="2"></circle>
-                                            <circle cx="16" cy="12" r="2"></circle>
-                                            <circle cx="8" cy="18" r="2"></circle>
-                                            <circle cx="16" cy="18" r="2"></circle>
-                                        </svg>
-                                    </div>
-                                </td>
-                                <td><span class="line-number">{{ $rowIndex + 1 }}</span></td>
-                                <td>
-                                    {{ Form::select('items['.$rowIndex.'][item]', $product_services, $line->product_id, [
-                                        'class' => 'form-select item-select',
-                                        'placeholder' => 'Select a product/service',
+                    <div class="dc-card">
+                        {{-- Header Section --}}
+                        <div class="dc-header">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label for="customer_id" class="form-label">{{ __('Customer') }}</label>
+                                    {{ Form::select('customer_id', $customers, $delayedCredit->customer_id, [
+                                        'class' => 'form-select',
+                                        'id' => 'customer_id',
+                                        'placeholder' => 'Choose a customer',
+                                        'required' => 'required',
                                     ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::textarea('items['.$rowIndex.'][description]', $line->description, [
-                                        'class' => 'form-control item-description',
-                                        'rows' => '1',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::text('items['.$rowIndex.'][quantity]', $line->quantity, [
-                                        'class' => 'form-control input-right item-quantity',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::text('items['.$rowIndex.'][price]', $line->rate, [
-                                        'class' => 'form-control input-right item-price',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    <input type="text" name="items[{{ $rowIndex }}][amount]" class="form-control input-right item-amount" value="{{ number_format($line->amount, 2) }}" readonly>
-                                </td>
-                                <td>
-                                    <div class="form-check">
-                                        <input class="form-check-input item-tax" type="checkbox" name="items[{{ $rowIndex }}][tax]" value="1" {{ $line->tax ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="delete-icon delete-row" title="Delete line">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
-                                        </svg>
-                                    </span>
-                                </td>
-                            </tr>
-                            @php $rowIndex++; @endphp
-                        @empty
-                            <tr class="item-row">
-                                <td>
-                                    <div class="drag-handle">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                            <circle cx="8" cy="6" r="2"></circle>
-                                            <circle cx="16" cy="6" r="2"></circle>
-                                            <circle cx="8" cy="12" r="2"></circle>
-                                            <circle cx="16" cy="12" r="2"></circle>
-                                            <circle cx="8" cy="18" r="2"></circle>
-                                            <circle cx="16" cy="18" r="2"></circle>
-                                        </svg>
-                                    </div>
-                                </td>
-                                <td><span class="line-number">1</span></td>
-                                <td>
-                                    {{ Form::select('items[0][item]', $product_services, '', [
-                                        'class' => 'form-select item-select',
-                                        'placeholder' => 'Select a product/service',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::textarea('items[0][description]', null, [
-                                        'class' => 'form-control item-description',
-                                        'rows' => '1',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::text('items[0][quantity]', '', [
-                                        'class' => 'form-control input-right item-quantity',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    {{ Form::text('items[0][price]', '', [
-                                        'class' => 'form-control input-right item-price',
-                                        'placeholder' => '',
-                                    ]) }}
-                                </td>
-                                <td>
-                                    <input type="text" name="items[0][amount]" class="form-control input-right item-amount" value="0.00" readonly>
-                                </td>
-                                <td>
-                                    <div class="form-check">
-                                        <input class="form-check-input item-tax" type="checkbox" name="items[0][tax]" value="1">
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="delete-icon delete-row" title="Delete line">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path>
-                                        </svg>
-                                    </span>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-
-                <div class="table-actions">
-                    <button type="button" class="btn-action" id="add-line">{{ __('Add lines') }}</button>
-                    <button type="button" class="btn-action" id="clear-lines">{{ __('Clear all lines') }}</button>
-                </div>
-            </div>
-
-            {{-- Bottom Section --}}
-            <div class="bottom-section">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-field mb-4">
-                            <label for="memo" class="form-label">{{ __('Memo') }}</label>
-                            {{ Form::textarea('memo', $delayedCredit->memo, [
-                                'class' => 'form-control',
-                                'id' => 'memo',
-                                'rows' => '3',
-                                'placeholder' => '',
-                            ]) }}
-                        </div>
-
-                        <div class="info-field">
-                            <label class="form-label">{{ __('Attachments') }}</label>
-                            @if($delayedCredit->attachments && count($delayedCredit->attachments) > 0)
-                                <div class="mb-2">
-                                    <strong>{{ __('Existing:') }}</strong>
-                                    @foreach($delayedCredit->attachments as $attachment)
-                                        <span class="existing-attachment">
-                                            <a href="{{ asset('storage/uploads/delayed_credit_attachments/' . $attachment) }}" target="_blank">{{ $attachment }}</a>
-                                        </span>
-                                    @endforeach
                                 </div>
-                            @endif
-                            <div class="attachment-zone" onclick="document.getElementById('attachments').click()">
-                                <span class="attachment-link">{{ __('Add attachment') }}</span>
-                                <div class="attachment-limit">{{ __('Max file size: 20 MB') }}</div>
+                                <div class="col-md-9 text-end">
+                                    <div style="margin-top: 20px;">
+                                        <label
+                                            style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
+                                        <div style="font-size: 28px; font-weight: 500; color: #393a3d;"
+                                            id="header-amount-display">
+                                            ${{ number_format($delayedCredit->total_amount, 2) }}</div>
+                                    </div>
+                                </div>
                             </div>
-                            <input type="file" name="attachments[]" id="attachments" multiple style="display: none;">
-                            <div id="attachment-list" class="mt-2"></div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label for="date" class="form-label">{{ __('Delayed Credit Date') }}</label>
+                                    {{ Form::date('date', $delayedCredit->date ? $delayedCredit->date->format('Y-m-d') : date('Y-m-d'), [
+                                        'class' => 'form-control',
+                                        'id' => 'date',
+                                        'required' => 'required',
+                                        'style' => 'width: 185px;',
+                                    ]) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Product Section --}}
+                        <div class="product-section">
+                            <table class="product-table" id="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30px;"></th>
+                                        <th style="width: 30px;">#</th>
+                                        <th style="width: 250px;">{{ __('PRODUCT/SERVICE') }}</th>
+                                        <th>{{ __('DESCRIPTION') }}</th>
+                                        <th style="width: 80px;">{{ __('QTY') }}</th>
+                                        <th style="width: 100px;">{{ __('RATE') }}</th>
+                                        <th style="width: 100px;">{{ __('AMOUNT') }}</th>
+                                        <th style="width: 50px;">{{ __('TAX') }}</th>
+                                        <th style="width: 40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-body">
+                                    @php $rowIndex = 0; @endphp
+                                    @forelse($delayedCredit->lines as $line)
+                                        <tr class="item-row">
+                                            <td>
+                                                <div class="drag-handle">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24"
+                                                        fill="currentColor">
+                                                        <circle cx="8" cy="6" r="2"></circle>
+                                                        <circle cx="16" cy="6" r="2"></circle>
+                                                        <circle cx="8" cy="12" r="2"></circle>
+                                                        <circle cx="16" cy="12" r="2"></circle>
+                                                        <circle cx="8" cy="18" r="2"></circle>
+                                                        <circle cx="16" cy="18" r="2"></circle>
+                                                    </svg>
+                                                </div>
+                                            </td>
+                                            <td><span class="line-number">{{ $rowIndex + 1 }}</span></td>
+                                            <td>
+                                                {{ Form::select('items[' . $rowIndex . '][item]', $product_services, $line->product_id, [
+                                                    'class' => 'form-select item-select',
+                                                    'placeholder' => 'Select a product/service',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::textarea('items[' . $rowIndex . '][description]', $line->description, [
+                                                    'class' => 'form-control item-description',
+                                                    'rows' => '1',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::text('items[' . $rowIndex . '][quantity]', $line->quantity, [
+                                                    'class' => 'form-control input-right item-quantity',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::text('items[' . $rowIndex . '][price]', $line->rate, [
+                                                    'class' => 'form-control input-right item-price',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                <input type="text" name="items[{{ $rowIndex }}][amount]"
+                                                    class="form-control input-right item-amount"
+                                                    value="{{ number_format($line->amount, 2) }}" readonly>
+                                            </td>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input item-tax" type="checkbox"
+                                                        name="items[{{ $rowIndex }}][tax]" value="1"
+                                                        {{ $line->tax ? 'checked' : '' }}>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="delete-icon delete-row" title="Delete line">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24"
+                                                        fill="currentColor">
+                                                        <path
+                                                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                                                        </path>
+                                                    </svg>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @php $rowIndex++; @endphp
+                                    @empty
+                                        <tr class="item-row">
+                                            <td>
+                                                <div class="drag-handle">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24"
+                                                        fill="currentColor">
+                                                        <circle cx="8" cy="6" r="2"></circle>
+                                                        <circle cx="16" cy="6" r="2"></circle>
+                                                        <circle cx="8" cy="12" r="2"></circle>
+                                                        <circle cx="16" cy="12" r="2"></circle>
+                                                        <circle cx="8" cy="18" r="2"></circle>
+                                                        <circle cx="16" cy="18" r="2"></circle>
+                                                    </svg>
+                                                </div>
+                                            </td>
+                                            <td><span class="line-number">1</span></td>
+                                            <td>
+                                                {{ Form::select('items[0][item]', $product_services, '', [
+                                                    'class' => 'form-select item-select',
+                                                    'placeholder' => 'Select a product/service',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::textarea('items[0][description]', null, [
+                                                    'class' => 'form-control item-description',
+                                                    'rows' => '1',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::text('items[0][quantity]', '', [
+                                                    'class' => 'form-control input-right item-quantity',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                {{ Form::text('items[0][price]', '', [
+                                                    'class' => 'form-control input-right item-price',
+                                                    'placeholder' => '',
+                                                ]) }}
+                                            </td>
+                                            <td>
+                                                <input type="text" name="items[0][amount]"
+                                                    class="form-control input-right item-amount" value="0.00" readonly>
+                                            </td>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input item-tax" type="checkbox"
+                                                        name="items[0][tax]" value="1">
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="delete-icon delete-row" title="Delete line">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24"
+                                                        fill="currentColor">
+                                                        <path
+                                                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z">
+                                                        </path>
+                                                    </svg>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+
+                            <div class="table-actions">
+                                <button type="button" class="btn-action" id="add-line">{{ __('Add lines') }}</button>
+                                <button type="button" class="btn-action"
+                                    id="clear-lines">{{ __('Clear all lines') }}</button>
+                            </div>
+                        </div>
+
+                        {{-- Bottom Section --}}
+                        <div class="bottom-section">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-field mb-4">
+                                        <label for="memo" class="form-label">{{ __('Memo') }}</label>
+                                        {{ Form::textarea('memo', $delayedCredit->memo, [
+                                            'class' => 'form-control',
+                                            'id' => 'memo',
+                                            'rows' => '3',
+                                            'placeholder' => '',
+                                        ]) }}
+                                    </div>
+
+                                    <div class="info-field">
+                                        <label class="form-label">{{ __('Attachments') }}</label>
+                                        @if ($delayedCredit->attachments && count($delayedCredit->attachments) > 0)
+                                            <div class="mb-2">
+                                                <strong>{{ __('Existing:') }}</strong>
+                                                @foreach ($delayedCredit->attachments as $attachment)
+                                                    <span class="existing-attachment">
+                                                        <a href="{{ asset('storage/uploads/delayed_credit_attachments/' . $attachment) }}"
+                                                            target="_blank">{{ $attachment }}</a>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        <div class="attachment-zone"
+                                            onclick="document.getElementById('attachments').click()">
+                                            <span class="attachment-link">{{ __('Add attachment') }}</span>
+                                            <div class="attachment-limit">{{ __('Max file size: 20 MB') }}</div>
+                                        </div>
+                                        <input type="file" name="attachments[]" id="attachments" multiple
+                                            style="display: none;">
+                                        <div id="attachment-list" class="mt-2"></div>
+                                        <div class="mt-2 text-center">
+                                            <a href="#" class="attachment-link"
+                                                style="font-size: 13px;">{{ __('Show existing') }}</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="totals-section">
+                                        <div class="total-row final">
+                                            <span>{{ __('Total') }}</span>
+                                            <span
+                                                id="total-amount">${{ number_format($delayedCredit->total_amount, 2) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="totals-section">
-                            <div class="total-row final">
-                                <span>{{ __('Total') }}</span>
-                                <span id="total-amount">${{ number_format($delayedCredit->total_amount, 2) }}</span>
+
+                    {{-- Privacy --}}
+                    <div class="text-center" style="padding: 12px 0;">
+                        <a href="#"
+                            style="color: #0077c5; font-size: 13px; text-decoration: none;">{{ __('Privacy') }}</a>
+                    </div>
+
+                    {{-- Footer --}}
+                    <div class="dc-footer">
+                        <div class="footer-left">
+                            <a href="{{ route('sales.transactions.index') }}"
+                                class="btn btn-secondary">{{ __('Cancel') }}</a>
+                        </div>
+                        <div class="footer-center">
+                            <a href="#" class="text-primary">{{ __('Make recurring') }}</a>
+                        </div>
+                        <div class="footer-actions">
+                            <div class="btn-group dropup">
+                                <button type="submit" class="btn btn-primary">{{ __('Save and close') }}</button>
+                                <button type="button" class="btn btn-primary dropdown-toggle-split" id="saveDropdown"
+                                    onclick="document.getElementById('saveMenu').classList.toggle('show')">
+                                    <span>▼</span>
+                                </button>
+                                <ul class="dropdown-menu" id="saveMenu">
+                                    <li><button type="submit" class="dropdown-item" name="save_action"
+                                            value="save_close">{{ __('Save and close') }}</button></li>
+                                    <li><button type="submit" class="dropdown-item" name="save_action"
+                                            value="save_new">{{ __('Save and new') }}</button></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
+
+                    {{ Form::close() }}
                 </div>
             </div>
         </div>
-
-        {{-- Footer --}}
-        <div class="dc-footer">
-            <div class="footer-left">
-                <a href="{{ route('delayed-credit.index') }}" class="btn btn-secondary">{{ __('Cancel') }}</a>
-            </div>
-            <div class="footer-center">
-                <a href="#" class="text-primary">{{ __('Make recurring') }}</a>
-            </div>
-            <div class="footer-actions">
-                <div class="btn-group dropup">
-                    <button type="submit" class="btn btn-primary">{{ __('Save and close') }}</button>
-                    <button type="button" class="btn btn-primary dropdown-toggle-split" id="saveDropdown" onclick="document.getElementById('saveMenu').classList.toggle('show')">
-                        <span>▼</span>
-                    </button>
-                    <ul class="dropdown-menu" id="saveMenu">
-                        <li><button type="submit" class="dropdown-item" name="save_action" value="save_close">{{ __('Save and close') }}</button></li>
-                        <li><button type="submit" class="dropdown-item" name="save_action" value="save_new">{{ __('Save and new') }}</button></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        {{ Form::close() }}
-    </div>
-    </div>
-    </div>
     </div>
 @endsection
 
@@ -713,7 +793,7 @@
                         <td>
                             <select name="items[${rowIndex}][item]" class="form-select item-select">
                                 <option value="">Select a product/service</option>
-                                @foreach($product_services as $id => $name)
+                                @foreach ($product_services as $id => $name)
                                     <option value="{{ $id }}">{{ $name }}</option>
                                 @endforeach
                             </select>
@@ -751,7 +831,7 @@
 
             // Clear all lines
             $('#clear-lines').on('click', function() {
-                if (confirm('{{ __("Clear all lines?") }}')) {
+                if (confirm('{{ __('Clear all lines?') }}')) {
                     $('#items-body .item-row').slice(1).remove();
                     var $first = $('#items-body .item-row:first');
                     $first.find('.item-select').val('');
@@ -786,7 +866,7 @@
                 var productId = $(this).val();
                 if (productId) {
                     $.ajax({
-                        url: '{{ route("invoice.product") }}',
+                        url: '{{ route('invoice.product') }}',
                         type: 'POST',
                         dataType: 'json', // 🔥 THIS LINE
                         data: {
@@ -795,7 +875,8 @@
                         },
                         success: function(response) {
                             if (response.product) {
-                                $row.find('.item-description').val(response.product.description || '');
+                                $row.find('.item-description').val(response.product
+                                    .description || '');
                                 $row.find('.item-quantity').val(1);
                                 $row.find('.item-price').val(response.product.sale_price || 0);
                                 recalcRow($row);
@@ -823,12 +904,12 @@
             });
         });
 
-           $(document).ready(function() {
-        var expenseModal = new bootstrap.Modal(document.getElementById('expense-modal'), {
-            backdrop: 'static',
-            keyboard: false
+        $(document).ready(function() {
+            var expenseModal = new bootstrap.Modal(document.getElementById('expense-modal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            expenseModal.show();
         });
-        expenseModal.show();
-    });
     </script>
 @endpush

@@ -23,6 +23,7 @@ class Proposal extends Model
         'created_by',
         'accepted_by',
         'accepted_date',
+        'tax_id',
     ];
 
     public static $statues = [
@@ -30,7 +31,7 @@ class Proposal extends Model
         'Open',
         'Accepted',
         'Declined',
-        'Close',
+        'Converted',
     ];
 
 

@@ -17,7 +17,7 @@
         </div>
         <div class="form-group col-md-6">
             {{ Form::label('account_subtype', __('Account Type'),['class'=>'form-label']) }}
-            {{ Form::select('account_subtype', $account_subtypes,'', array('class' => 'form-control select','required'=>'required')) }}
+            {{ Form::select('account_subtype', $account_subtypes,$bankAccount->account_subtype, array('class' => 'form-control select','required'=>'required')) }}
         </div>
         <div class="form-group col-md-6">
             {{ Form::label('holder_name', __('Bank Holder Name'),['class'=>'form-label']) }}

@@ -1,4 +1,9 @@
 <style>
+    #globalAddNewModal .modal-dialog {
+        width: 800px !important;
+        max-width: 800px !important;
+    }
+
     .qb-label {
         font-size: 14px;
         color: #393a3d;
@@ -671,33 +676,46 @@
 <script>
     $(document).ready(function() {
         var currentSelect = null;
+        var currentType = null;
 
         function openAddNewModal($select) {
-            if ($select.val() !== '__add__') return;
+
+            let v = $select.val();
+
+            if (!(v === '__add__' || v.startsWith('__add_'))) {
+                return;
+            }
             $select.val(''); // reset dropdown
             currentSelect = $select; // save reference
-            var url = $select.data('create-url');
-            var title = $select.data('create-title') || 'Create New';
+            if (v.startsWith('__add_')) {
+                var url = $select.attr("data-create-url");
+                var title = $select.attr("data-create-title");
+                currentType = $select.attr("data-create-type");
+            } else {
+                var url = $select.data('create-url');
+                var title = $select.data('create-title') || 'Create New';
+
+            }
+            console.log(url, title, currentType, 'ad');
 
             // prevent duplicate modal
             if ($('#globalAddNewModal').length) {
                 $('#globalAddNewModal').modal('show');
                 return;
             }
-
             var $modal = $(`
-            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
-              <div class="modal-dialog">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">${title}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body">Loading...</div>
+                <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">Loading...</div>
+                    </div>
                 </div>
-              </div>
-            </div>
-        `);
+                </div>
+            `);
 
             $('body').append($modal);
 
@@ -725,8 +743,33 @@
             var $select = $(this);
             if ($select.val() === '__add__') {
                 openAddNewModal($select);
+            } else if ($select.val().startsWith("__add_")) {
+                let selected = $select.find(":selected");
+
+                // Move attributes to SELECT so your global function remains SAME
+                $select.attr("data-create-url", selected.data("create-url"));
+                $select.attr("data-create-title", selected.data("create-title"));
+                $select.attr("data-create-type", selected.data("create-type"));
+                openAddNewModal($select);
             }
         });
+        // $(document).on('change', '#payee_all', function () {
+        //     let $select = $(this);
+        //     let value = $select.val();
+
+        //     // detect any add option
+        //     if (value === "__add__" || value.startsWith("__add_")) {
+        //         // Force modal to use THIS option's data attributes
+        //         let selected = $select.find(":selected");
+
+        //         // Move attributes to SELECT so your global function remains SAME
+        //         $select.attr("data-create-url", selected.data("create-url"));
+        //         $select.attr("data-create-title", selected.data("create-title"));
+        //         // Call your existing global modal function
+        //         openAddNewModal($select);
+
+        //     }
+        // });
 
         // AJAX submit for dynamic modal
         $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
@@ -744,21 +787,44 @@
                 data: $form.serialize(),
                 success: function(response) {
                     if (response.success) {
-                        // 🔹 Insert new option before the "Add New" of the same select
-                        var $addNewOption = $select.find('option[value="__add__"]').first();
-                        var $newOption = $('<option>', {
-                            value: response.data.id,
-                            text: response.data.name
-                        });
+                        if (currentType != null) {
+                            console.log(currentType);
+                            let $targetGroup = $('optgroup[label="' + currentType + '"]',
+                                $select);
 
-                        if ($addNewOption.length) {
-                            $select.append($newOption);
-                            // $newOption.insertBefore($addNewOption);
+                            let $newOption = $('<option>', {
+                                value: currentType + '_' + response.data
+                                    .id, // group prefix
+                                text: response.data.name
+                            });
+
+                            // Insert after __add_type
+                            $targetGroup.find('option[value="__add_' + currentType + '"]')
+                                .after($newOption);
+
+                            // Select new value
+                            $select.val(currentType + '_' + response.data.id).trigger(
+                                'change');
+
                         } else {
-                            $select.append($newOption);
-                        }
 
-                        $select.val(response.data.id).trigger('change');
+
+                            // 🔹 Insert new option before the "Add New" of the same select
+                            var $addNewOption = $select.find('option[value="__add__"]')
+                                .first();
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
+                            });
+
+                            if ($addNewOption.length) {
+                                $select.append($newOption);
+                                // $newOption.insertBefore($addNewOption);
+                            } else {
+                                $select.append($newOption);
+                            }
+                            $select.val(response.data.id).trigger('change');
+                        }
                         $modal.modal('hide');
                     } else {
                         alert(response.message || 'Something went wrong!');
@@ -800,18 +866,18 @@
             }
 
             var $modal = $(`
-                                        <div class="modal fade" id="globalAddNewModal" tabindex="-1">
-                                          <div class="modal-dialog">
-                                            <div class="modal-content">
-                                              <div class="modal-header">
-                                                <h5 class="modal-title">${title}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                              </div>
-                                              <div class="modal-body">Loading...</div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                    `);
+                            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                                <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                    <h5 class="modal-title">${title}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">Loading...</div>
+                                </div>
+                                </div>
+                            </div>
+                        `);
 
             $('body').append($modal);
 
@@ -839,11 +905,19 @@
             var $select = $(this);
             if ($select.val() === '__add__') {
                 openAddNewModal($select);
+            } else if ($select.val().startsWith("__add_")) {
+                let selected = $select.find(":selected");
+
+                // Move attributes to SELECT so your global function remains SAME
+                $select.attr("data-create-url", selected.data("create-url"));
+                $select.attr("data-create-title", selected.data("create-title"));
+                $select.attr("data-create-type", selected.data("create-type"));
+                openAddNewModal($select);
             }
         });
 
         // AJAX submit for dynamic modal
-        $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+         $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
             e) {
             e.preventDefault();
             var $form = $(this);
@@ -858,21 +932,44 @@
                 data: $form.serialize(),
                 success: function(response) {
                     if (response.success) {
-                        // 🔹 Insert new option before the "Add New" of the same select
-                        var $addNewOption = $select.find('option[value="__add__"]').first();
-                        var $newOption = $('<option>', {
-                            value: response.data.id,
-                            text: response.data.name
-                        });
+                        if (currentType != null) {
+                            console.log(currentType);
+                            let $targetGroup = $('optgroup[label="' + currentType + '"]',
+                                $select);
 
-                        if ($addNewOption.length) {
-                            $select.append($newOption);
-                            // $newOption.insertBefore($addNewOption);
+                            let $newOption = $('<option>', {
+                                value: currentType + '_' + response.data
+                                    .id, // group prefix
+                                text: response.data.name
+                            });
+
+                            // Insert after __add_type
+                            $targetGroup.find('option[value="__add_' + currentType + '"]')
+                                .after($newOption);
+
+                            // Select new value
+                            $select.val(currentType + '_' + response.data.id).trigger(
+                                'change');
+
                         } else {
-                            $select.append($newOption);
-                        }
 
-                        $select.val(response.data.id).trigger('change');
+
+                            // 🔹 Insert new option before the "Add New" of the same select
+                            var $addNewOption = $select.find('option[value="__add__"]')
+                                .first();
+                            var $newOption = $('<option>', {
+                                value: response.data.id,
+                                text: response.data.name
+                            });
+
+                            if ($addNewOption.length) {
+                                $select.append($newOption);
+                                // $newOption.insertBefore($addNewOption);
+                            } else {
+                                $select.append($newOption);
+                            }
+                            $select.val(response.data.id).trigger('change');
+                        }
                         $modal.modal('hide');
                     } else {
                         alert(response.message || 'Something went wrong!');
@@ -1384,9 +1481,27 @@
                                         <select id="payee_all" name="payee" class="form-control select">
 
                                             <option value="">Who did you pay?</option>
+                                            {{-- Vendors --}}
+                                            <optgroup label="Vendors">
+                                                <option value="__add_vendor" data-create-type="vendor"
+                                                    data-create-url="{{ route('vender.create') }}"
+                                                    data-create-title="Add New Vendor">
+                                                    ➕ Add New vendor
+                                                </option>
+                                                @foreach ($venders as $id => $name)
+                                                    <option value="vendor_{{ $id }}">Vendor -
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
 
                                             {{-- Employees --}}
                                             <optgroup label="Employees">
+                                                 <option value="__add_employee" data-create-type="employee"
+                                                    data-create-url="{{ route('user.create') }}"
+                                                    data-create-title="Add New Employee">
+                                                    ➕ Add New Employee
+                                                </option>
                                                 @foreach ($employees as $id => $name)
                                                     <option value="employee_{{ $id }}">Employee -
                                                         {{ $name }}
@@ -1396,6 +1511,11 @@
 
                                             {{-- Customers --}}
                                             <optgroup label="Customers">
+                                                <option value="__add_customer" data-create-type="customer"
+                                                    data-create-url="{{ route('customer.create') }}"
+                                                    data-create-title="Add New Customer">
+                                                    ➕ Add New Customer
+                                                </option>
                                                 @foreach ($customers as $id => $name)
                                                     <option value="customer_{{ $id }}">Customer -
                                                         {{ $name }}
@@ -1403,14 +1523,7 @@
                                                 @endforeach
                                             </optgroup>
 
-                                            {{-- Vendors --}}
-                                            <optgroup label="Vendors">
-                                                @foreach ($venders as $id => $name)
-                                                    <option value="vendor_{{ $id }}">Vendor -
-                                                        {{ $name }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
+                                            
 
                                         </select>
                                     </div>

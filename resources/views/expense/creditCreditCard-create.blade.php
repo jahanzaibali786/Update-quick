@@ -1987,6 +1987,11 @@
                         color: #6b6c72;
                     }
 
+                    #globalAddNewModal .modal-dialog {
+                        width: 800px !important;
+                        max-width: 800px !important;
+                    }
+
                     .attachment-remove:hover {
                         color: #e81500;
                     }

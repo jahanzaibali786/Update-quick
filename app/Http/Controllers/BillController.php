@@ -778,7 +778,7 @@ public function index(Request $request)
                                 'bill_id' => $bill->id
                             ], 200);
                         }
-                        return redirect()->route('bill.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
+                        return redirect()->route('expense.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
                     } else {
                         \DB::commit();
                         if ($request->ajax() || $request->wantsJson()) {
@@ -800,7 +800,7 @@ public function index(Request $request)
                         'bill_id' => $bill->id
                     ], 200);
                 }
-                return redirect()->route('bill.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
+                return redirect()->route('expense.index', $bill->id)->with('success', __('Bill successfully created and waiting for approval.'));
             } else {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
@@ -956,7 +956,7 @@ public function index(Request $request)
 
 
             \DB::commit();
-            return redirect()->route('bill.index')->with('success', __('Bill approved successfully and JV posted.'));
+            return redirect()->route('expense.index')->with('success', __('Bill approved successfully and JV posted.'));
         } catch (\Exception $e) {
             \DB::rollBack();
             // dd($e);
@@ -983,7 +983,7 @@ public function index(Request $request)
 
             Utility::makeActivityLog(\Auth::user()->id, 'Bill', $bill->id, 'Reject Bill', 'Bill rejected: ' . $request->rejection_reason);
             \DB::commit();
-            return redirect()->route('bill.index')->with('success', __('Bill rejected successfully.'));
+            return redirect()->route('expense.index')->with('success', __('Bill rejected successfully.'));
         } catch (\Exception $e) {
             \DB::rollBack();
             // dd($e);
@@ -1136,7 +1136,7 @@ public function index(Request $request)
 
                 $paymentTerms = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
                 $termsData = PaymentTerm::where('created_by', \Auth::user()->creatorId())->get();
-
+               
                 return view('bill.edit', compact(
                     'venders',
                     'product_services',
@@ -2431,7 +2431,7 @@ public function index(Request $request)
                 TransactionLines::where('reference_id', $bill->id)->where('reference', 'Bill Account')->delete();
                 TransactionLines::where('reference_id', $bill->id)->where('reference', 'Bill Payment')->delete();
 
-                return redirect()->route('bill.index')->with('success', __('Bill successfully deleted.'));
+                return redirect()->route('expense.index')->with('success', __('Bill successfully deleted.'));
             } else {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
@@ -2628,7 +2628,7 @@ public function index(Request $request)
     public function resent($id)
     {
         //        if(\Auth::user()->can('send bill'))
-//        {
+    //        {
 
         // Send Email
         $setings = Utility::settings();
@@ -2678,6 +2678,7 @@ public function index(Request $request)
 
     public function createPayment(Request $request, $bill_id)
     {
+
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create payment bill')) {
@@ -2687,12 +2688,10 @@ public function index(Request $request)
                         'date' => 'required',
                         'amount' => 'required',
                         'account_id' => 'required',
-
                     ]
                 );
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
@@ -2745,11 +2744,13 @@ public function index(Request $request)
                     $bill->status = 3;
                     $bill->save();
                 }
+                
                 $billPayment->user_id = $bill->vender_id;
                 $billPayment->user_type = 'Vender';
                 $billPayment->type = 'Partial';
                 $billPayment->created_by = \Auth::user()->id;
                 $billPayment->payment_id = $billPayment->id;
+                $billPayment->payment_no = $billPayment->id;
                 $billPayment->category = 'Bill';
                 $billPayment->account = $request->account_id;
                 Transaction::addTransaction($billPayment);
@@ -2785,6 +2786,7 @@ public function index(Request $request)
                 //     Utility::addTransactionLines($data , 'create');
                 // }
                 $bankAccount = BankAccount::find($request->account_id);
+                
                 if ($bankAccount && $bankAccount->chart_account_id != 0 || $bankAccount->chart_account_id != null) {
                     $data['account_id'] = $bankAccount->chart_account_id;
                 } else {
@@ -2800,6 +2802,9 @@ public function index(Request $request)
                 $data['prod_id'] = $billPayment->id;
                 // $data['result'] = $result;
                 $data['category'] = 'Bill';
+                $data['type'] = 'Bill Payment';
+                $data['vendor_id'] = $bill->vender_id;
+                $data['vendor_name'] = $vender->name;
                 $data['owned_by'] = $billPayment->owned_by;
                 $data['created_by'] = \Auth::user()->creatorId();
                 $data['created_at'] = date('Y-m-d', strtotime($billPayment->date)) . ' ' . date('h:i:s');
@@ -2858,7 +2863,6 @@ public function index(Request $request)
             if (!\Auth::user()->can('create payment bill')) {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
-
             $validator = \Validator::make(
                 $request->all(),
                 [

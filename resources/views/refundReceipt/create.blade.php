@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -1287,7 +1292,7 @@
                     if (returnUrl) {
                         location.href = decodeURIComponent(returnUrl);
                     } else {
-                        location.href = '{{ route("sales.transactions.index") }}';
+                        location.href = '{{ route('sales.transactions.index') }}';
                     }
                 });
 
@@ -1365,7 +1370,8 @@
                         var $subtotalRow = $body.find('tr.subtotal-row');
                         if ($subtotalRow.length) {
                             var subtotalEstimateId = $body.attr('data-estimate-id') || null;
-                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') || null;
+                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') ||
+                                null;
                             var subtotalLine = {
                                 type: 'subtotal',
                                 label: 'Subtotal',
@@ -1597,12 +1603,19 @@
                 var totalTax = taxableSubtotal * taxRate / 100;
                 var totalAmount = grandSubtotal - totalDiscount + totalTax;
 
+                // format as currency with $ and commas
+                var formattedTotal = '$' + totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
                 // update bottom totals
                 $('.subTotal').text(grandSubtotal.toFixed(2));
                 $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
                 $('.totalDiscount').text(totalDiscount.toFixed(2));
                 $('.totalTax').text(totalTax.toFixed(2));
-                $('.totalAmount').text(totalAmount.toFixed(2));
+                $('.totalAmount').text(formattedTotal);
+                $('.totalAmountRefunded').text(formattedTotal);
+
+                // Update header AMOUNT display
+                $('#header-amount-display').text(formattedTotal);
 
                 // Update hidden inputs
                 $('.subtotal_hidden').val(grandSubtotal.toFixed(2));
@@ -1826,6 +1839,13 @@
                         $row.find('.taxes').html(taxesHtml);
                         $row.find('.tax').val(taxIds.join(','));
                         $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
+
+                        // Auto-check taxable checkbox if product has taxable == 1
+                        if (item.product.taxable == 1) {
+                            $row.find('.form-check-input[type="checkbox"]').prop('checked', true);
+                        } else {
+                            $row.find('.form-check-input[type="checkbox"]').prop('checked', false);
+                        }
 
                         // compute the row amount from qty * rate and update totals
                         recalcRowAmount($row);
@@ -2059,7 +2079,7 @@
                 </div>
               </div>
             </div>
-        `);
+         `);
 
                     $('body').append($modal);
 
@@ -2403,6 +2423,124 @@
                 });
             });
         </script>
+        <script>
+            $(document).ready(function() {
+                var currentSelect = null;
+
+                function openAddNewModal($select) {
+                    if ($select.val() !== '__add__') return;
+                    $select.val(''); // reset dropdown
+                    currentSelect = $select; // save reference
+                    var url = $select.data('create-url');
+                    var title = $select.data('create-title') || 'Create New';
+
+                    // prevent duplicate modal
+                    if ($('#globalAddNewModal').length) {
+                        $('#globalAddNewModal').modal('show');
+                        return;
+                    }
+
+                    var $modal = $(`
+                        <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">Loading...</div>
+                            </div>
+                        </div>
+                        </div>
+                    `);
+
+                    $('body').append($modal);
+
+                    $.get(url, function(html) {
+                        $modal.find('.modal-body').html(html);
+
+                        // z-index stacking
+                        var zIndex = 1070 + ($('.modal:visible').length * 10);
+                        $modal.css('z-index', zIndex);
+                        setTimeout(function() {
+                            $('.modal-backdrop').last().css('z-index', zIndex - 1).addClass(
+                                'modal-stack');
+                        }, 0);
+
+                        $modal.modal('show');
+                    });
+
+                    $modal.on('hidden.bs.modal', function() {
+                        $modal.remove();
+                    });
+                }
+
+                // Detect "Add New" selection
+                $(document).on('change', 'select', function() {
+                    var $select = $(this);
+                    if ($select.val() === '__add__') {
+                        openAddNewModal($select);
+                    }
+                });
+
+                // AJAX submit for dynamic modal
+                $(document).off('submit', '#globalAddNewModal form').on('submit', '#globalAddNewModal form', function(
+                    e) {
+                    e.preventDefault();
+                    var $form = $(this);
+                    var $modal = $form.closest('#globalAddNewModal');
+
+                    // Find the select that triggered this modal
+                    var $select = currentSelect;
+
+                    $.ajax({
+                        url: $form.attr('action'),
+                        method: $form.attr('method') || 'POST',
+                        data: $form.serialize(),
+                        success: function(response) {
+                            if (response.success) {
+                                // 🔹 Insert new option before the "Add New" of the same select
+                                var $addNewOption = $select.find('option[value="__add__"]').first();
+                                var $newOption = $('<option>', {
+                                    value: response.data.id,
+                                    text: response.data.name
+                                });
+
+                                // Add data attributes if they exist in the response
+                                if (response.data.due_in_days !== undefined) {
+                                    $newOption.attr('data-days', response.data.due_in_days);
+                                }
+
+                                if ($addNewOption.length) {
+                                    $newOption.insertBefore($addNewOption);
+                                } else {
+                                    $select.append($newOption);
+                                }
+
+                                $select.val(response.data.id).trigger('change');
+                                $modal.modal('hide');
+                            } else {
+                                alert(response.message || 'Something went wrong!');
+                            }
+                        },
+                        error: function(xhr) {
+                            if (xhr.status === 422) {
+                                var errors = xhr.responseJSON.errors;
+                                $form.find('.invalid-feedback').remove();
+                                $.each(errors, function(key, msgs) {
+                                    $form.find('[name="' + key + '"]').after(
+                                        `<small class="invalid-feedback text-danger">${msgs[0]}</small>`
+                                    );
+                                });
+                            } else {
+                                alert('Server error!');
+                            }
+                        }
+                    });
+                });
+
+            });
+        </script>
     @endpush
 
 @endpush
@@ -2472,12 +2610,12 @@
                                     {{-- Row 1: Customer, Email, Amount --}}
                                     <div class="row mb-3">
                                         <div class="col-md-3">
-                                            <label for="customer_id" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Customer') }}</label>
+                                            <label for="customer_id" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Customer') }}</label>
                                             {{ Form::select('customer_id', $customers, $customerId ?? '', [
                                                 'class' => 'form-select',
                                                 'id' => 'customer_id',
                                                 'data-url' => route('invoice.customer'),
-                                                'placeholder' => 'Choose a customer',
                                                 'required' => 'required',
                                                 'data-create-url' => route('customer.create'),
                                                 'data-create-title' => __('Create New Customer'),
@@ -2485,8 +2623,10 @@
                                         </div>
                                         <div class="col-md-4">
                                             <div class="d-flex align-items-center justify-content-between">
-                                                <label for="customer_email_field" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Email') }}</label>
-                                                <a href="javascript:void(0)" id="cc-bcc-toggle" style="font-size: 12px; color: #0077c5;">{{ __('Cc/Bcc') }}</a>
+                                                <label for="customer_email_field" class="form-label"
+                                                    style="font-size: 13px; font-weight: 500;">{{ __('Email') }}</label>
+                                                <a href="javascript:void(0)" id="cc-bcc-toggle"
+                                                    style="font-size: 12px; color: #0077c5;">{{ __('Cc/Bcc') }}</a>
                                             </div>
                                             {{ Form::text('customer_email_display', '', [
                                                 'class' => 'form-control',
@@ -2497,8 +2637,10 @@
                                         </div>
                                         <div class="col-md-5 text-end">
                                             <div style="margin-top: 20px;">
-                                                <label style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
-                                                <div style="font-size: 28px; font-weight: 500; color: #393a3d;" id="header-amount-display">$0.00</div>
+                                                <label
+                                                    style="font-size: 12px; color: #6b6c72; text-transform: uppercase; letter-spacing: 0.5px;">{{ __('AMOUNT') }}</label>
+                                                <div style="font-size: 28px; font-weight: 500; color: #393a3d;"
+                                                    id="header-amount-display">$0.00</div>
                                             </div>
                                         </div>
                                     </div>
@@ -2506,7 +2648,8 @@
                                     {{-- Row 2: Billing Address, Refund Receipt Date, Location of Sale --}}
                                     <div class="row mb-3">
                                         <div class="col-md-3">
-                                            <label for="billing_address" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Billing Address') }}</label>
+                                            <label for="billing_address" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Billing Address') }}</label>
                                             {{ Form::textarea('billing_address', '', [
                                                 'class' => 'form-control',
                                                 'id' => 'billing_address',
@@ -2515,7 +2658,8 @@
                                             ]) }}
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="issue_date" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Refund Receipt Date') }}</label>
+                                            <label for="issue_date" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Refund Receipt Date') }}</label>
                                             {{ Form::date('issue_date', date('Y-m-d'), [
                                                 'class' => 'form-control',
                                                 'id' => 'issue_date',
@@ -2524,7 +2668,8 @@
                                             ]) }}
                                         </div>
                                         <div class="col-md-3 offset-md-3 text-end">
-                                            <label for="location_of_sale" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Location of Sale') }}</label>
+                                            <label for="location_of_sale" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Location of Sale') }}</label>
                                             {{ Form::text('location_of_sale', Auth::user()->address ?? '123 Sierra Way, San Pablo CA 87999', [
                                                 'class' => 'form-control',
                                                 'id' => 'location_of_sale',
@@ -2535,24 +2680,38 @@
                                     {{-- Row 3: Payment Method, Refund From, Link --}}
                                     <div class="row mb-2">
                                         <div class="col-md-3">
-                                            <label for="payment_method" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Payment method') }}</label>
-                                            {{ Form::select('payment_method', $paymentMethods ?? ['' => 'Choose payment method', 'Cash' => 'Cash', 'Check' => 'Check', 'Credit Card' => 'Credit Card', 'Debit Card' => 'Debit Card', 'Bank Transfer' => 'Bank Transfer', 'Other' => 'Other'], null, [
-                                                'class' => 'form-select',
-                                                'id' => 'payment_method',
-                                                'placeholder' => 'Choose payment method',
-                                            ]) }}
+                                            <label for="payment_method" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Payment method') }}</label>
+                                            {{ Form::select(
+                                                'payment_method',
+                                                $paymentMethods ?? [
+                                                    '' => 'Choose payment method',
+                                                    'Cash' => 'Cash',
+                                                    'Check' => 'Check',
+                                                    'Credit Card' => 'Credit Card',
+                                                    'Debit Card' => 'Debit Card',
+                                                    'Bank Transfer' => 'Bank Transfer',
+                                                    'Other' => 'Other',
+                                                ],
+                                                null,
+                                                [
+                                                    'class' => 'form-select',
+                                                    'id' => 'payment_method',
+                                                ],
+                                            ) }}
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="refund_from" class="form-label" style="font-size: 13px; font-weight: 500;">{{ __('Refund From') }}</label>
+                                            <label for="refund_from" class="form-label"
+                                                style="font-size: 13px; font-weight: 500;">{{ __('Refund From') }}</label>
                                             {{ Form::select('refund_from', $bankAccounts ?? ['' => 'Choose an account'], null, [
                                                 'class' => 'form-select',
                                                 'id' => 'refund_from',
-                                                'placeholder' => 'Choose an account',
                                             ]) }}
                                         </div>
                                         <div class="col-md-6">
                                             <div style="margin-top: 28px;">
-                                                <a href="javascript:void(0)" style="color: #0077c5; font-size: 14px; text-decoration: none;">{{ __('Refund payments in QuickBooks') }}</a>
+                                                <a href="javascript:void(0)"
+                                                    style="color: #0077c5; font-size: 14px; text-decoration: none;">{{ __('Refund payments in QuickBooks') }}</a>
                                             </div>
                                         </div>
                                     </div>
@@ -3265,9 +3424,13 @@
                                                 <span>{{ __('Select sales tax rate') }}</span>
                                                 <span>
                                                     <select name="tax_id" class="form-select totals-tax-rate-select">
-                                                        <option value="" data-rate="0">{{ __('Select a tax rate') }}</option>
-                                                        @foreach($taxes as $tax)
-                                                            <option value="{{ $tax->id }}" data-rate="{{ $tax->rate }}">{{ $tax->name }} ({{ $tax->rate }}%)</option>
+                                                        <option value="" data-rate="0">
+                                                            {{ __('Select a tax rate') }}</option>
+                                                        @foreach ($taxes as $tax)
+                                                            <option value="{{ $tax->id }}"
+                                                                data-rate="{{ $tax->rate }}">{{ $tax->name }}
+                                                                ({{ $tax->rate }}%)
+                                                            </option>
                                                         @endforeach
                                                     </select>
                                                 </span>
@@ -3329,10 +3492,12 @@
 
                                             {{-- See the math (right-aligned) --}}
                                             <a href="#"
-                                                class="link-button see-math-link">{{ __('Need help with sales tax?') }} {{ __('Learn more') }}</a>
+                                                class="link-button see-math-link">{{ __('Need help with sales tax?') }}
+                                                {{ __('Learn more') }}</a>
 
                                             {{-- Total --}}
-                                            <div class="total-row final" style="border-top: 1px solid #e4e4e7; padding-top: 16px; margin-top: 16px;">
+                                            <div class="total-row final"
+                                                style="border-top: 1px solid #e4e4e7; padding-top: 16px; margin-top: 16px;">
                                                 <span style="font-weight: 600;">{{ __('Total') }}</span>
                                                 <span class="totalAmount" style="font-weight: 600;">$0.00</span>
                                             </div>
@@ -3674,9 +3839,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                        onclick="location.href = '{{ route('sales.transactions.index') }}';">
-                                                                                                                                                    {{ __('Cancel') }}
-                                                                                                                                                </button> -->
+                                                                                                                                                                onclick="location.href = '{{ route('sales.transactions.index') }}';">
+                                                                                                                                                            {{ __('Cancel') }}
+                                                                                                                                                        </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -3911,7 +4076,7 @@
 
                 items.forEach(function(item) {
                     let cardHtml = '';
-                    
+
                     if (item.type === 'estimate') {
                         cardHtml = renderEstimateCard(item);
                     } else if (item.type === 'time') {
@@ -3919,7 +4084,7 @@
                     } else if (item.type === 'expense') {
                         cardHtml = renderExpenseCard(item);
                     }
-                    
+
                     $list.append(cardHtml);
                 });
             }
@@ -3933,9 +4098,18 @@
 
                 // Combine all types into a single list with type markers
                 let allItems = [];
-                allSuggestions.estimates.forEach(e => allItems.push({...e, type: 'estimate'}));
-                allSuggestions.billable_time.forEach(t => allItems.push({...t, type: 'time'}));
-                allSuggestions.billable_expenses.forEach(x => allItems.push({...x, type: 'expense'}));
+                allSuggestions.estimates.forEach(e => allItems.push({
+                    ...e,
+                    type: 'estimate'
+                }));
+                allSuggestions.billable_time.forEach(t => allItems.push({
+                    ...t,
+                    type: 'time'
+                }));
+                allSuggestions.billable_expenses.forEach(x => allItems.push({
+                    ...x,
+                    type: 'expense'
+                }));
 
                 // Apply type filter
                 if (typeFilter !== 'all') {
@@ -3969,7 +4143,11 @@
                         'Select a customer to see suggested transactions.' +
                         '</p>'
                     );
-                    allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                    allSuggestions = {
+                        estimates: [],
+                        billable_time: [],
+                        billable_expenses: []
+                    };
                     filteredItems = [];
                     showSuggestionsPanel(false);
                     return;
@@ -3977,7 +4155,8 @@
 
                 // Check if suggestionsUrl is available
                 if (!suggestionsUrl) {
-                    console.error('Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
+                    console.error(
+                        'Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
                     $list.html(
                         '<p style="font-size:12px;color:#d9534f;">' +
                         'Configuration error: Suggestions URL not defined.' +
@@ -3999,10 +4178,10 @@
                             billable_time: data.billable_time || [],
                             billable_expenses: data.billable_expenses || []
                         };
-                        
-                        const totalCount = allSuggestions.estimates.length + 
-                                          allSuggestions.billable_time.length + 
-                                          allSuggestions.billable_expenses.length;
+
+                        const totalCount = allSuggestions.estimates.length +
+                            allSuggestions.billable_time.length +
+                            allSuggestions.billable_expenses.length;
 
                         console.log('Total suggestions:', totalCount);
                         applyFilter();
@@ -4015,7 +4194,11 @@
                             'Failed to load suggested transactions.' +
                             '</p>'
                         );
-                        allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                        allSuggestions = {
+                            estimates: [],
+                            billable_time: [],
+                            billable_expenses: []
+                        };
                         filteredItems = [];
                         showSuggestionsPanel(false);
                     });
@@ -4121,9 +4304,9 @@
 
                 // Row is empty if no product selected and no quantity/price/description
                 return (!itemId || itemId === '' || itemId === '--') &&
-                       (!qty || qty === '' || parseFloat(qty) === 0) &&
-                       (!price || price === '' || parseFloat(price) === 0) &&
-                       (!desc || desc.trim() === '');
+                    (!qty || qty === '' || parseFloat(qty) === 0) &&
+                    (!price || price === '' || parseFloat(price) === 0) &&
+                    (!desc || desc.trim() === '');
             }
 
             // Helper: Remove empty default row if estimate has items
@@ -4145,7 +4328,7 @@
             $(document).on('click', '.suggestion-add-button', function() {
                 const type = $(this).data('type');
                 const id = String($(this).data('id'));
-                
+
                 // Determine insertion point: before trailing special rows, if any
                 var $lastBody = $('#sortable-table').find('tbody').last();
                 var $insertBefore = null;
@@ -4169,7 +4352,8 @@
                         insertProposalItem({
                             product_id: p.product_id || null,
                             description: (p.note && p.note.length) ?
-                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number : 'Estimate'),
+                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number :
+                                    'Estimate'),
                             quantity: 1,
                             price: Number(p.total_amount || 0),
                             amount: Number(p.total_amount || 0)
@@ -4178,7 +4362,7 @@
 
                     // Remove from suggestions
                     allSuggestions.estimates = allSuggestions.estimates.filter(x => String(x.id) !== id);
-                    
+
                 } else if (type === 'time') {
                     const t = allSuggestions.billable_time.find(x => String(x.id) === id);
                     if (!t) return;
@@ -4215,8 +4399,9 @@
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !== id);
-                    
+                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !==
+                        id);
+
                 } else if (type === 'expense') {
                     const e = allSuggestions.billable_expenses.find(x => String(x.id) === id);
                     if (!e) return;
@@ -4240,20 +4425,21 @@
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x.id) !== id);
+                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x
+                        .id) !== id);
                 }
 
                 // Remove card from UI
                 $(this).closest('.suggestion-card').remove();
-                
+
                 // Update filteredItems
                 filteredItems = filteredItems.filter(x => !(x.type === type && String(x.id) === id));
 
                 // Check if any suggestions remain
-                const totalCount = allSuggestions.estimates.length + 
-                                  allSuggestions.billable_time.length + 
-                                  allSuggestions.billable_expenses.length;
-                
+                const totalCount = allSuggestions.estimates.length +
+                    allSuggestions.billable_time.length +
+                    allSuggestions.billable_expenses.length;
+
                 if (totalCount === 0) {
                     $list.html(
                         '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4297,7 +4483,8 @@
                             insertProposalItem({
                                 product_id: item.product_id || null,
                                 description: (item.note && item.note.length) ?
-                                    item.note : (item.proposal_number ? 'Estimate ' + item.proposal_number : 'Estimate'),
+                                    item.note : (item.proposal_number ? 'Estimate ' + item
+                                        .proposal_number : 'Estimate'),
                                 quantity: 1,
                                 price: Number(item.total_amount || 0),
                                 amount: Number(item.total_amount || 0)
@@ -4347,7 +4534,11 @@
                     }
                 });
 
-                allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                allSuggestions = {
+                    estimates: [],
+                    billable_time: [],
+                    billable_expenses: []
+                };
                 filteredItems = [];
                 $list.html(
                     '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4396,7 +4587,7 @@
             $('#customer_id').on('change', function() {
                 var customerId = $(this).val();
                 var customerDataUrl = $(this).data('url');
-                
+
                 if (!customerId) {
                     // Clear fields when no customer selected
                     $('#customer_email_field').val('');
@@ -4404,12 +4595,12 @@
                     $('#billing_address').val('');
                     return;
                 }
-                
+
                 // Fetch customer data via AJAX (POST method required)
                 $.ajax({
                     url: customerDataUrl,
                     type: 'POST',
-                    data: { 
+                    data: {
                         id: customerId,
                         _token: $('meta[name="csrf-token"]').attr('content')
                     },
@@ -4417,19 +4608,23 @@
                     success: function(response) {
                         if (response && response.customer) {
                             var customer = response.customer;
-                            
+
                             // Populate email field
                             var email = customer.email || '';
                             $('#customer_email_field').val(email);
                             $('#customer_email').val(email);
-                            
+
                             // Populate billing address
                             var billingAddress = '';
-                            if (customer.billing_name) billingAddress += customer.billing_name + '\n';
-                            if (customer.billing_address) billingAddress += customer.billing_address + '\n';
-                            if (customer.billing_city || customer.billing_state || customer.billing_zip) {
-                                billingAddress += (customer.billing_city || '') + 
-                                    (customer.billing_state ? ', ' + customer.billing_state : '') + 
+                            if (customer.billing_name) billingAddress += customer.billing_name +
+                                '\n';
+                            if (customer.billing_address) billingAddress += customer
+                                .billing_address + '\n';
+                            if (customer.billing_city || customer.billing_state || customer
+                                .billing_zip) {
+                                billingAddress += (customer.billing_city || '') +
+                                    (customer.billing_state ? ', ' + customer.billing_state :
+                                        '') +
                                     (customer.billing_zip ? ' ' + customer.billing_zip : '');
                             }
                             $('#billing_address').val(billingAddress.trim());
@@ -4445,36 +4640,13 @@
             // Update Header AMOUNT display when totals change
             // ========================================
             function updateHeaderAmount() {
-                var total = 0;
-                
-                // Sum all line item amounts from product rows
-                $('.product-table tbody').each(function() {
-                    var $row = $(this).find('tr.product-row');
-                    if ($row.length) {
-                        var amount = parseFloat($row.find('.amount').val()) || 0;
-                        total += amount;
-                    }
-                    // Also check for subtotal rows
-                    var $subtotalRow = $(this).find('tr.subtotal-row');
-                    if ($subtotalRow.length) {
-                        // Subtotal rows don't add to total, they're just display
-                    }
-                });
-                
-                // Format as currency
-                var formattedTotal = '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                
-                // Update header AMOUNT display
-                $('#header-amount-display').text(formattedTotal);
-                
-                // Update Total and Total Amount Refunded in totals section
-                $('.totalAmount').text(formattedTotal);
-                $('.totalAmountRefunded').text(formattedTotal);
-                
-                // Also update hidden inputs
-                $('.total_amount_hidden').val(total.toFixed(2));
+                // Delegate to recalcTotals which now handles all display updates
+                // including header, Total, and Total Amount Refunded
+                if (typeof recalcTotals === 'function') {
+                    recalcTotals();
+                }
             }
-            
+
             // Listen for changes on quantity, price, and amount fields
             $(document).on('change keyup', '.quantity, .price, .amount', function() {
                 // Recalculate line amount first
@@ -4485,49 +4657,49 @@
                     var amount = qty * price;
                     $row.find('.amount').val(amount.toFixed(2));
                 }
-                
+
                 // Then update header
                 setTimeout(updateHeaderAmount, 50);
             });
-            
+
             // Listen for line item additions/deletions
             $(document).on('click', '[data-repeater-create], [data-repeater-delete], .delete-icon', function() {
                 setTimeout(updateHeaderAmount, 100);
             });
-            
+
             // Initial update on page load
             setTimeout(updateHeaderAmount, 500);
         });
     </script>
 @endsection
 
-@if(isset($mode) && $mode == 'edit' && isset($salesReceiptData))
-<script>
-$(document).ready(function() {
-    // Set selected tax rate
-    if (typeof salesReceiptData !== 'undefined' && salesReceiptData.sales_tax_rate) {
-        $('select[name="tax_id"]').val(salesReceiptData.sales_tax_rate);
-    }
+@if (isset($mode) && $mode == 'edit' && isset($salesReceiptData))
+    <script>
+        $(document).ready(function() {
+            // Set selected tax rate
+            if (typeof salesReceiptData !== 'undefined' && salesReceiptData.sales_tax_rate) {
+                $('select[name="tax_id"]').val(salesReceiptData.sales_tax_rate);
+            }
 
-    // Set taxable checkboxes for each item
-    if (typeof salesReceiptData !== 'undefined' && salesReceiptData.items) {
-        // Wait a bit for repeater to initialize
-        setTimeout(function() {
-            salesReceiptData.items.forEach(function(item, index) {
-                var $tbody = $('#sortable-table tbody').eq(index);
-                if ($tbody.length && $tbody.find('tr.product-row').length) {
-                    var $checkbox = $tbody.find('.form-check-input[type="checkbox"]');
-                    if (item.taxable == 1 || item.taxable === true) {
-                        $checkbox.prop('checked', true);
-                    } else {
-                        $checkbox.prop('checked', false);
-                    }
-                }
-            });
-        }, 500);
-    }
-});
-</script>
+            // Set taxable checkboxes for each item
+            if (typeof salesReceiptData !== 'undefined' && salesReceiptData.items) {
+                // Wait a bit for repeater to initialize
+                setTimeout(function() {
+                    salesReceiptData.items.forEach(function(item, index) {
+                        var $tbody = $('#sortable-table tbody').eq(index);
+                        if ($tbody.length && $tbody.find('tr.product-row').length) {
+                            var $checkbox = $tbody.find('.form-check-input[type="checkbox"]');
+                            if (item.taxable == 1 || item.taxable === true) {
+                                $checkbox.prop('checked', true);
+                            } else {
+                                $checkbox.prop('checked', false);
+                            }
+                        }
+                    });
+                }, 500);
+            }
+        });
+    </script>
 @endif
 
 <script src="{{ asset('js/invoice-items-payload-handler.js') }}"></script>

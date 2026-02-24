@@ -19,10 +19,10 @@
 
 @section('content')
     <div class="row">
-        <div class="col-3">
+        {{-- <div class="col-3">
             @include('layouts.account_setup')
-        </div>
-        <div class="col-9">
+        </div> --}}
+        <div class="col-12">
             <div class="card">
                 <div class="card-body table-border-style">
                     <div class="table-responsive">

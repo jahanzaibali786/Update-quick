@@ -6328,14 +6328,7 @@ class Utility extends Model
         //     $journalItem->save();
         // }
 
-        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Assets')->first();
-        $account = null;
-        if ($types) {
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-            if ($sub_type) {
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
-            }
-        }
+        $account = self::getAccountReceivable(@$data['created_by']);
         if ($account) {
             $journalItem = new JournalItem();
             $journalItem->journal = $journal->id;
@@ -6466,14 +6459,7 @@ class Utility extends Model
         //     $journalItem->save();
         // }
 
-        $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Assets')->first();
-        $account = null;
-        if ($types) {
-            $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Asset')->first();
-            if ($sub_type) {
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Receivables')->first();
-            }
-        }
+        $account = self::getAccountReceivable(@$data['created_by']);
         if ($account) {
             $journalItem = new JournalItem();
             $journalItem->journal = $journal->id;
@@ -6574,6 +6560,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6625,6 +6614,9 @@ class Utility extends Model
                             $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
                             $journalItem->debit = $tax;
                             $journalItem->credit = 0;
+                            $journalItem->type = $data['type'] ?? null;
+                            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                             $journalItem->save();
                             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6658,6 +6650,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6689,6 +6684,9 @@ class Utility extends Model
             $journalItem->product_ids = $data['prod_id'];
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6724,6 +6722,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6745,11 +6746,12 @@ class Utility extends Model
             Utility::addTransactionLines($dataline, 'create');
 
 
-            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-            if ($types) {
-                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
-            }
+            // $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+            // if ($types) {
+            //     $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+            //     $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
+            // }
+            $account = self::getAccountPayableAccount(@$data['created_by']);
             if ($account) {
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;
@@ -6757,6 +6759,9 @@ class Utility extends Model
                 $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
                 $journalItem->credit = 0;
                 $journalItem->debit = $data['amount'];
+                $journalItem->type = $data['type'] ?? null;
+                $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                 $journalItem->save();
                 $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6821,6 +6826,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = (($data['items'][$i]['quantity'] * $data['items'][$i]['price']) - $data['items'][$i]['discount']);
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6872,6 +6880,9 @@ class Utility extends Model
                             $journalItem->description = 'Tax on Expense No : ' . @$data['no'];
                             $journalItem->debit = $tax;
                             $journalItem->credit = 0;
+                            $journalItem->type = $data['type'] ?? null;
+                            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                             $journalItem->save();
                             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6905,6 +6916,9 @@ class Utility extends Model
                     $journalItem->description = @$data['items'][$i]['description'];
                     $journalItem->debit = @$data['items'][$i]['amount'] ?? 0;
                     $journalItem->credit = 0;
+                    $journalItem->type = $data['type'] ?? null;
+                    $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                    $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                     $journalItem->save();
                     $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                     $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6937,6 +6951,9 @@ class Utility extends Model
             $journalItem->product_ids = @$data['prod_id'];
             $journalItem->debit = 0;
             $journalItem->credit = $data['amount'];
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6973,6 +6990,9 @@ class Utility extends Model
             $journalItem->description = $data['description'];
             $journalItem->credit = $data['amount'];
             $journalItem->debit = 0;
+            $journalItem->type = $data['type'] ?? null;
+            $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+            $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
             $journalItem->save();
             $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
             $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
@@ -6994,11 +7014,12 @@ class Utility extends Model
             Utility::addTransactionLines($dataline, 'create');
 
 
-            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-            if ($types) {
-                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
-            }
+            // $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+            // if ($types) {
+            //     $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+            //     $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
+            // }
+            $account = self::getAccountPayableAccount(@$data['created_by']);
             if ($account) {
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;
@@ -7006,6 +7027,9 @@ class Utility extends Model
                 $journalItem->description = "Account payable less on " . $journal->category . ' No : ' . @$data['no'];
                 $journalItem->credit = 0;
                 $journalItem->debit = $data['amount'];
+                $journalItem->type = $data['type'] ?? null;
+                $journalItem->name = $data['vendor_name'] ?? @$data['vendor_name'];
+                $journalItem->vendor_id = $data['vendor_id'] ?? @$data['vendor_id'];
                 $journalItem->save();
                 $journalItem->created_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');
                 $journalItem->updated_at = @$data['created_at'] ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s');

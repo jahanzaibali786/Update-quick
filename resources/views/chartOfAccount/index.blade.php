@@ -78,7 +78,7 @@
     ])
 
     {{-- tabs --}}
-    @include('transaction.transactions-tabs')
+    {{-- @include('transaction.transactions-tabs') --}}
 
     {{-- Chart of Account Date Filter Dropdown --}}
     <div class="dropdown card-header mt-4 mb-2">
@@ -206,7 +206,7 @@
                                                             </a>
                                                         </div>
                                                     @endcan
-                                                    @can('delete chart of account')
+                                                    {{-- @can('delete chart of account')
                                                         <div class="action-btn bg-danger ms-2">
                                                             {!! Form::open([
                                                                 'method' => 'DELETE',
@@ -223,7 +223,7 @@
                                                             </a>
                                                             {!! Form::close() !!}
                                                         </div>
-                                                    @endcan
+                                                    @endcan --}}
                                                 </td>
                                             </tr>
                                         @endforeach

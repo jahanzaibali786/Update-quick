@@ -1268,6 +1268,19 @@
                                         <select id="payee_all" name="payee" class="form-control select" required>
 
                                             <option value="">Who did you pay?</option>
+                                            {{-- Vendors --}}
+                                            <optgroup label="vendor">
+                                                <option value="__add_vendor" data-create-type="vendor"
+                                                            data-create-url="{{ route('vender.create') }}"
+                                                            data-create-title="Add New Vendor">
+                                                        ➕ Add New vendor
+                                                    </option>
+                                                @foreach ($venders as $id => $name)
+                                                    <option value="vendor_{{ $id }}">
+                                                        {{ $name }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
 
                                             {{-- Employees --}}
                                             <optgroup label="employee">
@@ -1297,20 +1310,7 @@
                                                 @endforeach
                                             </optgroup>
 
-                                            {{-- Vendors --}}
-                                            <optgroup label="vendor">
-                                                <option value="__add_vendor" data-create-type="vendor"
-                                                            data-create-url="{{ route('vender.create') }}"
-                                                            data-create-title="Add New Vendor">
-                                                        ➕ Add New vendor
-                                                    </option>
-                                                @foreach ($venders as $id => $name)
-                                                    <option value="vendor_{{ $id }}">
-                                                        {{ $name }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-
+                                            
                                         </select>
                                     </div>
                                     <div class="col-3">
@@ -1360,11 +1360,28 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     {{ Form::label('category_id', __('Payment Method'), ['class' => 'form-label']) }}
-                                    {{ Form::select('category_id', $category, null, [
+                                    {{-- {{ Form::select('category_id', $category, null, [
                                         'class' => 'form-control select',
                                         'data-create-url' => route('product-category.create'),
                                         'data-create-title' => __('Create New Category'),
-                                    ]) }}
+                                    ]) }} --}}
+                                       {{ Form::select(
+                                                'payment_method',
+                                                $paymentMethods ?? [
+                                                    '' => 'Choose payment method',
+                                                    'Cash' => 'Cash',
+                                                    'Check' => 'Check',
+                                                    'Credit Card' => 'Credit Card',
+                                                    'Debit Card' => 'Debit Card',
+                                                    'Bank Transfer' => 'Bank Transfer',
+                                                    'Other' => 'Other',
+                                                ],
+                                                null,
+                                                [
+                                                    'class' => 'form-select',
+                                                    'id' => 'payment_method',
+                                                ],
+                                            ) }}
                                 </div>
                             </div>
 
@@ -2479,6 +2496,11 @@
         /* Optional: adjust dropdown menu for split button */
         .fixed-footer .btn-group .dropdown-menu {
             min-width: auto;
+        }
+
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
         }
     </style>
 

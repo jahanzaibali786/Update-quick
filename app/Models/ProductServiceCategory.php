@@ -27,8 +27,6 @@ class ProductServiceCategory extends Model
         'liability' => 'Liability',
         'equity' => 'Equity',
         'costs of good sold' => 'Costs of Goods Sold',
-        'product' => 'Product',
-        'service' => 'Service',
     ];
 
 

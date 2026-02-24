@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -1290,7 +1295,7 @@
                     if (returnUrl) {
                         location.href = decodeURIComponent(returnUrl);
                     } else {
-                        location.href = '{{ route("sales.transactions.index") }}';
+                        location.href = '{{ route('sales.transactions.index') }}';
                     }
                 });
 
@@ -1368,7 +1373,8 @@
                         var $subtotalRow = $body.find('tr.subtotal-row');
                         if ($subtotalRow.length) {
                             var subtotalEstimateId = $body.attr('data-estimate-id') || null;
-                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') || null;
+                            var subtotalProposalProductId = $body.attr('data-proposal-product-id') ||
+                                null;
                             var subtotalLine = {
                                 type: 'subtotal',
                                 label: 'Subtotal',
@@ -1719,6 +1725,11 @@
 
                             // compute amount from qty * rate
                             recalcRowAmount($row);
+
+                            // Set taxable checkbox if item was taxable in estimate
+                            if (p.taxable == 1) {
+                                $newBody.find('.form-check-input[type="checkbox"]').prop('checked', true);
+                            }
                         }
 
                         // reset helpers
@@ -2051,18 +2062,18 @@
                     }
 
                     var $modal = $(`
-            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
-              <div class="modal-dialog">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">${title}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body">Loading...</div>
-                </div>
-              </div>
-            </div>
-        `);
+                            <div class="modal fade" id="globalAddNewModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">${title}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">Loading...</div>
+                                </div>
+                            </div>
+                            </div>
+                        `);
 
                     $('body').append($modal);
 
@@ -2116,9 +2127,13 @@
                                     text: response.data.name
                                 });
 
+                                // Add data attributes if they exist in the response
+                                if (response.data.due_in_days !== undefined) {
+                                    $newOption.attr('data-days', response.data.due_in_days);
+                                }
+
                                 if ($addNewOption.length) {
-                                    $select.append($newOption);
-                                    // $newOption.insertBefore($addNewOption);
+                                    $newOption.insertBefore($addNewOption);
                                 } else {
                                     $select.append($newOption);
                                 }
@@ -2418,6 +2433,8 @@
                 <div class="invoice-container">
                     {{ Form::open(['url' => 'invoice', 'id' => 'invoice-form', 'files' => true]) }}
                     <input type="hidden" name="_token" id="token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="convert_id" id="convert_id" value="">
+                    <input type="hidden" name="convert_type" id="convert_type" value="">
 
                     {{-- Fixed Top Header (QuickBooks Style) --}}
                     <div class="fixed-top-header">
@@ -2630,16 +2647,15 @@
                                                 <label class="form-label"
                                                     style="font-size: 13px; margin: 0; min-width: 80px;">{{ __('Terms') }}</label>
                                                 <div style="flex: 1;">
-                                                    {{ Form::select(
-                                                        'terms',
-                                                        [
-                                                            'Net 30' => 'Net 30',
-                                                            'Net 15' => 'Net 15',
-                                                            'Due on receipt' => 'Due on receipt',
-                                                        ],
-                                                        'Net 30',
-                                                        ['class' => 'form-select', 'style' => 'font-size: 13px; width: 50%;'],
-                                                    ) }}
+                                                    <select name="terms" id="terms" class="form-select"
+                                                        style="font-size: 13px;  width: 50%;">
+                                                        <option value="">{{ __('Select Terms') }}</option>
+                                                        @foreach ($paymentTerms as $term)
+                                                            <option value="{{ $term->id }}"
+                                                                data-days="{{ $term->due_in_days }}">{{ $term->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
@@ -2665,8 +2681,9 @@
                                                 <label class="form-label"
                                                     style="font-size: 13px; margin: 0; min-width: 80px;">{{ __('Due date') }}</label>
                                                 <div style="flex: 1;">
-                                                    {{ Form::date('due_date', date('Y-m-d', strtotime('+30 days')), [
+                                                    {{ Form::date('due_date', date('Y-m-d', strtotime('+25 days')), [
                                                         'class' => 'form-control',
+                                                        'id' => 'due_date',
                                                         'required' => 'required',
                                                         'style' => 'font-size: 13px; width: 50%;',
                                                     ]) }}
@@ -3422,9 +3439,13 @@
                                                 <span>{{ __('Select sales tax rate') }}</span>
                                                 <span>
                                                     <select name="tax_id" class="form-select totals-tax-rate-select">
-                                                        <option value="" data-rate="0">{{ __('Select a tax rate') }}</option>
-                                                        @foreach($taxes as $tax)
-                                                            <option value="{{ $tax->id }}" data-rate="{{ $tax->rate }}">{{ $tax->name }} ({{ $tax->rate }}%)</option>
+                                                        <option value="" data-rate="0">
+                                                            {{ __('Select a tax rate') }}</option>
+                                                        @foreach ($taxes as $tax)
+                                                            <option value="{{ $tax->id }}"
+                                                                data-rate="{{ $tax->rate }}">{{ $tax->name }}
+                                                                ({{ $tax->rate }}%)
+                                                            </option>
                                                         @endforeach
                                                     </select>
                                                 </span>
@@ -3827,9 +3848,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                                                                                                        onclick="location.href = '{{ route('sales.transactions.index') }}';">
-                                                                                                                                                    {{ __('Cancel') }}
-                                                                                                                                                </button> -->
+                                                                                                                                                                                                onclick="location.href = '{{ route('sales.transactions.index') }}';">
+                                                                                                                                                                                            {{ __('Cancel') }}
+                                                                                                                                                                                        </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -3897,147 +3918,183 @@
                 </div>
             </div>
         </div>
- @if(session('estimate_prefill'))
-<script>
-var __estimatePrefill__ = @json(session('estimate_prefill'));
 
-document.addEventListener('DOMContentLoaded', function () {
-    var modalEl = document.getElementById('invoice-modal');
-    if (!modalEl) return;
-    modalEl.addEventListener('shown.bs.modal', function () {
-        runPrefill(__estimatePrefill__);
-    });
-});
+        @if (session('estimate_prefill'))
+            <script>
+                var __estimatePrefill__ = @json(session('estimate_prefill'));
+                document.addEventListener('DOMContentLoaded', function() {
+                    var modalEl = document.getElementById('invoice-modal');
+                    if (!modalEl) return;
+                    modalEl.addEventListener('shown.bs.modal', function() {
+                        runPrefill(__estimatePrefill__);
+                    });
+                });
 
-function runPrefill(p) {
-    // 1. Customer — but detach item change handler first to prevent cascading resets
-    $(document).off('change', '.item');
-
-    if (p.customer_id) {
-        $('#customer_id').val(p.customer_id).trigger('change');
-    }
-
-    setTimeout(function () {
-        if (p.issue_date) $('input[name="issue_date"]').val(p.issue_date);
-        if (p.bill_to)    { $('textarea[name="bill_to"]').val(p.bill_to); $('#bill-to-section').show(); }
-        if (p.note)       $('textarea[name="note"]').val(p.note);
-        if (p.memo)       $('textarea[name="memo"]').val(p.memo);
-        if (p.terms)      $('select[name="terms"]').val(p.terms);
-    }, 400);
-
-    if (p.products && p.products.length > 0) {
-        setTimeout(function () {
-            fillEstimateRows(p.products, function() {
-                // Re-attach item change handler after all rows are filled
-                reattachItemHandler();
-            });
-        }, 800);
-    } else {
-        setTimeout(reattachItemHandler, 800);
-    }
-}
-
-function reattachItemHandler() {
-    $(document).on('change', '.item', function () {
-        if ($(this).data('ignore-ajax')) return;
-        var iteams_id = $(this).val();
-        var url = $(this).data('url');
-        var el = $(this);
-        if (!iteams_id) {
-            var $row = el.closest('tr.product-row');
-            $row.find('.pro_description').val('');
-            $row.find('.quantity').val('');
-            $row.find('.price').val('');
-            $row.find('.amount').val('0.00');
-            el.closest('tbody').find('.form-check-input[type="checkbox"]').prop('checked', false);
-            recalcTotals();
-            return;
-        }
-        $.ajax({
-            url: url, type: 'POST',
-            headers: { 'X-CSRF-TOKEN': jQuery('#token').val() },
-            data: { 'product_id': iteams_id },
-            cache: false,
-            success: function (data) {
-                if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
-                var item = data;
-                var $row = el.closest('tr.product-row');
-                $row.find('.quantity').val(1);
-                $row.find('.price').val(item.product.sale_price);
-                $row.find('.pro_description').val(item.product.description);
-                var totalItemTaxRate = 0, taxesHtml = '', taxIds = [];
-                if (item.taxes && item.taxes.length) {
-                    for (var i = 0; i < item.taxes.length; i++) {
-                        taxesHtml += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i].name + ' (' + item.taxes[i].rate + '%)</span>';
-                        taxIds.push(item.taxes[i].id);
-                        totalItemTaxRate += parseFloat(item.taxes[i].rate);
-                    }
-                } else { taxesHtml = '-'; }
-                $row.find('.taxes').html(taxesHtml);
-                $row.find('.tax').val(taxIds.join(','));
-                $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
-                recalcRowAmount($row);
-                recalcTotals();
-            }
-        });
-    });
-}
-
-function fillEstimateRows(products, onComplete) {
-    var $table       = $('#sortable-table');
-    var $firstBody   = $table.children('tbody').first();
-    var $firstRow    = $firstBody.find('tr.product-row');
-    var defaultEmpty = !$firstRow.find('select.item').val();
-    var total        = products.length;
-    var done         = 0;
-
-    $.each(products, function (idx, lineItem) {
-        (function (rowIndex, item) {
-            setTimeout(function () {
-
-                if (rowIndex === 0 && defaultEmpty) {
-                    var $row = $table.children('tbody').first().find('tr.product-row');
-
-                    // Set product select silently — NO .trigger('change') — handler is detached anyway
-                    if (item.product_id) {
-                        $row.find('select.item').val(item.product_id);
+                function runPrefill(p) {
+                    // Set convert_id and convert_type for estimate-to-invoice tracking
+                    if (p.from_estimate) {
+                        $('#convert_id').val(p.from_estimate);
+                        $('#convert_type').val('estimate');
                     }
 
-                    // Set all values directly
-                    $row.find('.quantity')[0]      && ($row.find('.quantity')[0].value      = parseFloat(item.quantity) || 1);
-                    $row.find('.price')[0]         && ($row.find('.price')[0].value         = parseFloat(item.price)    || 0);
-                    $row.find('.pro_description')[0] && ($row.find('.pro_description')[0].value = item.description      || '');
+                    // 1. Customer — but detach item change handler first to prevent cascading resets
+                    $(document).off('change', '.item');
+                    if (p.customer_id) {
+                        $('#customer_id').val(p.customer_id).trigger('change');
+                    }
+                    setTimeout(function() {
+                        if (p.issue_date) $('input[name="issue_date"]').val(p.issue_date);
+                        if (p.bill_to) {
+                            $('textarea[name="bill_to"]').val(p.bill_to);
+                            $('#bill-to-section').show();
+                        }
+                        if (p.note) $('textarea[name="note"]').val(p.note);
+                        if (p.memo) $('textarea[name="memo"]').val(p.memo);
+                        if (p.terms) $('select[name="terms"]').val(p.terms);
 
-                    recalcRowAmount($row);
-                    recalcTotals();
-
-                    console.log('Row 0 set | qty:', parseFloat(item.quantity), '| price:', parseFloat(item.price), '| desc:', item.description);
-
-                } else {
-                    window.qbProposalToAdd = {
-                        product_id:  item.product_id  || null,
-                        description: item.description || '',
-                        quantity:    parseFloat(item.quantity) || 1,
-                        price:       parseFloat(item.price)    || 0,
-                        amount:      parseFloat(item.amount)   || 0,
-                    };
-                    window.qbInsertAfterTbody  = null;
-                    window.qbInsertBeforeTbody = null;
-                    window.qbDuplicateSource   = null;
-                    $('[data-repeater-create]').first().trigger('click');
+                        // Auto-select the sales tax rate dropdown
+                        if (p.tax_id) {
+                            $('select[name="tax_id"]').val(p.tax_id);
+                        }
+                    }, 400);
+                    if (p.products && p.products.length > 0) {
+                        setTimeout(function() {
+                            fillEstimateRows(p.products, function() {
+                                // Re-attach item change handler after all rows are filled
+                                reattachItemHandler();
+                                // Recalculate totals with the selected tax rate
+                                if (typeof recalcTotals === 'function') recalcTotals();
+                            });
+                        }, 800);
+                    } else {
+                        setTimeout(function() {
+                            reattachItemHandler();
+                            if (typeof recalcTotals === 'function') recalcTotals();
+                        }, 800);
+                    }
                 }
 
-                done++;
-                if (done === total && typeof onComplete === 'function') {
-                    onComplete();
+                function reattachItemHandler() {
+                    $(document).on('change', '.item', function() {
+                        if ($(this).data('ignore-ajax')) return;
+                        var iteams_id = $(this).val();
+                        var url = $(this).data('url');
+                        var el = $(this);
+                        if (!iteams_id) {
+                            var $row = el.closest('tr.product-row');
+                            $row.find('.pro_description').val('');
+                            $row.find('.quantity').val('');
+                            $row.find('.price').val('');
+                            $row.find('.amount').val('0.00');
+                            el.closest('tbody').find('.form-check-input[type="checkbox"]').prop('checked', false);
+                            recalcTotals();
+                            return;
+                        }
+                        $.ajax({
+                            url: url,
+                            type: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': jQuery('#token').val()
+                            },
+                            data: {
+                                'product_id': iteams_id
+                            },
+                            cache: false,
+                            success: function(data) {
+                                if (typeof data === 'string') {
+                                    try {
+                                        data = JSON.parse(data);
+                                    } catch (e) {
+                                        return;
+                                    }
+                                }
+
+
+                                var item = data;
+                                var $row = el.closest('tr.product-row');
+                                $row.find('.quantity').val(1);
+                                $row.find('.price').val(item.product.sale_price);
+                                $row.find('.pro_description').val(item.product.description);
+                                var totalItemTaxRate = 0,
+                                    taxesHtml = '',
+                                    taxIds = [];
+                                if (item.taxes && item.taxes.length) {
+                                    for (var i = 0; i < item.taxes.length; i++) {
+                                        taxesHtml += '<span class="badge bg-primary mt-1 mr-2">' + item.taxes[i]
+                                            .name + ' (' + item.taxes[i].rate + '%)</span>';
+                                        taxIds.push(item.taxes[i].id);
+                                        totalItemTaxRate += parseFloat(item.taxes[i].rate);
+                                    }
+                                } else {
+                                    taxesHtml = '-';
+                                }
+                                $row.find('.taxes').html(taxesHtml);
+                                $row.find('.tax').val(taxIds.join(','));
+                                $row.find('.itemTaxRate').val(totalItemTaxRate.toFixed(2));
+                                recalcRowAmount($row);
+                                recalcTotals();
+                            }
+                        });
+                    });
                 }
 
-            }, rowIndex * 500);
-        })(idx, lineItem);
-    });
-}
-</script>
-@endif
+                function fillEstimateRows(products, onComplete) {
+                    var $table = $('#sortable-table');
+                    var $firstBody = $table.children('tbody').first();
+                    var $firstRow = $firstBody.find('tr.product-row');
+                    var defaultEmpty = !$firstRow.find('select.item').val();
+                    var total = products.length;
+                    var done = 0;
+                    $.each(products, function(idx, lineItem) {
+                        (function(rowIndex, item) {
+                            setTimeout(function() {
+                                if (rowIndex === 0 && defaultEmpty) {
+                                    var $row = $table.children('tbody').first().find('tr.product-row');
+                                    // Set product select silently — NO .trigger('change') — handler is detached anyway
+                                    if (item.product_id) {
+                                        $row.find('select.item').val(item.product_id);
+                                    }
+                                    // Set all values directly
+                                    $row.find('.quantity')[0] && ($row.find('.quantity')[0].value = parseFloat(
+                                        item.quantity) || 1);
+                                    $row.find('.price')[0] && ($row.find('.price')[0].value = parseFloat(item
+                                        .price) || 0);
+                                    $row.find('.pro_description')[0] && ($row.find('.pro_description')[0]
+                                        .value = item.description || '');
+                                    // Set taxable checkbox
+                                    if (item.taxable == 1) {
+                                        $row.closest('tbody').find('.form-check-input[type="checkbox"]').prop(
+                                            'checked', true);
+                                    }
+                                    recalcRowAmount($row);
+                                    recalcTotals();
+                                    console.log('Row 0 set | qty:', parseFloat(item.quantity), '| price:',
+                                        parseFloat(item.price), '| desc:', item.description);
+                                } else {
+                                    window.qbProposalToAdd = {
+                                        product_id: item.product_id || null,
+                                        description: item.description || '',
+                                        quantity: parseFloat(item.quantity) || 1,
+                                        price: parseFloat(item.price) || 0,
+                                        amount: parseFloat(item.amount) || 0,
+                                        taxable: item.taxable || 0,
+                                    };
+                                    window.qbInsertAfterTbody = null;
+                                    window.qbInsertBeforeTbody = null;
+                                    window.qbDuplicateSource = null;
+                                    $('[data-repeater-create]').first().trigger('click');
+                                }
+                                done++;
+                                if (done === total && typeof onComplete === 'function') {
+                                    onComplete();
+                                }
+                            }, rowIndex * 500);
+                        })(idx, lineItem);
+                    });
+                }
+            </script>
+        @endif
+
     </div>
     <script>
         $(function() {
@@ -4205,7 +4262,7 @@ function fillEstimateRows(products, onComplete) {
 
                 items.forEach(function(item) {
                     let cardHtml = '';
-                    
+
                     if (item.type === 'estimate') {
                         cardHtml = renderEstimateCard(item);
                     } else if (item.type === 'time') {
@@ -4213,7 +4270,7 @@ function fillEstimateRows(products, onComplete) {
                     } else if (item.type === 'expense') {
                         cardHtml = renderExpenseCard(item);
                     }
-                    
+
                     $list.append(cardHtml);
                 });
             }
@@ -4227,9 +4284,18 @@ function fillEstimateRows(products, onComplete) {
 
                 // Combine all types into a single list with type markers
                 let allItems = [];
-                allSuggestions.estimates.forEach(e => allItems.push({...e, type: 'estimate'}));
-                allSuggestions.billable_time.forEach(t => allItems.push({...t, type: 'time'}));
-                allSuggestions.billable_expenses.forEach(x => allItems.push({...x, type: 'expense'}));
+                allSuggestions.estimates.forEach(e => allItems.push({
+                    ...e,
+                    type: 'estimate'
+                }));
+                allSuggestions.billable_time.forEach(t => allItems.push({
+                    ...t,
+                    type: 'time'
+                }));
+                allSuggestions.billable_expenses.forEach(x => allItems.push({
+                    ...x,
+                    type: 'expense'
+                }));
 
                 // Apply type filter
                 if (typeFilter !== 'all') {
@@ -4263,7 +4329,11 @@ function fillEstimateRows(products, onComplete) {
                         'Select a customer to see suggested transactions.' +
                         '</p>'
                     );
-                    allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                    allSuggestions = {
+                        estimates: [],
+                        billable_time: [],
+                        billable_expenses: []
+                    };
                     filteredItems = [];
                     showSuggestionsPanel(false);
                     return;
@@ -4271,7 +4341,8 @@ function fillEstimateRows(products, onComplete) {
 
                 // Check if suggestionsUrl is available
                 if (!suggestionsUrl) {
-                    console.error('Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
+                    console.error(
+                        'Suggestions URL not found. Check data-suggestions-url attribute on #customer_id.');
                     $list.html(
                         '<p style="font-size:12px;color:#d9534f;">' +
                         'Configuration error: Suggestions URL not defined.' +
@@ -4293,10 +4364,10 @@ function fillEstimateRows(products, onComplete) {
                             billable_time: data.billable_time || [],
                             billable_expenses: data.billable_expenses || []
                         };
-                        
-                        const totalCount = allSuggestions.estimates.length + 
-                                          allSuggestions.billable_time.length + 
-                                          allSuggestions.billable_expenses.length;
+
+                        const totalCount = allSuggestions.estimates.length +
+                            allSuggestions.billable_time.length +
+                            allSuggestions.billable_expenses.length;
 
                         console.log('Total suggestions:', totalCount);
                         applyFilter();
@@ -4309,7 +4380,11 @@ function fillEstimateRows(products, onComplete) {
                             'Failed to load suggested transactions.' +
                             '</p>'
                         );
-                        allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                        allSuggestions = {
+                            estimates: [],
+                            billable_time: [],
+                            billable_expenses: []
+                        };
                         filteredItems = [];
                         showSuggestionsPanel(false);
                     });
@@ -4415,9 +4490,9 @@ function fillEstimateRows(products, onComplete) {
 
                 // Row is empty if no product selected and no quantity/price/description
                 return (!itemId || itemId === '' || itemId === '--') &&
-                       (!qty || qty === '' || parseFloat(qty) === 0) &&
-                       (!price || price === '' || parseFloat(price) === 0) &&
-                       (!desc || desc.trim() === '');
+                    (!qty || qty === '' || parseFloat(qty) === 0) &&
+                    (!price || price === '' || parseFloat(price) === 0) &&
+                    (!desc || desc.trim() === '');
             }
 
             // Helper: Remove empty default row if estimate has items
@@ -4439,7 +4514,7 @@ function fillEstimateRows(products, onComplete) {
             $(document).on('click', '.suggestion-add-button', function() {
                 const type = $(this).data('type');
                 const id = String($(this).data('id'));
-                
+
                 // Determine insertion point: before trailing special rows, if any
                 var $lastBody = $('#sortable-table').find('tbody').last();
                 var $insertBefore = null;
@@ -4463,7 +4538,8 @@ function fillEstimateRows(products, onComplete) {
                         insertProposalItem({
                             product_id: p.product_id || null,
                             description: (p.note && p.note.length) ?
-                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number : 'Estimate'),
+                                p.note : (p.proposal_number ? 'Estimate ' + p.proposal_number :
+                                    'Estimate'),
                             quantity: 1,
                             price: Number(p.total_amount || 0),
                             amount: Number(p.total_amount || 0)
@@ -4472,7 +4548,7 @@ function fillEstimateRows(products, onComplete) {
 
                     // Remove from suggestions
                     allSuggestions.estimates = allSuggestions.estimates.filter(x => String(x.id) !== id);
-                    
+
                 } else if (type === 'time') {
                     const t = allSuggestions.billable_time.find(x => String(x.id) === id);
                     if (!t) return;
@@ -4509,8 +4585,9 @@ function fillEstimateRows(products, onComplete) {
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !== id);
-                    
+                    allSuggestions.billable_time = allSuggestions.billable_time.filter(x => String(x.id) !==
+                        id);
+
                 } else if (type === 'expense') {
                     const e = allSuggestions.billable_expenses.find(x => String(x.id) === id);
                     if (!e) return;
@@ -4534,20 +4611,21 @@ function fillEstimateRows(products, onComplete) {
                     $('[data-repeater-create]').trigger('click');
 
                     // Remove from suggestions
-                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x.id) !== id);
+                    allSuggestions.billable_expenses = allSuggestions.billable_expenses.filter(x => String(x
+                        .id) !== id);
                 }
 
                 // Remove card from UI
                 $(this).closest('.suggestion-card').remove();
-                
+
                 // Update filteredItems
                 filteredItems = filteredItems.filter(x => !(x.type === type && String(x.id) === id));
 
                 // Check if any suggestions remain
-                const totalCount = allSuggestions.estimates.length + 
-                                  allSuggestions.billable_time.length + 
-                                  allSuggestions.billable_expenses.length;
-                
+                const totalCount = allSuggestions.estimates.length +
+                    allSuggestions.billable_time.length +
+                    allSuggestions.billable_expenses.length;
+
                 if (totalCount === 0) {
                     $list.html(
                         '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4591,7 +4669,8 @@ function fillEstimateRows(products, onComplete) {
                             insertProposalItem({
                                 product_id: item.product_id || null,
                                 description: (item.note && item.note.length) ?
-                                    item.note : (item.proposal_number ? 'Estimate ' + item.proposal_number : 'Estimate'),
+                                    item.note : (item.proposal_number ? 'Estimate ' + item
+                                        .proposal_number : 'Estimate'),
                                 quantity: 1,
                                 price: Number(item.total_amount || 0),
                                 amount: Number(item.total_amount || 0)
@@ -4641,7 +4720,11 @@ function fillEstimateRows(products, onComplete) {
                     }
                 });
 
-                allSuggestions = { estimates: [], billable_time: [], billable_expenses: [] };
+                allSuggestions = {
+                    estimates: [],
+                    billable_time: [],
+                    billable_expenses: []
+                };
                 filteredItems = [];
                 $list.html(
                     '<p style="font-size:12px;color:#6b6f73;">' +
@@ -4683,6 +4766,31 @@ function fillEstimateRows(products, onComplete) {
                 applyFilter();
                 $filterPanel.removeClass('show');
             });
+
+            // Update Due Date function
+            function updateDueDate() {
+                const selectedOption = $('#terms').find(':selected');
+                const days = selectedOption.data('days');
+                const issueDateVal = $('input[name="issue_date"]').val();
+
+                if (days !== undefined && days !== '' && issueDateVal) {
+                    const issueDate = new Date(issueDateVal);
+                    if (!isNaN(issueDate.getTime())) {
+                        const dueDate = new Date(issueDate);
+                        dueDate.setDate(dueDate.getDate() + parseInt(days));
+
+                        const year = dueDate.getFullYear();
+                        const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                        const day = String(dueDate.getDate()).padStart(2, '0');
+                        const newDueDate = `${year}-${month}-${day}`;
+
+                        $('input[name="due_date"]').val(newDueDate);
+                    }
+                }
+            }
+
+            $(document).on('change', '#terms', updateDueDate);
+            $(document).on('change', 'input[name="issue_date"]', updateDueDate);
         });
     </script>
 @endsection

@@ -95,11 +95,7 @@ class CreditNoteController extends Controller
             $invoice_number = \Auth::user()->invoiceNumberFormat($this->invoiceNumber());
 
             $customers = Customer::where($column, $ownerId)->get()->pluck('name', 'id')->toArray();
-            $customers = ['__add__' => '➕ Add new customer'] + ['' => 'Select Customer'] + $customers;
-
-            $category = ProductServiceCategory::where($column, $ownerId)
-                ->where('type', 'income')->get()->pluck('name', 'id')->toArray();
-            $category = ['__add__' => '➕ Add new category'] + ['' => 'Select Category'] + $category;
+            $customers = ['' => 'Select Customer'] + ['__add__' => '➕ Add new customer'] + $customers;
 
             $product_services = ProductService::where($column, $ownerId)->get()->pluck('name', 'id');
             $product_services->prepend('--', '');
@@ -111,7 +107,6 @@ class CreditNoteController extends Controller
                 'customers',
                 'invoice_number',
                 'product_services',
-                'category',
                 'customFields',
                 'customerId',
                 'taxes'
@@ -734,6 +729,22 @@ class CreditNoteController extends Controller
         {
 
             $creditNote = CreditNote::find($creditNote_id);
+            // delete its joutnalEntry ,journalItem and transactionLines
+            $journalEntry = JournalEntry::where('reference_id', $creditNote->id)->first();
+            if($journalEntry){
+      
+                $journalItem = JournalItem::where('journal', $journalEntry->id)->first();
+                if($journalItem){
+                    $journalItem->delete();
+                }
+                $transactionLines = TransactionLines::where('reference_id', $journalEntry->id)->first();
+                if($transactionLines){
+                    $transactionLines->delete();
+                }
+                
+                $journalEntry->delete();
+            
+            }
             $creditNote->delete();
 
             Utility::updateUserBalance('customer', $creditNote->customer, $creditNote->amount, 'credit');

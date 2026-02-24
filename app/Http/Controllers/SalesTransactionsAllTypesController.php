@@ -128,7 +128,7 @@ class SalesTransactionsAllTypesController extends Controller
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
                 ->when($status !== 'all', fn($q) => $this->applyInvoiceStatusFilter($q, $status))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             \Log::info('Invoices after filters', [
@@ -150,8 +150,8 @@ class SalesTransactionsAllTypesController extends Controller
                     'view_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
                     'edit_url' => route('invoice.edit', Crypt::encrypt($inv->id)),
                     'edit_payment_url' => route(
-                        'receive-payment.payment',
-                        ['invoice_id' => Crypt::encrypt($inv->id)]
+                        'receive-payment.create',
+                        ['invoice_id' => $inv->customer_id]
                     ),
                     'delete_url' => route('invoice.destroy', $inv->id),
                     'activity_url' => route('sales.transaction.activity', ['type' => 'invoice', 'id' => $inv->id]),
@@ -170,7 +170,7 @@ class SalesTransactionsAllTypesController extends Controller
                         $iq->where('customer_id', $customerId);
                     });
                 })
-                ->with(['invoice.customer'])
+                ->with(['invoice.customer'])->orderBy('id', 'desc')
                 ->get();
 
             foreach ($payments as $pay) {
@@ -195,7 +195,7 @@ class SalesTransactionsAllTypesController extends Controller
             $proposals = Proposal::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($proposals as $prop) {
@@ -211,7 +211,9 @@ class SalesTransactionsAllTypesController extends Controller
                     'status' => __($statusText),
                     'view_url' => route('proposal.edit', Crypt::encrypt($prop->id)),
                     'delete_url' => route('proposal.destroy', $prop->id),
-                    'convert_url' => route('estimate.to.invoice', $prop->id),
+
+                    'convert_url' => $prop->status != 4 ? route('estimate.to.invoice', $prop->id) : '',
+
                     'activity_url' => route('sales.transaction.activity', ['type' => 'estimate', 'id' => $prop->id]),
                 ]);
             }
@@ -222,7 +224,7 @@ class SalesTransactionsAllTypesController extends Controller
             $salesReceipts = SalesReceipt::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
-                ->with('customer')
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($salesReceipts as $sr) {
@@ -248,6 +250,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = RefundReceipt::where('created_by', $companyId)
                 ->whereBetween('issue_date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->with('customer')->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -293,6 +296,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = DelayedCredits::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -301,7 +305,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'date' => $cn->date,
                     'type' => __('Delayed Credit'),
                     'no' => '#' . ($cn->credit_id ?? $cn->id),
-                    'customer' => optional($cn->customer_detail)->name ?? '-',
+                    'customer' => optional($cn->customer)->name ?? '-',
                     'memo' => $cn->description ?? '',
                     'amount' => -$cn->total_amount,
                     'status' => __('Open'),
@@ -315,6 +319,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = DelayedCharges::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -325,7 +330,7 @@ class SalesTransactionsAllTypesController extends Controller
                     'no' => '#' . ($cn->credit_id ?? $cn->id),
                     'customer' => optional($cn->customer_detail)->name ?? '-',
                     'memo' => $cn->description ?? '',
-                    'amount' => -$cn->total_amount,
+                    'amount' => $cn->total_amount,
                     'status' => __('Open'),
                    'view_url' => route('delayed-charge.edit', $cn->id),
                     'delete_url' => route('delayed-charge.destroy', $cn->id),
@@ -337,6 +342,7 @@ class SalesTransactionsAllTypesController extends Controller
             $creditNotes = TimeActivity::where('created_by', $companyId)
                 ->whereBetween('date', [$startDate, $endDate])
                 ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+                ->orderBy('id', 'desc')
                 ->get();
 
             foreach ($creditNotes as $cn) {
@@ -798,6 +804,9 @@ $flashData = [
             'tax'         => $p->tax ?? null,
             'discount'    => $p->discount ?? 0,
             'amount'      => $p->amount ?? 0,
+
+            'taxable'     => $p->taxable ?? 0,
+
         ];
     })->toArray(),
 ];
@@ -811,6 +820,9 @@ session()->flash('estimate_prefill', $flashData);
 
 
     return redirect()->route('invoice.create', 0);
+
+}
+
 }
 
 }

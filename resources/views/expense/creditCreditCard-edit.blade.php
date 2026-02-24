@@ -1134,13 +1134,20 @@
                             show_toastr('success',
                                 '{{ __('Expense updated successfully') }}', 'success');
                         }
-                        setTimeout(() => window.location.reload(), 500);
+                         const EXPANSE_URL = "{{ url('/expense') }}";
+                            setTimeout(() => {
+                                window.location.href = EXPANSE_URL;
+                            }, 500);
                     } else {
                         $('#commonModalOver').modal('hide');
                         show_toastr('success', response.message ||
                             '{{ __('Expense updated successfully') }}', 'success');
                         $('.btn-qbo-save').prop('disabled', false).text(
                             '{{ __('Save') }}');
+                        const EXPANSE_URL = "{{ url('/expense') }}";
+                            setTimeout(() => {
+                                window.location.href = EXPANSE_URL;
+                            }, 500);
                     }
                 },
                 error: function(xhr) {
@@ -1332,6 +1339,11 @@
                     }
                     .bill-toggle-btn:hover {
                         background: #D4D7DC;
+                    }
+
+                    #globalAddNewModal .modal-dialog {
+                        width: 800px !important;
+                        max-width: 800px !important;
                     }
                     .bill-toggle-btn svg {
                         width: 16px;
@@ -1851,7 +1863,7 @@
                                                 </td>
 
                                                 <td>
-                                                    {{ Form::number("items[{$i}][amount]", ((float)($item->price ?? 0)) * ((float)($item->quantity ?? 0)), ['class' => 'form-control text-end item-amount', 'step' => '0.01']) }}
+                                                    {{ Form::number("items[{$i}][amount]", ((float)($item->price ?? 0)) * ((float)($item->quantity ?? 0)), ['class' => 'form-control text-end item-amount', 'step' => '0.01' , 'readonly' => true]) }}
                                                 </td>
                                                 <td class="text-center">
                                                     {{ Form::checkbox("items[{$i}][billable]", 1, $item->billable ?? false, ['class' => 'form-check-input']) }}

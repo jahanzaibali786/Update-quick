@@ -11,6 +11,11 @@
 
 @push('css-page')
     <style>
+        #globalAddNewModal .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+        }
+
         /* Custom Design from invoiceDesign.php */
         .invoice-container {
             background: #ffffff;
@@ -501,7 +506,7 @@
         .bottom-section {
             padding: 24px 0px;
             /* display: grid;
-                        grid-template-columns: 1fr 400px; */
+                                grid-template-columns: 1fr 400px; */
             /* gap: 350px; */
             background: #ffffff;
         }
@@ -1519,8 +1524,9 @@
                     taxableSubtotal += amount;
                 }
             });
-            // sales tax rate select (value should be numeric percentage)
-            var taxRate = parseFloat($('select[name="sales_tax_rate"]').val()) || 0;
+            // sales tax rate - get from data-rate attribute, not value (which is the tax ID)
+            var $selectedTax = $('select[name="sales_tax_rate"]').find(':selected');
+            var taxRate = parseFloat($selectedTax.data('rate')) || 0;
             var totalTax = taxableSubtotal * taxRate / 100;
 
             // update bottom totals
@@ -1532,6 +1538,11 @@
             // update all subtotal rows inside table
             recalcSubtotals();
         }
+
+        // Tax rate selector change handler
+        $(document).on('change', 'select[name="sales_tax_rate"]', function() {
+            recalcTotals();
+        });
     </script>
     <script>
         var selector = "body";
@@ -1907,7 +1918,7 @@
 
                                 {{-- Close button (existing) --}}
                                 <button type="button" class="close-button"
-                                    onclick="location.href = '{{ route('invoice.index') }}';" aria-label="Close">
+                                    onclick="location.href = '{{ route('sales.transactions.index') }}';" aria-label="Close">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         color="currentColor" width="24px" height="24px" focusable="false"
                                         aria-hidden="true">
@@ -2282,13 +2293,13 @@
                                                 ]) }}
                                             </td>
                                             <!-- <td>
-                                                                                                                    {{ Form::text('discount', '', [
-                                                                                                                        'class' => 'form-control input-right discount',
-                                                                                                                        'placeholder' => '0.00',
-                                                                                                                    ]) }}
-                                                                                                                </td> -->
+                                                                                                                            {{ Form::text('discount', '', [
+                                                                                                                                'class' => 'form-control input-right discount',
+                                                                                                                                'placeholder' => '0.00',
+                                                                                                                            ]) }}
+                                                                                                                        </td> -->
                                             <td>
-                                                <input type="text" name="amount"
+                                                <input type="text" name="amount" readonly
                                                     class="form-control input-right amount" value="0.00">
                                             </td>
 
@@ -2930,9 +2941,9 @@
                     <div class="invoice-footer">
                         <div class="footer-left">
                             <!-- <button type="button" class="btn btn-secondary"
-                                                                            onclick="location.href = '{{ route('invoice.index') }}';">
-                                                                        {{ __('Cancel') }}
-                                                                    </button> -->
+                                                                                    onclick="location.href = '{{ route('invoice.index') }}';">
+                                                                                {{ __('Cancel') }}
+                                                                            </button> -->
                         </div>
 
                         <div class="footer-center">
@@ -3152,7 +3163,6 @@
                             setTimeout(addNextItem, 50); // Small delay before next item
                         }
                     }
-                    $('.taxableSubtotal').text(taxableSubtotal.toFixed(2));
                     // Start adding items
                     addNextItem();
                 }
