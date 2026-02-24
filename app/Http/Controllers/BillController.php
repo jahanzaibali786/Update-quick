@@ -2678,6 +2678,7 @@ public function index(Request $request)
 
     public function createPayment(Request $request, $bill_id)
     {
+
         \DB::beginTransaction();
         try {
             if (\Auth::user()->can('create payment bill')) {
@@ -2687,12 +2688,10 @@ public function index(Request $request)
                         'date' => 'required',
                         'amount' => 'required',
                         'account_id' => 'required',
-
                     ]
                 );
                 if ($validator->fails()) {
                     $messages = $validator->getMessageBag();
-
                     return redirect()->back()->with('error', $messages->first());
                 }
 
@@ -2745,11 +2744,13 @@ public function index(Request $request)
                     $bill->status = 3;
                     $bill->save();
                 }
+                
                 $billPayment->user_id = $bill->vender_id;
                 $billPayment->user_type = 'Vender';
                 $billPayment->type = 'Partial';
                 $billPayment->created_by = \Auth::user()->id;
                 $billPayment->payment_id = $billPayment->id;
+                $billPayment->payment_no = $billPayment->id;
                 $billPayment->category = 'Bill';
                 $billPayment->account = $request->account_id;
                 Transaction::addTransaction($billPayment);
@@ -2785,6 +2786,7 @@ public function index(Request $request)
                 //     Utility::addTransactionLines($data , 'create');
                 // }
                 $bankAccount = BankAccount::find($request->account_id);
+                
                 if ($bankAccount && $bankAccount->chart_account_id != 0 || $bankAccount->chart_account_id != null) {
                     $data['account_id'] = $bankAccount->chart_account_id;
                 } else {
@@ -2858,7 +2860,6 @@ public function index(Request $request)
             if (!\Auth::user()->can('create payment bill')) {
                 return redirect()->back()->with('error', __('Permission denied.'));
             }
-
             $validator = \Validator::make(
                 $request->all(),
                 [

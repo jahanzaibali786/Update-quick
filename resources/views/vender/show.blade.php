@@ -769,13 +769,18 @@
                     {{ __('New transaction') }}
                 </button>
                 <ul class="dropdown-menu">
-                    @can('create bill')
-                        <li><a class="dropdown-item" href="{{ route('bill.create', $vendor->id) }}">{{ __('Bill') }}</a>
-                        </li>
-                    @endcan
-                    <li><a class="dropdown-item" href="#">{{ __('Expense') }}</a></li>
-                    <li><a class="dropdown-item" href="#">{{ __('Check') }}</a></li>
-                    <li><a class="dropdown-item" href="#">{{ __('Purchase Order') }}</a></li>
+                    
+                    <li><a class="dropdown-item" href="{{ route('timeActivity.create') }}">{{ __('Time activity') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ route('bill.create', 0) }}">{{ __('Bill') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ route('expense.create', 0) }}">{{ __('Expense') }}</a></li>
+                    <li><a class="dropdown-item" href="#" class="openChecksModal"
+                            data-url="{{ route('checks.create') }}">{{ __('Check') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url('purchase/create/0') }}">{{ __('Purchase order') }}</a></li>
+                    <li><a class="dropdown-item" href="#" class="openChecksModal"
+                            data-url="{{ route('vendor-credit.create') }}">{{ __('Vendor credit') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ route('creditcreditcard.create', 0) }}">{{ __('Credit card credit') }}</a></li>
+                    <li><a class="dropdown-item" href="#" class="openChecksModal"
+                            data-url="{{ route('paydowncreditcard.create') }}">{{ __('Pay down credit card') }}</a></li>
                 </ul>
             </div>
         </div>

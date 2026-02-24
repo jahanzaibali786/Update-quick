@@ -143,7 +143,10 @@ class ExpenseController extends Controller
                 'vendor_credit' => __('Vendor credit'),
             ];
 
-            return view('expense.index', compact('vender', 'status', 'category', 'transactions', 'totalAmount', 'typeOptions', 'type'));
+            $accounts = BankAccount::select('*', \DB::raw("CONCAT(bank_name,' ',holder_name) AS name"))->where('created_by', \Auth::user()->creatorId())->get()->pluck('name', 'id');
+            $accounts->prepend('Select Account', '');
+
+            return view('expense.index', compact('vender', 'status', 'category', 'transactions', 'totalAmount', 'typeOptions', 'type', 'accounts'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }

@@ -6731,11 +6731,12 @@ class Utility extends Model
             Utility::addTransactionLines($dataline, 'create');
 
 
-            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-            if ($types) {
-                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
-            }
+            // $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+            // if ($types) {
+            //     $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+            //     $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
+            // }
+            $account = self::getAccountPayableAccount(@$data['created_by']);
             if ($account) {
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;
@@ -6980,11 +6981,12 @@ class Utility extends Model
             Utility::addTransactionLines($dataline, 'create');
 
 
-            $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
-            if ($types) {
-                $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
-                $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
-            }
+            // $types = ChartOfAccountType::where('created_by', '=', $data['created_by'])->where('name', 'Liabilities')->first();
+            // if ($types) {
+            //     $sub_type = ChartOfAccountSubType::where('type', $types->id)->where('name', 'Current Liabilities')->first();
+            //     $account = ChartOfAccount::where('type', $types->id)->where('sub_type', $sub_type->id)->where('name', 'Account Payable')->first();
+            // }
+            $account = self::getAccountPayableAccount(@$data['created_by']);
             if ($account) {
                 $journalItem = new JournalItem();
                 $journalItem->journal = $journal->id;

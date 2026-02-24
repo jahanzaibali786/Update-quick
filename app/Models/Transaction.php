@@ -45,6 +45,7 @@ class Transaction extends Model
         $transaction->category    = $request->category;
         $transaction->payment_no  = $request->payment_no ?? null;
         $transaction->save();
+        
     }
 
     public static function editTransaction($request)

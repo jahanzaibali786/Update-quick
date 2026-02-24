@@ -53,6 +53,10 @@
                 // iterate through original table rows and populate modal rows
                 $('.bills-main-row').each(function() {
                     var $orig = $(this);
+                    var openBalance = parseFloat($orig.data('bill-due')) || 0;
+
+                    // Skip fully paid bills (Open Balance must be > 0)
+                    if (openBalance <= 0) return;
                     var billId = $orig.data('bill-id').toString();
                     var billNumber = $orig.find('.bill-number').text().trim();
                     var vendorName = $orig.find('td:nth-child(3)').text().trim();
@@ -61,13 +65,13 @@
                     var openBalance = parseFloat($orig.data('bill-due')) || 0;
 
                     // Check if bill is overdue
-                    var isOverdue = statusHtml && (statusHtml.toLowerCase().includes('overdue') || 
-                                    statusHtml.toLowerCase().includes('unpaid') ||
-                                    statusHtml.toLowerCase().includes('partial'));
-                    
+                    var isOverdue = statusHtml && (statusHtml.toLowerCase().includes('overdue') ||
+                        statusHtml.toLowerCase().includes('unpaid') ||
+                        statusHtml.toLowerCase().includes('partial'));
+
                     // Status display QBO style
-                    var statusDisplay = isOverdue ? 
-                        '<span style="color: #d9534f; font-weight: 500;">Overdue</span><br><small style="color: #999; font-size: 11px;">days ago</small>' : 
+                    var statusDisplay = isOverdue ?
+                        '<span style="color: #d9534f; font-weight: 500;">Overdue</span><br><small style="color: #999; font-size: 11px;">days ago</small>' :
                         statusHtml;
 
                     // default selected if was checked on main table
@@ -78,26 +82,36 @@
 
                     // QBO Style row
                     var tr = '<tr data-bill-id="' + billId + '" data-bill-amount="' + openBalance +
-                        '" data-bill-due="' + openBalance + '" style="border-bottom: 1px solid #e9ecef;">' +
+                        '" data-bill-due="' + openBalance +
+                        '" style="border-bottom: 1px solid #e9ecef;">' +
                         '<td class="text-center align-middle" style="padding: 12px 8px;">' +
-                        '<input name="bill_ids[]" value="' + billId + '" type="checkbox" class="modal-row-checkbox form-check-input" ' + checkedAttr + ' style="cursor: pointer;">' +
+                        '<input name="bill_ids[]" value="' + billId +
+                        '" type="checkbox" class="modal-row-checkbox form-check-input" ' +
+                        checkedAttr + ' style="cursor: pointer;">' +
                         '</td>' +
-                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' + vendorName + '</td>' +
-                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' + billNumber + '</td>' +
-                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' + dueDate + '</td>' +
-                        '<td class="align-middle bill-status-display" style="padding: 12px 8px;">' + statusDisplay + '</td>' +
-                        '<td class="align-middle text-end bill-open-col" style="padding: 12px 8px; color: #333;">$' + openBalance.toFixed(2) + '</td>' +
+                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' +
+                        vendorName + '</td>' +
+                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' +
+                        billNumber + '</td>' +
+                        '<td class="align-middle" style="padding: 12px 8px; color: #333;">' +
+                        dueDate + '</td>' +
+                        '<td class="align-middle bill-status-display" style="padding: 12px 8px;">' +
+                        statusDisplay + '</td>' +
+                        '<td class="align-middle text-end bill-open-col" style="padding: 12px 8px; color: #333;">$' +
+                        openBalance.toFixed(2) + '</td>' +
                         '<td class="align-middle text-center" style="padding: 12px 8px; color: #999;">Not available</td>' +
                         '<td class="align-middle text-center payment-col" style="padding: 12px 8px;">' +
                         '<input type="number" step="0.01" min="0" class="form-control form-control-sm payment-input text-center" ' +
-                        'value="' + paymentValue + '" name="payment_amounts[' + billId + ']" style="width: 90px; margin: 0 auto; border-color: #c0c0c0;">' +
+                        'value="' + paymentValue + '" name="payment_amounts[' + billId +
+                        ']" style="width: 90px; margin: 0 auto; border-color: #c0c0c0;">' +
                         '</td>' +
-                        '<td class="align-middle text-end total-col" style="padding: 12px 8px; color: #333;">' + totalValue + '</td>' +
+                        '<td class="align-middle text-end total-col" style="padding: 12px 8px; color: #333;">' +
+                        totalValue + '</td>' +
                         '</tr>';
 
                     $modalTableBody.append(tr);
                 });
-                
+
                 // Update bill count for pagination
                 var billCount = $('#payModalTable tbody tr').length;
                 $('.total-bills-count').text(billCount);
@@ -139,17 +153,23 @@
                 var val = parseFloat($(this).val()) || 0;
                 var total = parseFloat($tr.data('bill-due')) || 0;
 
+                // Sync checkbox state with input value
+                var $checkbox = $tr.find('.modal-row-checkbox');
+                if (val > 0) {
+                    $checkbox.prop('checked', true);
+                } else {
+                    $checkbox.prop('checked', false);
+                }
+                updateModalSelectAllState();
+
                 // if entered amount greater than total: reduce to total
                 if (val > total) {
                     val = total;
                     $(this).val(total.toFixed(2));
                 }
 
-                // update total-col: payment value is added in total column per spec
-                // spec said: "After entering an amount that amount will also be added in total."
-                // Interpreting: total-col should show open amount when row selected; but user requested "total column .... And when a row is selected then it displays it's amount i.e it's total amount."
-                // We'll set total-col to show the row's total amount (open balance) when selected; but also ensure total row sums payment inputs.
-                var isChecked = $tr.find('.modal-row-checkbox').is(':checked');
+                // update total-col
+                var isChecked = $checkbox.is(':checked');
                 if (isChecked) {
                     $tr.find('.total-col').text('$' + (parseFloat($tr.data('bill-due')) || 0).toFixed(2));
                 } else {
@@ -164,20 +184,6 @@
                     $tr.find('.partial-label-container').empty();
                 }
 
-
-                // Check if not checked but payment added
-                const value = parseFloat($(this).val()) || 0; // get numeric value
-                const row = $(this).closest('tr');
-                const checkbox = row.find('.modal-row-checkbox');
-
-                if (value > 0) {
-                    checkbox.prop('checked', true);
-                } else {
-                    checkbox.prop('checked', false);
-                }
-
-                updateModalSelectAllState();
-
                 recalcModalTotals();
             });
 
@@ -187,13 +193,13 @@
                 var grandPayment = 0.00;
                 var grandOpenBalance = 0.00;
                 var grandTotal = 0.00;
-                
+
                 $('#payModalTable tbody tr').each(function() {
                     var $tr = $(this);
                     var isChecked = $tr.find('.modal-row-checkbox').is(':checked');
                     var pay = parseFloat($tr.find('.payment-input').val()) || 0;
                     var openBal = parseFloat($tr.data('bill-due')) || 0;
-                    
+
                     grandPayment += pay;
                     if (isChecked) {
                         grandOpenBalance += openBal;
@@ -347,7 +353,7 @@
             // Receive Bill Payment button - navigate to bill payment create page
             $('#open-receive-modal').on('click', function(e) {
                 e.preventDefault();
-                window.location.href = '{{ route("receive-bill-payment.create") }}';
+                window.location.href = '{{ route('receive-bill-payment.create') }}';
             });
 
         });
@@ -398,27 +404,27 @@
 
 
 @section('content')
-{{-- MY APPS Sidebar (Fixed Position) --}}
-@include('partials.admin.allApps-subMenu-Sidebar', [
-    'activeSection' => 'expenses',
-    'activeItem' => 'bills'
-])
+    {{-- MY APPS Sidebar (Fixed Position) --}}
+    @include('partials.admin.allApps-subMenu-Sidebar', [
+        'activeSection' => 'expenses',
+        'activeItem' => 'bills',
+    ])
 
     {{-- tabs --}}
-    @include('expense.expense-tabs')
+    {{-- @include('expense.expense-tabs') --}}
     <div class="float-end">
         <a href="{{ route('bill.export') }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip"
             title="{{ __('Export') }}">
             <i class="ti ti-file-export"></i>
         </a>
 
-        @can('create bill')
+        {{-- @can('create bill')
             <a href="#" data-url="{{ route('bill.create', 0) }}" data-ajax-popup="true" data-size="fullscreen"
                 data-title="{{ __('Create New Bill') }}" data-bs-toggle="tooltip" title="{{ __('Create') }}"
                 class="btn btn-sm btn-primary">
                 <i class="ti ti-plus"></i>
             </a>
-        @endcan
+        @endcan --}}
 
         {{-- Pay Bill Button --}}
         @can('edit bill')
@@ -427,7 +433,8 @@
             </button>
         @endcan
         <!-- Recieve Bill Payments -->
-         <button id="open-receive-modal" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="{{ __('Receive Bill Payment') }}">
+        <button id="open-receive-modal" class="btn btn-sm btn-success" data-bs-toggle="tooltip"
+            title="{{ __('Receive Bill Payment') }}">
             <i class="ti ti-cash"></i> {{ __('Receive Bill Payment') }}
         </button>
     </div>
@@ -585,7 +592,7 @@
                                         @if (Gate::check('edit bill') || Gate::check('delete bill') || Gate::check('show bill'))
                                             <td class="Action align-middle">
                                                 <span>
-                                                    @can('duplicate bill')
+                                                    {{-- @can('duplicate bill')
                                                         <div class="action-btn bg-primary ms-2">
                                                             {!! Form::open([
                                                                 'method' => 'get',
@@ -604,7 +611,7 @@
                                                                 {!! Form::close() !!}
                                                             </a>
                                                         </div>
-                                                    @endcan
+                                                    @endcan --}}
                                                     @can('show bill')
                                                         <div class="action-btn bg-info ms-2">
                                                             <a href="{{ $bill->vender_id ? route('vender.show', \Crypt::encrypt($bill->vender_id)) : '#' }}"
@@ -623,7 +630,8 @@
                                                                 data-original-title="{{ __('Edit') }}">
                                                                 <i class="ti ti-pencil text-white"></i>
                                                             </a> --}}
-                                                            <a href="#" data-url="{{ route('bill.edit', \Crypt::encrypt($bill->id)) }}" 
+                                                            <a href="#"
+                                                                data-url="{{ route('bill.edit', \Crypt::encrypt($bill->id)) }}"
                                                                 data-ajax-popup="true" data-size="fullscreen"
                                                                 data-bs-toggle="tooltip" title="Edit">
                                                                 <i class="ti ti-pencil text-white"></i>
@@ -687,15 +695,19 @@
             <div class="modal-content" style="background-color: #fff;">
                 {{-- QBO Style Header --}}
                 <div class="modal-header border-0 pb-0" style="background: #fff; padding: 16px 24px;">
-                    <h4 class="modal-title fw-normal" id="payBillModalLabel" style="font-size: 24px; color: #333;">{{ __('Pay Bills') }}</h4>
+                    <h4 class="modal-title fw-normal" id="payBillModalLabel" style="font-size: 24px; color: #333;">
+                        {{ __('Pay Bills') }}</h4>
                     <div class="ms-auto d-flex align-items-center gap-3">
-                        <a href="#" class="text-success text-decoration-none d-flex align-items-center" style="font-size: 14px;">
+                        <a href="#" class="text-success text-decoration-none d-flex align-items-center"
+                            style="font-size: 14px;">
                             <i class="ti ti-message-circle me-1"></i> {{ __('Give feedback') }}
                         </a>
-                        <button type="button" class="btn btn-link p-0 text-muted" style="font-size: 20px;" data-bs-toggle="tooltip" title="{{ __('Help') }}">
+                        <button type="button" class="btn btn-link p-0 text-muted" style="font-size: 20px;"
+                            data-bs-toggle="tooltip" title="{{ __('Help') }}">
                             <i class="ti ti-help-circle"></i>
                         </button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 12px;"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                            style="font-size: 12px;"></button>
                     </div>
                 </div>
 
@@ -707,38 +719,45 @@
                     <div class="px-4 py-3">
                         <div class="row align-items-end px-4 py-3" style="background: #ECEEF1;">
                             <div class="col-auto">
-                                <label class="form-label text-muted mb-1" style="font-size: 12px;">{{ __('Payment account') }}</label>
+                                <label class="form-label text-muted mb-1"
+                                    style="font-size: 12px;">{{ __('Payment account') }}</label>
                                 <div class="position-relative">
                                     {{ Form::select('account_id', $accounts ?? [], null, [
                                         'class' => 'form-select',
                                         'placeholder' => __('Select an account'),
                                         'required' => true,
-                                        'style' => 'min-width: 180px; font-size: 14px; border-color: #c0c0c0;'
+                                        'style' => 'min-width: 180px; font-size: 14px; border-color: #c0c0c0;',
                                     ]) }}
                                 </div>
                             </div>
 
                             <div class="col-auto">
-                                <label class="form-label text-muted mb-1" style="font-size: 12px;">{{ __('Payment date') }}</label>
+                                <label class="form-label text-muted mb-1"
+                                    style="font-size: 12px;">{{ __('Payment date') }}</label>
                                 {{ Form::date('date', now()->format('Y-m-d'), [
                                     'class' => 'form-control',
                                     'required' => true,
-                                    'style' => 'min-width: 160px; font-size: 14px; border-color: #c0c0c0;'
+                                    'style' => 'min-width: 160px; font-size: 14px; border-color: #c0c0c0;',
                                 ]) }}
                             </div>
 
                             <div class="col text-end">
-                                <div class="text-muted text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">{{ __('TOTAL PAYMENT AMOUNT') }}</div>
-                                <div id="modal-grand-total" class="fw-normal" style="font-size: 36px; color: #333;">$<span class="grand-total-value">0.00</span></div>
+                                <div class="text-muted text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                                    {{ __('TOTAL PAYMENT AMOUNT') }}</div>
+                                <div id="modal-grand-total" class="fw-normal" style="font-size: 36px; color: #333;">
+                                    $<span class="grand-total-value">0.00</span></div>
                             </div>
                         </div>
                     </div>
 
                     {{-- QBO Style Filters Section --}}
-                    <div class="px-4 py-3 d-flex align-items-center justify-content-between" style="border-bottom: 1px solid #e9ecef;">
+                    <div class="px-4 py-3 d-flex align-items-center justify-content-between"
+                        style="border-bottom: 1px solid #e9ecef;">
                         <div class="d-flex align-items-center gap-2">
                             <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" id="payBillFiltersDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 14px; border-color: #2ca01c; color: #2ca01c;">
+                                <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
+                                    type="button" id="payBillFiltersDropdown" data-bs-toggle="dropdown"
+                                    aria-expanded="false" style="font-size: 14px; border-color: #2ca01c; color: #2ca01c;">
                                     <i class="ti ti-filter me-1"></i> {{ __('Filters') }}
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="payBillFiltersDropdown">
@@ -747,9 +766,11 @@
                                     <li><a class="dropdown-item" href="#">{{ __('Due This Week') }}</a></li>
                                 </ul>
                             </div>
-                            <span class="badge rounded-pill" style="background: #e8e8e8; color: #333; font-weight: normal; font-size: 13px; padding: 6px 12px;">{{ __('Last 12 months') }}</span>
+                            <span class="badge rounded-pill"
+                                style="background: #e8e8e8; color: #333; font-weight: normal; font-size: 13px; padding: 6px 12px;">{{ __('Last 12 months') }}</span>
                         </div>
-                        <button type="button" class="btn btn-link text-muted p-0" data-bs-toggle="tooltip" title="{{ __('Settings') }}">
+                        <button type="button" class="btn btn-link text-muted p-0" data-bs-toggle="tooltip"
+                            title="{{ __('Settings') }}">
                             <i class="ti ti-settings" style="font-size: 20px;"></i>
                         </button>
                     </div>
@@ -760,16 +781,26 @@
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
                                     <th class="text-center" style="width: 40px; padding: 12px 8px;">
-                                        <input type="checkbox" id="modalSelectAll" class="form-check-input" style="cursor: pointer;">
+                                        <input type="checkbox" id="modalSelectAll" class="form-check-input"
+                                            style="cursor: pointer;">
                                     </th>
-                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('PAYEE') }}</th>
-                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('REF NO.') }} <i class="ti ti-arrow-down" style="font-size: 12px;"></i></th>
-                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('DUE DATE') }}</th>
-                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('STATUS') }}</th>
-                                    <th class="text-end" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('OPEN BALANCE') }}</th>
-                                    <th class="text-center" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('CREDIT APPLIED') }}</th>
-                                    <th class="text-center" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px; width: 120px;">{{ __('PAYMENT') }}</th>
-                                    <th class="text-end" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('TOTAL AMOUNT') }}</th>
+                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('PAYEE') }}
+                                    </th>
+                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('REF NO.') }}
+                                        <i class="ti ti-arrow-down" style="font-size: 12px;"></i></th>
+                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('DUE DATE') }}
+                                    </th>
+                                    <th style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">{{ __('STATUS') }}
+                                    </th>
+                                    <th class="text-end" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">
+                                        {{ __('OPEN BALANCE') }}</th>
+                                    <th class="text-center" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">
+                                        {{ __('CREDIT APPLIED') }}</th>
+                                    <th class="text-center"
+                                        style="font-weight: 500; color: #6b6b6b; padding: 12px 8px; width: 120px;">
+                                        {{ __('PAYMENT') }}</th>
+                                    <th class="text-end" style="font-weight: 500; color: #6b6b6b; padding: 12px 8px;">
+                                        {{ __('TOTAL AMOUNT') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -780,16 +811,21 @@
                                     <td colspan="5" class="text-start" style="padding: 12px 8px;">
                                         <strong style="color: #333;">{{ __('Total payment') }}</strong>
                                     </td>
-                                    <td class="text-end" style="padding: 12px 8px;"><strong class="modal-footer-open-balance" style="color: #333;">$0.00</strong></td>
-                                    <td class="text-center" style="padding: 12px 8px;"><strong class="modal-footer-credit" style="color: #333;">$0.00</strong></td>
-                                    <td class="text-center" style="padding: 12px 8px;"><strong class="modal-footer-payment" style="color: #333;">$0.00</strong></td>
-                                    <td class="text-end" style="padding: 12px 8px;"><strong class="modal-footer-total" style="color: #333;">$0.00</strong></td>
+                                    <td class="text-end" style="padding: 12px 8px;"><strong
+                                            class="modal-footer-open-balance" style="color: #333;">$0.00</strong></td>
+                                    <td class="text-center" style="padding: 12px 8px;"><strong
+                                            class="modal-footer-credit" style="color: #333;">$0.00</strong></td>
+                                    <td class="text-center" style="padding: 12px 8px;"><strong
+                                            class="modal-footer-payment" style="color: #333;">$0.00</strong></td>
+                                    <td class="text-end" style="padding: 12px 8px;"><strong class="modal-footer-total"
+                                            style="color: #333;">$0.00</strong></td>
                                 </tr>
                                 <tr>
                                     <td colspan="9" class="text-end" style="border: none; padding: 8px;">
                                         <small class="text-muted me-2">{{ __('First') }}</small>
                                         <small class="text-muted me-2">{{ __('Previous') }}</small>
-                                        <small style="color: #333;">1 - <span class="total-bills-count">0</span> {{ __('of') }} <span class="total-bills-count">0</span></small>
+                                        <small style="color: #333;">1 - <span class="total-bills-count">0</span>
+                                            {{ __('of') }} <span class="total-bills-count">0</span></small>
                                         <small class="text-muted ms-2">{{ __('Next') }}</small>
                                         <small class="text-muted ms-2">{{ __('Last') }}</small>
                                     </td>
@@ -800,13 +836,18 @@
                 </div>
 
                 {{-- QBO Style Footer --}}
-                <div class="modal-footer border-top d-flex justify-content-between align-items-center" style="background: #fff; padding: 16px 24px;">
-                    <a href="#" class="text-success text-decoration-none" data-bs-dismiss="modal" style="font-size: 14px;">{{ __('Cancel') }}</a>
+                <div class="modal-footer border-top d-flex justify-content-between align-items-center"
+                    style="background: #fff; padding: 16px 24px;">
+                    <a href="#" class="text-success text-decoration-none" data-bs-dismiss="modal"
+                        style="font-size: 14px;">{{ __('Cancel') }}</a>
                     <div class="btn-group">
-                        <button type="submit" id="modal-proceed-payment" class="btn btn-success px-4" style="background-color: #2ca01c; border-color: #2ca01c; font-size: 14px;">
+                        <button type="submit" id="modal-proceed-payment" class="btn btn-success px-4"
+                            style="background-color: #2ca01c; border-color: #2ca01c; font-size: 14px;">
                             {{ __('Schedule payment') }}
                         </button>
-                        <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #2ca01c; border-color: #2ca01c;">
+                        <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            style="background-color: #2ca01c; border-color: #2ca01c;">
                             <span class="visually-hidden">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
